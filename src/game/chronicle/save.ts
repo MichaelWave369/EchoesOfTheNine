@@ -1,4 +1,4 @@
-import type { ChronicleBranch, QuestNode, SaveGame } from "../contracts.ts";
+import type { ChronicleBranch, QuestNode, SaveGame, WandererAppearance } from "../contracts.ts";
 import { DEFAULT_SETTINGS, SCHEMA_VERSION } from "../contracts.ts";
 import { INITIAL_QUESTS } from "../content/world.ts";
 import { makeCombatant } from "../content/characters.ts";
@@ -23,6 +23,7 @@ export function freshSave(playerName: string): SaveGame {
     savedAt: new Date().toISOString(),
     slot: "auto",
     playerName: name,
+    appearance: "lantern",
     mapId: "map.vale",
     spawnId: "square",
     mode: "legacy",
@@ -61,6 +62,18 @@ export function freshSave(playerName: string): SaveGame {
     echoMemory: [],
     gnosis: 0,
   };
+}
+
+export function setAppearance(save: SaveGame, appearance: WandererAppearance): SaveGame {
+  const next = structuredClone(save);
+  next.appearance = appearance;
+  return next;
+}
+
+const APPEARANCE_IDS: WandererAppearance[] = ["lantern", "festival", "river", "ridge"];
+
+export function normalizeAppearance(value: unknown): WandererAppearance {
+  return APPEARANCE_IDS.includes(value as WandererAppearance) ? (value as WandererAppearance) : "lantern";
 }
 
 export function flag(save: SaveGame, id: string): boolean {
@@ -301,6 +314,8 @@ function blankChronicle(): ChronicleBranch {
 export function migrateSave(parsed: SaveGame): SaveGame {
   const next = parsed;
   next.version = 1;
+  next.playerName = next.playerName || "Wanderer";
+  next.appearance = normalizeAppearance(next.appearance);
   next.schema = SCHEMA_VERSION;
   next.equipment = next.equipment ?? {};
   if (!next.equipment.wanderer) next.equipment.wanderer = { weapon: "weapon.festival_knife" };

@@ -2,7 +2,19 @@
  * Presentation only. No damage, no flags, no saves.
  * Future chapters: add a RegionLook and a landmark painter. Do not invent tiles
  * that change which squares can be walked. Collision stays in GameApp.
+ * Living Canvas frames live in sprites.ts. If a sheet has not loaded, the
+ * geometric fallback still draws.
  */
+
+import {
+  blit,
+  foeFrame,
+  frameFor,
+  groundKind,
+  hotspotActor,
+  imageReady,
+  type Pose,
+} from "./sprites.ts";
 
 export const TILE = 48;
 
@@ -193,7 +205,7 @@ export function regionLook(mapId: string): RegionLook {
 
 export const PUBLIC_ART_NOTES = Object.values(LOOKS).map((look) => look.note);
 
-type Hotspot = { x: number; y: number; label: string; kind: string };
+type Hotspot = { id: string; x: number; y: number; label: string; kind: string };
 
 export function paintExploration(
   ctx: CanvasRenderingContext2D,
@@ -210,9 +222,14 @@ export function paintExploration(
     hotspots: Hotspot[];
     hover: { x: number; y: number } | null;
     blocked: (x: number, y: number) => boolean;
+    appearance?: string;
+    moving?: boolean;
+    sightSteps?: number;
   },
 ) {
   const { mapId, width: w, height: h, sight, tick, reduced, pos, facing, party, hotspots, hover, blocked } = opts;
+  const appearance = opts.appearance ?? "lantern";
+  const moving = opts.moving ?? false;
   const look = regionLook(mapId);
   const sky = ctx.createLinearGradient(0, 0, 0, h * TILE);
   sky.addColorStop(0, sight ? shift(look.skyTop, 18) : look.skyTop);
@@ -223,14 +240,43 @@ export function paintExploration(
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      if (blocked(x, y)) paintWall(ctx, look, x, y);
-      else paintFloor(ctx, look, mapId, x, y, w, h);
+      if (blocked(x, y)) paintWall(ctx, look, mapId, x, y);
+      else paintFloor(ctx, look, mapId, x, y, w, h, tick, reduced);
     }
   }
   paintWater(ctx, mapId, w, h, tick, reduced);
-  paintLandmarks(ctx, mapId, tick, reduced, sight);
+  const living = imageReady("wanderer.png");
+  if (!living || !stampReplaces(mapId)) paintLandmarks(ctx, mapId, tick, reduced, sight);
+  if (living) {
+    paintLiving(ctx, {
+      mapId,
+      tick,
+      reduced,
+      sight,
+      pos,
+      facing,
+      party,
+      hotspots,
+      appearance,
+      moving,
+      blocked,
+      width: w,
+      height: h,
+    });
+  } else {
+    const trail = party.filter((id) => id !== "wanderer");
+    const back = facing === "n" ? [0, 1] : facing === "s" ? [0, -1] : facing === "e" ? [-1, 0] : [1, 0];
+    trail.forEach((id, i) => {
+      const tx = pos.x + (back[0] ?? 0) * (i + 1);
+      const ty = pos.y + (back[1] ?? 0);
+      if (tx < 0 || ty < 0 || tx >= w || ty >= h || blocked(tx, ty)) return;
+      paintPerson(ctx, id, tx * TILE + 24, ty * TILE + 36, facing, tick, reduced, 1);
+    });
+    paintPerson(ctx, "wanderer", pos.x * TILE + 24, pos.y * TILE + 36, facing, tick, reduced, 1.05, appearance, "idle", moving);
+  }
   paintAmbience(ctx, mapId, w, h, tick, reduced);
   if (sight) paintSightWash(ctx, w * TILE, h * TILE, tick, reduced);
+  if (sight && typeof opts.sightSteps === "number") paintSightCount(ctx, opts.sightSteps);
 
   for (const spot of hotspots) {
     const near = Math.max(Math.abs(spot.x - pos.x), Math.abs(spot.y - pos.y)) <= 1;
@@ -238,21 +284,199 @@ export function paintExploration(
     paintMarker(ctx, spot, near || aimed || spot.kind === "exit", tick, reduced);
   }
 
-  const trail = party.filter((id) => id !== "wanderer");
-  const back = facing === "n" ? [0, 1] : facing === "s" ? [0, -1] : facing === "e" ? [-1, 0] : [1, 0];
-  trail.forEach((id, i) => {
-    const tx = pos.x + (back[0] ?? 0) * (i + 1);
-    const ty = pos.y + (back[1] ?? 0);
-    if (tx < 0 || ty < 0 || tx >= w || ty >= h || blocked(tx, ty)) return;
-    paintPerson(ctx, id, tx * TILE + 24, ty * TILE + 30, facing, tick, reduced, 1);
-  });
-  paintPerson(ctx, "wanderer", pos.x * TILE + 24, pos.y * TILE + 30, facing, tick, reduced, 1.05);
-
   const vignette = ctx.createRadialGradient((w * TILE) / 2, (h * TILE) / 2, TILE * 2, (w * TILE) / 2, (h * TILE) / 2, w * TILE);
   vignette.addColorStop(0, "rgba(0,0,0,0)");
   vignette.addColorStop(1, "rgba(8,4,10,0.45)");
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, w * TILE, h * TILE);
+}
+
+function paintSightCount(ctx: CanvasRenderingContext2D, steps: number) {
+  ctx.save();
+  ctx.font = "12px Source Sans 3, sans-serif";
+  const label = `${steps} steps`;
+  const tw = ctx.measureText(label).width;
+  ctx.fillStyle = "rgba(8,20,22,0.82)";
+  roundRect(ctx, 8, 8, tw + 16, 20, 4);
+  ctx.fill();
+  ctx.fillStyle = "#4ec8c0";
+  ctx.fillText(label, 16, 22);
+  ctx.restore();
+}
+
+function stampReplaces(mapId: string): boolean {
+  return (
+    mapId === "map.vale" ||
+    mapId === "map.woods" ||
+    mapId === "map.reach" ||
+    mapId === "map.inn" ||
+    mapId === "map.smith" ||
+    mapId === "map.hold" ||
+    mapId === "map.berth"
+  );
+}
+
+type Stamp = { file: string; x: number; y: number; w: number; h: number; col?: number; row?: number; cols?: number; rows?: number };
+
+function stampsFor(mapId: string): Stamp[] {
+  if (mapId === "map.vale") {
+    return [
+      { file: "house.png", x: 4, y: 5.2, w: 170, h: 156 },
+      { file: "house.png", x: 16.5, y: 3.15, w: 136, h: 126 },
+      { file: "clock.png", x: 11, y: 4.2, w: 96, h: 172 },
+      { file: "stall.png", x: 13.7, y: 10.35, w: 110, h: 98 },
+      { file: "well.png", x: 8.45, y: 8.25, w: 58, h: 68 },
+      { file: "lantern.png", x: 6.15, y: 7.75, w: 34, h: 62 },
+      { file: "lantern.png", x: 14.3, y: 7.75, w: 34, h: 62 },
+      { file: "lantern.png", x: 10.1, y: 11.15, w: 32, h: 58 },
+      { file: "pine.png", x: 1.25, y: 7.4, w: 80, h: 116 },
+      { file: "pine.png", x: 18.7, y: 4.3, w: 74, h: 108 },
+    ];
+  }
+  if (mapId === "map.woods") {
+    return [
+      { file: "pine.png", x: 4, y: 3.4, w: 86, h: 120 },
+      { file: "pine.png", x: 6.2, y: 8.4, w: 78, h: 110 },
+      { file: "pine.png", x: 15, y: 3.2, w: 90, h: 124 },
+      { file: "pine.png", x: 17.2, y: 8.2, w: 80, h: 112 },
+      { file: "pine.png", x: 10, y: 2.4, w: 70, h: 100 },
+    ];
+  }
+  if (mapId === "map.shrine") {
+    return [
+      { file: "foes.png", x: 8.5, y: 3.6, w: 84, h: 110, col: 2, row: 0, cols: 3, rows: 3 },
+      { file: "pine.png", x: 3.2, y: 6, w: 70, h: 100 },
+      { file: "pine.png", x: 13, y: 6.2, w: 70, h: 100 },
+    ];
+  }
+  if (mapId === "map.reach") {
+    return [
+      { file: "pine.png", x: 3, y: 3.4, w: 84, h: 118 },
+      { file: "pine.png", x: 7, y: 2.6, w: 76, h: 108 },
+      { file: "pine.png", x: 12.2, y: 8.4, w: 80, h: 112 },
+      { file: "pine.png", x: 15, y: 3.3, w: 78, h: 110 },
+      { file: "pine.png", x: 5, y: 9.2, w: 70, h: 100 },
+    ];
+  }
+  if (mapId === "map.barrow") return [{ file: "pine.png", x: 4, y: 4.2, w: 90, h: 120 }];
+  if (mapId === "map.inn") {
+    return [
+      { file: "lantern.png", x: 2.2, y: 2.4, w: 32, h: 56 },
+      { file: "lantern.png", x: 7.2, y: 2.4, w: 32, h: 56 },
+      { file: "stall.png", x: 2.4, y: 3.3, w: 78, h: 70 },
+    ];
+  }
+  if (mapId === "map.smith") {
+    return [
+      { file: "stall.png", x: 3.2, y: 2.6, w: 96, h: 84 },
+      { file: "lantern.png", x: 6.2, y: 2.3, w: 30, h: 54 },
+    ];
+  }
+  if (mapId === "map.lowbell") {
+    return [
+      { file: "stall.png", x: 4, y: 5.2, w: 100, h: 88 },
+      { file: "well.png", x: 12.4, y: 6.4, w: 54, h: 62 },
+      { file: "lantern.png", x: 6, y: 5.1, w: 30, h: 54 },
+      { file: "clock.png", x: 9, y: 2.4, w: 54, h: 96 },
+    ];
+  }
+  if (mapId === "map.ferry") {
+    return [
+      { file: "house.png", x: 3.6, y: 3.5, w: 140, h: 120 },
+      { file: "lantern.png", x: 7.2, y: 5.2, w: 30, h: 54 },
+    ];
+  }
+  if (mapId === "map.hold") {
+    return [
+      { file: "lantern.png", x: 4, y: 3.2, w: 30, h: 54 },
+      { file: "lantern.png", x: 8, y: 3.1, w: 30, h: 54 },
+      { file: "lantern.png", x: 12, y: 3.2, w: 30, h: 54 },
+    ];
+  }
+  if (mapId === "map.highroad") return [{ file: "lantern.png", x: 10.4, y: 3.2, w: 32, h: 58 }];
+  if (mapId === "map.ridge") {
+    return [
+      { file: "pine.png", x: 3.4, y: 4.2, w: 80, h: 112 },
+      { file: "house.png", x: 4.2, y: 3.6, w: 110, h: 96 },
+      { file: "lantern.png", x: 8, y: 5.4, w: 30, h: 54 },
+    ];
+  }
+  if (mapId === "map.glass") {
+    return [{ file: "foes.png", x: 8.5, y: 2.8, w: 72, h: 96, col: 2, row: 0, cols: 3, rows: 3 }];
+  }
+  if (mapId === "map.cave") return [{ file: "lantern.png", x: 8.4, y: 4.4, w: 28, h: 50 }];
+  if (mapId === "map.berth") return [{ file: "skiff.png", x: 7.2, y: 4.6, w: 150, h: 90 }];
+  return [];
+}
+
+function paintLiving(
+  ctx: CanvasRenderingContext2D,
+  opts: {
+    mapId: string;
+    tick: number;
+    reduced: boolean;
+    sight: boolean;
+    pos: { x: number; y: number };
+    facing: string;
+    party: string[];
+    hotspots: Hotspot[];
+    appearance: string;
+    moving: boolean;
+    blocked: (x: number, y: number) => boolean;
+    width: number;
+    height: number;
+  },
+) {
+  const layers: { y: number; draw: () => void }[] = [];
+  for (const stamp of stampsFor(opts.mapId)) {
+    const foot = stamp.y * TILE;
+    const cols = stamp.cols ?? 1;
+    const rows = stamp.rows ?? 1;
+    layers.push({
+      y: foot,
+      draw: () => {
+        blit(ctx, stamp.file, stamp.col ?? 0, stamp.row ?? 0, cols, rows, stamp.x * TILE - stamp.w / 2, foot - stamp.h, stamp.w, stamp.h);
+      },
+    });
+  }
+  for (const spot of opts.hotspots) {
+    const actor = hotspotActor(spot.id);
+    if (!actor || opts.party.includes(actor)) continue;
+    const foot = spot.y * TILE + 40;
+    layers.push({
+      y: foot,
+      draw: () => paintPerson(ctx, actor, spot.x * TILE + 24, foot, "s", opts.tick, opts.reduced, 1),
+    });
+  }
+  const back = opts.facing === "n" ? [0, 1] : opts.facing === "s" ? [0, -1] : opts.facing === "e" ? [-1, 0] : [1, 0];
+  opts.party
+    .filter((id) => id !== "wanderer")
+    .forEach((id, i) => {
+      const tx = opts.pos.x + (back[0] ?? 0) * (i + 1);
+      const ty = opts.pos.y + (back[1] ?? 0);
+      if (tx < 0 || ty < 0 || tx >= opts.width || ty >= opts.height || opts.blocked(tx, ty)) return;
+      const foot = ty * TILE + 40;
+      layers.push({
+        y: foot,
+        draw: () => paintPerson(ctx, id, tx * TILE + 24, foot, opts.facing, opts.tick, opts.reduced, 1, "lantern", "idle", opts.moving),
+      });
+    });
+  const heroFoot = opts.pos.y * TILE + 40;
+  layers.push({
+    y: heroFoot + 0.1,
+    draw: () => {
+      if (opts.sight) {
+        ctx.save();
+        ctx.globalAlpha = 0.38;
+        paintPerson(ctx, "wanderer", opts.pos.x * TILE + 36, heroFoot - 4, opts.facing, opts.tick, true, 1.05, opts.appearance, "idle", false);
+        ctx.restore();
+      }
+      paintPerson(ctx, "wanderer", opts.pos.x * TILE + 24, heroFoot, opts.facing, opts.tick, opts.reduced, 1.05, opts.appearance, "idle", opts.moving);
+    },
+  });
+  layers.sort((a, b) => a.y - b.y);
+  for (const layer of layers) layer.draw();
+  if (opts.mapId === "map.vale") bunting(ctx, 5, 6, 8, opts.tick, opts.reduced);
 }
 
 function paintStars(ctx: CanvasRenderingContext2D, w: number, h: number, mapId: string, tick: number, reduced: boolean) {
@@ -268,25 +492,30 @@ function paintStars(ctx: CanvasRenderingContext2D, w: number, h: number, mapId: 
   ctx.globalAlpha = 1;
 }
 
-function paintFloor(ctx: CanvasRenderingContext2D, look: RegionLook, mapId: string, x: number, y: number, w: number, h: number) {
+function paintFloor(
+  ctx: CanvasRenderingContext2D,
+  look: RegionLook,
+  mapId: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tick = 0,
+  reduced = false,
+) {
+  const path = isPath(mapId, x, y, w, h);
+  const kind = groundKind(mapId, x, y, path, tick, reduced);
+  if (blit(ctx, "tiles.png", kind % 4, Math.floor(kind / 4), 4, 4, x * TILE, y * TILE, TILE, TILE)) return;
   const alt = (x + y) % 2 === 0;
   const speck = (x * 7 + y * 13) % 5;
   ctx.fillStyle = alt ? look.ground[0] : look.ground[1];
   ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
-  if (isPath(mapId, x, y, w, h)) {
+  if (path) {
     ctx.fillStyle = look.path;
     ctx.fillRect(x * TILE + 6, y * TILE + 6, TILE - 12, TILE - 12);
   }
   ctx.fillStyle = "rgba(0,0,0,0.18)";
   ctx.fillRect(x * TILE + 4 + speck, y * TILE + 8 + speck * 2, 3, 2);
-  if (mapId === "map.reach" || mapId === "map.woods") {
-    ctx.fillStyle = "rgba(125,154,98,0.35)";
-    ctx.fillRect(x * TILE + 10, y * TILE + 30, 6, 3);
-  }
-  if (mapId === "map.ridge" || mapId === "map.highroad") {
-    ctx.strokeStyle = "rgba(255,255,255,0.05)";
-    ctx.strokeRect(x * TILE + 2.5, y * TILE + 2.5, TILE - 5, TILE - 5);
-  }
 }
 
 function isPath(mapId: string, x: number, y: number, w: number, h: number): boolean {
@@ -297,7 +526,14 @@ function isPath(mapId: string, x: number, y: number, w: number, h: number): bool
   return x === Math.floor(w / 2);
 }
 
-function paintWall(ctx: CanvasRenderingContext2D, look: RegionLook, x: number, y: number) {
+function paintWall(ctx: CanvasRenderingContext2D, look: RegionLook, mapId: string, x: number, y: number) {
+  const roof = mapId === "map.vale" && x >= 3 && x <= 5 && y >= 3 && y <= 5;
+  const kind = roof ? 10 : mapId === "map.woods" || mapId === "map.reach" ? 3 : 7;
+  if (blit(ctx, "tiles.png", kind % 4, Math.floor(kind / 4), 4, 4, x * TILE, y * TILE, TILE, TILE)) {
+    ctx.fillStyle = "rgba(0,0,0,0.38)";
+    ctx.fillRect(x * TILE, y * TILE + TILE * 0.62, TILE, TILE * 0.38);
+    return;
+  }
   ctx.fillStyle = look.wall;
   ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
   ctx.fillStyle = look.wallCap;
@@ -309,6 +545,13 @@ function paintWall(ctx: CanvasRenderingContext2D, look: RegionLook, x: number, y
 function paintWater(ctx: CanvasRenderingContext2D, mapId: string, w: number, h: number, tick: number, reduced: boolean) {
   const band = mapId === "map.lowbell" ? 8 : mapId === "map.ferry" ? 9 : mapId === "map.hold" ? 6 : -1;
   if (band < 0) return;
+  if (imageReady("tiles.png")) {
+    if (mapId === "map.ferry" && !reduced) {
+      ctx.fillStyle = "rgba(210,214,216,0.12)";
+      ctx.fillRect(0, TILE, w * TILE, 2.4 * TILE);
+    }
+    return;
+  }
   const y0 = band * TILE;
   ctx.fillStyle = regionLook(mapId).water ?? "#102830";
   ctx.globalAlpha = mapId === "map.hold" ? 0.72 : 0.88;
@@ -562,12 +805,31 @@ function paintAmbience(ctx: CanvasRenderingContext2D, mapId: string, w: number, 
       ctx.stroke();
     }
   }
-  if (mapId === "map.vale") {
-    ctx.fillStyle = "rgba(232,177,90,0.35)";
-    for (let i = 0; i < 8; i++) {
+  if (mapId === "map.vale" && !reduced) {
+    ctx.fillStyle = "rgba(232,177,90,0.28)";
+    for (let i = 0; i < 10; i++) {
       const x = (i * 90 + tick * 2) % (w * TILE);
-      const y = 40 + ((i * 37 + tick) % (h * TILE - 60));
+      const y = 30 + ((i * 37 + tick) % Math.max(40, h * TILE - 50));
+      ctx.globalAlpha = 0.35 + 0.4 * Math.sin(tick / 5 + i);
       ctx.fillRect(x, y, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+  if ((mapId === "map.woods" || mapId === "map.reach") && !reduced) {
+    ctx.fillStyle = "rgba(125,154,98,0.45)";
+    for (let i = 0; i < 6; i++) {
+      const x = (i * 70 + tick) % (w * TILE);
+      const y = ((i * 50 + tick * 1.4) % (h * TILE));
+      ctx.fillRect(x, y, 3, 2);
+    }
+  }
+  if (mapId === "map.smith" && !reduced) {
+    ctx.fillStyle = "rgba(180,180,180,0.35)";
+    for (let i = 0; i < 4; i++) {
+      const rise = (tick * 2 + i * 14) % 48;
+      ctx.beginPath();
+      ctx.arc(3 * TILE + 8 + i * 6, 2 * TILE - rise, 3 + i, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 }
@@ -640,8 +902,33 @@ export function paintPerson(
   tick: number,
   reduced: boolean,
   scale = 1,
+  appearance = "lantern",
+  pose: Pose = "idle",
+  moving = false,
 ) {
-  const bob = reduced ? 0 : Math.sin(tick / 5 + cx) * 1.2;
+  const bob = reduced || pose === "hurt" ? 0 : Math.sin(tick / 5 + cx) * 1.4;
+  const frame = frameFor(id, facing, tick, reduced, pose, moving, appearance);
+  const h = 58 * scale * (pose === "victory" && !reduced ? 1 + Math.sin(tick / 4) * 0.03 : 1);
+  const w = 44 * scale;
+  if (frame && imageReady(frame.file)) {
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 2, 10 * scale, 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    blit(ctx, frame.file, frame.col, frame.row, frame.cols, frame.rows, cx - w / 2, cy - h + bob, w, h, frame.filter);
+    if (pose === "cast") {
+      ctx.save();
+      ctx.strokeStyle = "#4ec8c0";
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.arc(cx, cy - h * 0.55, 16 * scale, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    return;
+  }
   const who = id.toLowerCase();
   ctx.save();
   ctx.translate(cx, cy + bob);
@@ -790,18 +1077,20 @@ function paintStall(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.fillRect(x * TILE + 16, y * TILE + 8, 6, 6);
 }
 
-function bunting(ctx: CanvasRenderingContext2D, x: number, y: number, count: number) {
+function bunting(ctx: CanvasRenderingContext2D, x: number, y: number, count: number, tick = 0, reduced = false) {
+  const sway = reduced ? 0 : Math.sin(tick / 8) * 3;
   ctx.strokeStyle = "#e8b15a";
   ctx.beginPath();
   ctx.moveTo(x * TILE, y * TILE);
-  ctx.lineTo((x + count) * TILE, y * TILE + 10);
+  ctx.lineTo((x + count) * TILE, y * TILE + 10 + sway);
   ctx.stroke();
   for (let i = 0; i < count; i++) {
     ctx.fillStyle = i % 2 ? "#4ec8c0" : "#e06a5c";
+    const ox = reduced ? 0 : Math.sin(tick / 7 + i) * 2;
     ctx.beginPath();
-    ctx.moveTo(x * TILE + i * TILE, y * TILE + i);
-    ctx.lineTo(x * TILE + i * TILE + 8, y * TILE + 12);
-    ctx.lineTo(x * TILE + i * TILE - 8, y * TILE + 12);
+    ctx.moveTo(x * TILE + i * TILE + ox, y * TILE + i);
+    ctx.lineTo(x * TILE + i * TILE + 8 + ox, y * TILE + 12);
+    ctx.lineTo(x * TILE + i * TILE - 8 + ox, y * TILE + 12);
     ctx.fill();
   }
 }
@@ -861,7 +1150,8 @@ type EncounterLike = {
   activeActorId: string | null;
   combatants: CombatantLike[];
   intents: { actorId: string; abilityId: string }[];
-  events: { kind: string; targetId?: string; abilityId?: string }[];
+  events: { kind: string; targetId?: string; abilityId?: string; actorId?: string; tick?: number }[];
+  tick?: number;
 };
 
 export function paintArena(
@@ -870,6 +1160,7 @@ export function paintArena(
   hero: { x: number; z: number },
   reduced: boolean,
   now = 0,
+  appearance = "lantern",
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -928,10 +1219,12 @@ export function paintArena(
     const pos = c.side === "party" && asc && c.id === enc.activeActorId ? hero : c.position;
     const z = c.side === "party" && !asc ? 1.6 : pos.z;
     const p = projectOf(pos.x, z);
+    const pose = battlePose(enc, c, reduced, tick);
+    const lunge = pose === "attack" ? (c.side === "party" ? 16 : -16) : pose === "hurt" ? (c.side === "party" ? -10 : 10) : 0;
     if (c.side === "party") {
-      paintPerson(ctx, c.id, p.px, p.py, "n", tick, reduced, 1.35);
+      paintPerson(ctx, c.id, p.px + lunge, p.py, "s", tick, reduced, 1.45, c.id === "wanderer" ? appearance : "lantern", pose, false);
     } else {
-      paintFoe(ctx, c, p.px, p.py, tick, reduced);
+      paintFoe(ctx, c, p.px + lunge, p.py, tick, reduced, pose);
     }
     const intent = enc.intents.find((i) => i.actorId === c.id);
     if (intent) {
@@ -972,6 +1265,21 @@ export function paintArena(
     }
     ctx.textAlign = "left";
   }
+  const foesUp = enc.combatants.some((c) => c.side === "enemy" && c.alive);
+  const partyUp = enc.combatants.some((c) => c.side === "party" && c.alive);
+  if (!foesUp && partyUp) {
+    ctx.save();
+    ctx.font = "20px Fraunces, serif";
+    ctx.textAlign = "center";
+    const banner = "The light holds";
+    const tw = ctx.measureText(banner).width;
+    ctx.fillStyle = "rgba(12,8,14,0.82)";
+    roundRect(ctx, w / 2 - tw / 2 - 16, 18, tw + 32, 32, 6);
+    ctx.fill();
+    ctx.fillStyle = "#f3e6c8";
+    ctx.fillText(banner, w / 2, 40);
+    ctx.restore();
+  }
 }
 
 function project(w: number, h: number, x: number, z: number) {
@@ -988,8 +1296,44 @@ function battleBackdrop(id: string, asc: boolean): { top: string; bottom: string
   return { top: "#2a1c28", bottom: "#140e14", ground: "rgba(74,52,40,0.5)" };
 }
 
-function paintFoe(ctx: CanvasRenderingContext2D, c: CombatantLike, x: number, y: number, tick: number, reduced: boolean) {
-  const bob = reduced ? 0 : Math.sin(tick / 6) * 2;
+function battlePose(enc: EncounterLike, c: CombatantLike, reduced: boolean, tick: number): Pose {
+  const foesUp = enc.combatants.some((f) => f.side === "enemy" && f.alive);
+  if (!foesUp && c.side === "party" && c.alive) return reduced ? "idle" : "victory";
+  const last = enc.events[enc.events.length - 1];
+  if (!last) return "idle";
+  const fresh = last.tick == null || enc.tick == null || enc.tick - last.tick <= 1;
+  if (!fresh) return "idle";
+  if (last.targetId === c.id && (last.kind === "damage" || last.kind === "down" || last.kind === "shield")) return "hurt";
+  if (last.actorId === c.id && (last.kind === "damage" || last.kind === "miss" || last.kind === "heal" || last.kind === "shield")) {
+    const spell = (last.abilityId ?? "").startsWith("spell.") || last.kind === "heal";
+    return spell ? "cast" : "attack";
+  }
+  void tick;
+  return "idle";
+}
+
+const foeBorn = new Map<string, number>();
+
+function paintFoe(ctx: CanvasRenderingContext2D, c: CombatantLike, x: number, y: number, tick: number, reduced: boolean, pose: Pose = "idle") {
+  const spec = foeFrame(c.jobId);
+  if (!foeBorn.has(c.id)) foeBorn.set(c.id, tick);
+  const age = tick - (foeBorn.get(c.id) ?? tick);
+  const intro = reduced || !spec.big ? 1 : Math.min(1, 0.4 + Math.max(0, age) / 5);
+  const bob = reduced ? 0 : Math.sin(tick / 6 + x) * 2;
+  const h = (spec.big ? 108 : 72) * intro;
+  const w = h * 0.72;
+  if (blit(ctx, "foes.png", spec.col, spec.row, 3, 3, x - w / 2, y - h + bob, w, h, pose === "hurt" ? "brightness(1.8)" : "none")) {
+    if (pose === "attack" || pose === "cast") {
+      ctx.save();
+      ctx.strokeStyle = pose === "cast" ? "#8b6bb8" : "#f3e6c8";
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(x, y - h * 0.45, 14 + (reduced ? 0 : (tick % 5)), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    return;
+  }
   ctx.save();
   ctx.translate(x, y + bob);
   const job = c.jobId;

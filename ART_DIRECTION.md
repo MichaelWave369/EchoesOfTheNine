@@ -35,12 +35,19 @@ Open sky stays a locked mark. Do not paint it as a place you can walk.
 
 ## How to extend it
 
-Presentation lives in [src/game/ui/art.ts](src/game/ui/art.ts). Add a `RegionLook` and, if the place needs a silhouette, a branch in `paintLandmarks`. Do not move collision, exits, or rewards into that file. Sprites are drawn figures, not image files, so GitHub Pages does not need an asset pipeline.
+Presentation lives in [src/game/ui/art.ts](src/game/ui/art.ts) and [src/game/ui/sprites.ts](src/game/ui/sprites.ts). Add a `RegionLook` and, if the place needs a silhouette, a stamp in `stampsFor` or a branch in `paintLandmarks`. Do not move collision, exits, or rewards into those files.
+
+Characters and tiles are original frames in `public/game/art`. See [ASSETS.md](ASSETS.md). A missing sheet falls back to the drawn figure so a slow load does not blank the road. `imageSmoothingEnabled` stays off while a frame is copied, so the pixels stay crisp.
+
+Walk sheets are four rows: toward you, west, east, away. Columns are stand, left foot, stand, right foot. Battle poses reuse those columns: attack, hurt, cast, and a small victory bob. They read the last combat event. They do not roll damage.
+
+The wanderer's cloak can be lantern, festival, river, or ridge. That is a dye. It is not a job. Old chronicles without the field become lantern. Schema stays 4.
 
 Labels on the map appear when you stand next to a thing, point at it, or it is a way out. Do not put a permanent caption on every tile.
 
-Temporal Sight is a teal wash, a slow scan, and a small clock. It shows. It does not solve.
+Temporal Sight is a teal wash, a ghost a step off the wanderer, a slow scan, and a step count. It shows. It does not solve. Reduced motion holds the wash still and skips the ghost bob.
 
-The First Stay is a route between two pads. Draw the hull. Do not draw an open skybox.
+The First Stay is a route between two pads. The hull is a drawn skiff. Departure waits a short beat, then the chronicle still calls `flyTo`. Reduced motion casts off at once. Do not draw an open skybox.
 
-Future chapters should reuse the same palette, the same figure language, and the same rule: the picture may glow, and the chronicle still decides what happened.
+Future chapters should reuse the same palette, the same frame language, and the same rule: the picture may glow, and the chronicle still decides what happened.
+

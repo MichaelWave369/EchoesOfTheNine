@@ -22,7 +22,7 @@ Read the repo root `GAMEPLAY_STATUS.md` before claiming a feature works. The mas
 ## Checks
 
 ```bash
-node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/ui/art.test.ts
+node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/ui/art.test.ts src/game/ui/sprites.test.ts
 npm run typecheck
 ```
 
