@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* The Pages Vite root is pages/, but the canonical React UI lives in src/game/.
+   Explicitly scan its Tailwind classes so the title logo, backdrop, menus,
+   exploration HUD and battle controls do not render at unstyled SVG sizes. */
+@source "./game";
+
 @theme {
   --color-ink: #140e18;
   --color-ink-2: #241828;
