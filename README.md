@@ -1,6 +1,6 @@
 # Echoes of the Nine
 
-A browser science-fantasy JRPG from Φ369 Labs. Playable now: **The Crystal Awakening** and the road beyond it, **Hollowwood Reach**. The late chronicle is not on the title screen, and it should stay that way.
+A browser science-fantasy JRPG from Φ369 Labs. Playable now: **The Crystal Awakening**, **Hollowwood Reach**, and the optional **Vale expanses** (companion choices, two spell evolutions, Lowbell Landing). The late chronicle is not on the title screen, and it should stay that way.
 
 Public pitch: an old-school fantasy RPG you can step inside. Command a classic battle, or move inside the same fight.
 
@@ -16,7 +16,15 @@ Keyboard and buttons complete every mandatory beat. A headset is optional and is
 6. Face the Crystal Warden. **Offer mercy** after Stoneguard and Tide Whisper, or fight it down. Both are kept.
 7. North of the prism, Hollowwood opens. Talk to Nessa. Give the moss wind, then flame, then stone. Sight (a button, three charges, refilled at the inn) shows what the moss is hiding.
 8. In the barrow, the Thorn Cantor can be ended, or — if you spared the Warden — asked to stop once the song is under half.
-9. Settings holds mute, text size, captions, reduced motion, contrast, export, import, and reset.
+9. Optional, and not required to finish either chapter:
+   - Parish shelf, with Mira: write the tenth strike, or leave the page blank. A written strike and a sleeping Warden can teach Memory Tide after Tide Whisper has been spoken once.
+   - Pell, on the Glasspine path with Kael: turn them back, or let them finish the walk.
+   - Nessa's mother's stone: teach the old spring rhyme, or let the new verse stand.
+   - Cast Ember three times. The river kiln at Lowbell (flame, stone, flame) or a scorched vein after a fallen Warden teaches Solar Flare. Neither Warden ending closes every road.
+   - After Nessa joins, the river stair leads to Lowbell. The split bell wants nine-and-nine from the walk and a tenth strike from inside the step. A button folds the view. The reward is a clapper shard, and Memory Tide if Tide has been spoken.
+   - Temporal Sight at Lowbell records an unfinished hour. It does not explain it. The atlas travels only to places you have already walked. The far ferry and the high road stay shut.
+   - Jobs and arts, from the sidebar, lists the kits that exist, with costs. You do not change jobs except the Elementalist unlock.
+10. Settings holds mute, text size, captions, reduced motion, contrast, export, import, and reset.
 
 **Move:** WASD or arrows, or the on-screen pad. A gamepad d-pad steps; the south button acts. **Act:** E, Enter, or Act. **Battle:** Attack, Magic, Defend, Sidestep, Item. **Ascension** (after the conduits): WASD inside the ring, F or Cast, Q to dodge. Standing close hits harder. **Switch** spends the turn and keeps HP, intent, and the dice. Tab switches on your turn. **Sight:** the sidebar button, after the conduits.
 
@@ -28,11 +36,11 @@ Saves from the first chapter still open. They gain the new fields without losing
 npm ci
 npm run dev        # http://127.0.0.1:8080 when run locally
 npm run typecheck
-node --experimental-strip-types --test src/game/core/combat.test.ts
+node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts
 npm run build      # skips the database step when DATABASE_URL is unset
 ```
 
-`npm test` also runs the app platform checks. The game contract is the combat test file above.
+`npm test` also runs the app platform checks. The game contract is the two test files above.
 
 GitHub Actions (`.github/workflows/ci.yml`) installs, typechecks, runs those tests, and builds. No database URL is required.
 

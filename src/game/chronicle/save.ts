@@ -120,7 +120,23 @@ function journalLine(id: string): string {
     "flag.sight_cache": "Sight: west of the hymn stone, the moss is lying.",
     "flag.sight_barrow": "Sight: the left root was not always a root.",
     "flag.sight_shrine": "Sight: the floor date will not finish forming.",
+    "flag.sight_lowbell": "Sight: a second bell hangs on an empty rope. The hour feels rehearsed, and unfinished.",
     "flag.cleared.enc.thicket": "The briars remember losing.",
+    "flag.mira_record": "Mira wrote the tenth strike in the margin.",
+    "flag.mira_blank": "Mira left the parish page blank, and will remember it anyway.",
+    "flag.kael_law": "Pell was turned back. The gate held.",
+    "flag.kael_people": "Pell finished the walk. The oath bent toward a person.",
+    "flag.nessa_spring": "Nessa taught the moss her mother's spring. It did not thank her.",
+    "flag.nessa_verse": "The Reach's new verse stands. Spring can stay with Nessa's mother.",
+    "flag.braziers": "The river kiln took flame, stone, flame.",
+    "flag.bell_face": "The bell's face says nine and nine. That is half.",
+    "flag.bell_ghost": "A tenth strike is still in the air over Lowbell.",
+    "flag.bell_solved": "The split bell is recorded. It is not explained.",
+    "flag.bell_lesson": "The bell is holding a lesson until Tide Whisper has been spoken.",
+    "flag.got_bell_shard": "A warm shard of the clapper came away.",
+    "flag.solar_kiln": "The kiln asked Ember to become noon. Solar Flare answered.",
+    "flag.solar_scorch": "A fallen guardian left a vein hot enough for Solar Flare.",
+    "flag.memory_from_mira": "Mira taught Memory Tide from a written strike and a sleeping guardian.",
   };
   return lines[id] ?? `Noted: ${id.replace("flag.", "").replaceAll("_", " ")}`;
 }
@@ -133,6 +149,11 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.warden") return flag(save, "flag.chapter_complete");
     if (q.id === "quest.hearth") return flag(save, "flag.rested") || flag(save, "flag.bought_gear");
     if (q.id === "quest.reach") return flag(save, "flag.nessa_joined") && flag(save, "flag.moss_hymn") && (flag(save, "flag.cantor_spared") || flag(save, "flag.cantor_defeated"));
+    if (q.id === "quest.mira") return flag(save, "flag.mira_record") || flag(save, "flag.mira_blank");
+    if (q.id === "quest.kael") return flag(save, "flag.kael_law") || flag(save, "flag.kael_people");
+    if (q.id === "quest.nessa") return flag(save, "flag.nessa_spring") || flag(save, "flag.nessa_verse");
+    if (q.id === "quest.lowbell") return flag(save, "flag.bell_solved");
+    if (q.id === "quest.evolutions") return (save.knownSpells.wanderer?.includes("spell.solar") ?? false) && (save.knownSpells.mira?.includes("spell.memory_tide") ?? false);
     return false;
   };
   const visible = (q: QuestNode) => {
@@ -142,6 +163,11 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.prism") return flag(save, "flag.woods_cleared");
     if (q.id === "quest.warden") return flag(save, "flag.conduits_aligned") || flag(save, "flag.chapter_complete");
     if (q.id === "quest.reach") return flag(save, "flag.chapter_complete");
+    if (q.id === "quest.mira") return flag(save, "flag.mira_joined");
+    if (q.id === "quest.kael") return flag(save, "flag.kael_joined");
+    if (q.id === "quest.nessa") return flag(save, "flag.nessa_joined");
+    if (q.id === "quest.lowbell") return flag(save, "flag.nessa_joined");
+    if (q.id === "quest.evolutions") return flag(save, "flag.conduits_aligned") || flag(save, "flag.chapter_complete");
     return false;
   };
   for (const q of save.quests) {

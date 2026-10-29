@@ -9,6 +9,7 @@ export interface GearDef {
   attack?: number;
   defense?: number;
   speed?: number;
+  mp?: number;
   price: number;
 }
 
@@ -70,6 +71,32 @@ export const GEAR: Record<string, GearDef> = {
     speed: 1,
     price: 0,
   },
+  "accessory.margin_clasp": {
+    id: "accessory.margin_clasp",
+    name: "Margin Clasp",
+    blurb: "A brass clip from the parish book. It keeps a written thing from being sanded down.",
+    slot: "accessory",
+    defense: 1,
+    mp: 4,
+    price: 0,
+  },
+  "accessory.path_cord": {
+    id: "accessory.path_cord",
+    name: "Path Cord",
+    blurb: "Pell's knot. The oath bent toward a person, and the cord remembers the bend.",
+    slot: "accessory",
+    speed: 2,
+    price: 0,
+  },
+  "accessory.bell_shard": {
+    id: "accessory.bell_shard",
+    name: "Clapper Shard",
+    blurb: "Warm bronze from a bell that could not agree with itself. It keeps pace, not time.",
+    slot: "accessory",
+    defense: 2,
+    speed: 1,
+    price: 0,
+  },
 };
 
 export const SHOP_IDS = ["weapon.glass_needle", "weapon.oath_blade", "armor.lantern_coat", "armor.pine_mail", "item.lantern_salve", "item.dew_vial"] as const;
@@ -113,14 +140,32 @@ export function withGear(base: CombatantState, load?: EquipLoadout): CombatantSt
     next.attack += g.attack ?? 0;
     next.defense += g.defense ?? 0;
     next.speed += g.speed ?? 0;
+    next.maxMp += g.mp ?? 0;
+    next.mp += g.mp ?? 0;
   }
   return next;
+}
+
+/** Person-specific gear. Applied to the battle copy only, never baked into the roster. */
+export function applySynergy(save: SaveGame, id: string, attack: number, speed: number, maxMp: number, mp: number, jobId: string) {
+  const load = save.equipment?.[id];
+  let a = attack;
+  let s = speed;
+  if (id === "wanderer" && jobId === "job.elementalist" && load?.weapon === "weapon.glass_needle") a += 2;
+  if (id === "kael" && load?.weapon === "weapon.oath_blade") a += 2;
+  if (id === "nessa" && load?.accessory === "accessory.reed_loop") s += 1;
+  return { attack: a, speed: s, maxMp, mp: Math.min(mp, maxMp) };
 }
 
 export function prepareForBattle(save: SaveGame, id: string): CombatantState {
   const raw = save.roster[id];
   if (!raw) throw new Error(`No such ally ${id}`);
   const geared = withGear(raw, save.equipment[id]);
+  const tuned = applySynergy(save, id, geared.attack, geared.speed, geared.maxMp, geared.mp, geared.jobId);
+  geared.attack = tuned.attack;
+  geared.speed = tuned.speed;
+  geared.maxMp = tuned.maxMp;
+  geared.mp = tuned.mp;
   const ranks: Record<string, number> = {};
   const known = new Set([...(save.knownSpells[id] ?? [])]);
   for (const [abilityId, casts] of Object.entries(save.spellMastery)) {
@@ -202,6 +247,16 @@ export function useSight(save: SaveGame): { ok: true; save: SaveGame; text: stri
   else if (next.mapId === "map.reach") note("flag.sight_cache", "West of the hymn stone the moss is lying. Something small is underneath.");
   else if (next.mapId === "map.barrow") note("flag.sight_barrow", "The left root was not always a root. A cache waits behind it.");
   else if (next.mapId === "map.shrine") note("flag.sight_shrine", "The floor inscription flickers. Your name stays. The date does not finish forming.");
+  else if (next.mapId === "map.lowbell") {
+    note(
+      "flag.sight_lowbell",
+      "The clapper's shadow finishes a strike the bronze never starts. For a blink a second bell hangs on an empty rope. The hour feels rehearsed, and unfinished.",
+    );
+    if (!next.choiceLog.some((c) => c.id === "sight.lowbell")) {
+      next.choiceLog.push({ id: "sight.lowbell", value: "unfinished-hour" });
+    }
+    if (!next.discoveries.includes("disc.unfinished_hour")) next.discoveries.push("disc.unfinished_hour");
+  }
   return { ok: true, save: next, text };
 }
 

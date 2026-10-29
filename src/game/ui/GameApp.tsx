@@ -4,7 +4,23 @@ import { CHARACTERS, ENEMY_TEMPLATES, JOBS } from "../content/characters.ts";
 import { ability, ABILITIES } from "../content/abilities.ts";
 import { DIALOGUE, ITEMS, MAPS, MOSS_ANSWER, RUNE_ANSWER, type MapHotspot } from "../content/world.ts";
 import { buyItem, equipItem, GEAR, learnElementalist, levelForXp, prepareForBattle, restParty, SHOP_IDS, useSight, withGear } from "../content/gear.ts";
-import { companionAside, reachClose, wardenMemory } from "../content/memory.ts";
+import { companionAside, choiceCoda, reachClose, wardenMemory } from "../content/memory.ts";
+import {
+  ATLAS,
+  ATLAS_ROADS,
+  BRAZIER_ANSWER,
+  canTravel,
+  chooseCompanion,
+  EXPANSE_COPY,
+  JOB_KITS,
+  learnSolarFrom,
+  markPlace,
+  noteBell,
+  placeState,
+  talkIvo,
+  tryLearnMemoryFromMira,
+  windupAdvice,
+} from "../content/expanses.ts";
 import {
   applyReward,
   bumpBond,
@@ -28,11 +44,12 @@ type Toast = { id: number; text: string };
 
 const TILE = 48;
 
-function musicFor(mapId: string): "vale" | "woods" | "shrine" | "reach" | "barrow" | "inn" | "battle" | "title" {
+function musicFor(mapId: string): "vale" | "woods" | "shrine" | "reach" | "barrow" | "inn" | "lowbell" | "battle" | "title" {
   if (mapId === "map.shrine") return "shrine";
   if (mapId === "map.woods") return "woods";
   if (mapId === "map.reach") return "reach";
   if (mapId === "map.barrow") return "barrow";
+  if (mapId === "map.lowbell") return "lowbell";
   if (mapId === "map.inn" || mapId === "map.smith") return "inn";
   return "vale";
 }
@@ -46,6 +63,8 @@ const SPEAKER_HUE: Record<string, number> = {
   Salla: 330,
   Bram: 16,
   "Elder Voss": 42,
+  Ivo: 18,
+  Pell: 12,
   You: 38,
 };
 
@@ -451,10 +470,11 @@ function Explore({
     nodes: { id: string; speaker: string; text: string; choices?: { label: string; next: string; flag?: string }[]; next?: string; grant?: string }[];
     index: string;
   } | null>(null);
-  const [panel, setPanel] = useState<"none" | "journal" | "party" | "bag" | "help" | "shop" | "rest">("none");
+  const [panel, setPanel] = useState<"none" | "journal" | "party" | "bag" | "help" | "shop" | "rest" | "atlas" | "arts">("none");
   const [runePick, setRunePick] = useState<string[]>(save.runeOrder);
   const [mossPick, setMossPick] = useState<string[]>([]);
-  const [puzzle, setPuzzle] = useState<null | "runes" | "conduits" | "moss">(null);
+  const [kilnPick, setKilnPick] = useState<string[]>([]);
+  const [puzzle, setPuzzle] = useState<null | "runes" | "conduits" | "moss" | "bell" | "kiln">(null);
   const [conduit, setConduit] = useState(0);
   const moved = useRef(false);
   const padPrev = useRef<boolean[]>([]);
@@ -463,6 +483,11 @@ function Explore({
     setPos({ x: spawn.x, y: spawn.y });
     setFacing(spawn.facing);
   }, [save.mapId, save.spawnId]);
+
+  useEffect(() => {
+    const marked = markPlace(save);
+    if (marked !== save) commit(marked);
+  }, [save.mapId]);
 
   const objective = useMemo(() => currentObjective(save), [save]);
 
@@ -524,17 +549,115 @@ function Explore({
         push("A warm pebble comes loose under the clock. It keeps pace with you.");
         return;
       }
-      const key =
-        spot.id === "npc.voss"
-          ? flag(save, "flag.warden_spared")
-            ? "npc.voss.spared"
-            : flag(save, "flag.warden_defeated")
-              ? "npc.voss.defeated"
-              : "npc.voss"
-          : spot.id;
-      const nodes = DIALOGUE[key];
-      if (!nodes) return;
-      setDialogue({ nodes, index: nodes[0]!.id });
+      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch"].includes(spot.id);
+      if (!special) {
+        const key =
+          spot.id === "npc.voss"
+            ? flag(save, "flag.warden_spared")
+              ? "npc.voss.spared"
+              : flag(save, "flag.warden_defeated")
+                ? "npc.voss.defeated"
+                : "npc.voss"
+            : spot.id;
+        const nodes = DIALOGUE[key];
+        if (!nodes) return;
+        setDialogue({ nodes, index: nodes[0]!.id });
+        return;
+      }
+    }
+    if (spot.id === "npc.shelf") {
+      if (!save.party.includes("mira")) {
+        push("The parish shelf is Mira's. She is not here to argue with a blank page.");
+        return;
+      }
+      if (!save.choiceLog.some((c) => c.id === "choice.mira")) {
+        setDialogue({
+          nodes: [
+            {
+              id: "shelf.ask",
+              speaker: "Mira",
+              text: EXPANSE_COPY.shelfAsk,
+              choices: [
+                { label: "Write the strike as it happened.", next: "shelf.done", flag: "choice.mira.record" },
+                { label: "Leave the page blank.", next: "shelf.done", flag: "choice.mira.blank" },
+              ],
+            },
+          ],
+          index: "shelf.ask",
+        });
+        return;
+      }
+      const learned = tryLearnMemoryFromMira(save);
+      if (learned.ok) commit(learned.save);
+      setDialogue({
+        nodes: [{ id: "shelf.now", speaker: "Mira", text: learned.ok ? learned.text : learned.reason }],
+        index: "shelf.now",
+      });
+      return;
+    }
+    if (spot.id === "npc.pell") {
+      if (!save.party.includes("kael")) {
+        push("Pell watches the path and will not talk until the oathkeeper is here.");
+        return;
+      }
+      if (save.choiceLog.some((c) => c.id === "choice.kael")) {
+        push(flag(save, "flag.kael_law") ? "Pell is gone, back toward the square." : "Pell finished the walk. The path is only a path again.");
+        return;
+      }
+      setDialogue({
+        nodes: [
+          {
+            id: "pell.ask",
+            speaker: "Pell",
+            text: EXPANSE_COPY.pellAsk,
+            choices: [
+              { label: "Turn Pell back. The oath is a gate.", next: "pell.done", flag: "choice.kael.law" },
+              { label: "Let Pell finish the walk.", next: "pell.done", flag: "choice.kael.people" },
+            ],
+          },
+        ],
+        index: "pell.ask",
+      });
+      return;
+    }
+    if (spot.id === "sign.mother") {
+      if (!save.party.includes("nessa")) {
+        push("A stone with a worn rhyme. It is waiting for someone who knew the speaker.");
+        return;
+      }
+      if (save.choiceLog.some((c) => c.id === "choice.nessa")) {
+        push(flag(save, "flag.nessa_spring") ? "The old rhyme is spoken. The moss is unconvinced." : "The new verse stands. The stone does not argue.");
+        return;
+      }
+      setDialogue({
+        nodes: [
+          {
+            id: "mother.ask",
+            speaker: "Nessa",
+            text: EXPANSE_COPY.motherAsk,
+            choices: [
+              { label: "Teach it the old spring rhyme.", next: "mother.done", flag: "choice.nessa.spring" },
+              { label: "Let the new verse stand.", next: "mother.done", flag: "choice.nessa.verse" },
+            ],
+          },
+        ],
+        index: "mother.ask",
+      });
+      return;
+    }
+    if (spot.id === "npc.ivo") {
+      const scene = talkIvo(save);
+      if (scene.save !== save) commit(scene.save);
+      setDialogue({ nodes: [{ id: "ivo.1", speaker: "Ivo", text: scene.text }], index: "ivo.1" });
+      return;
+    }
+    if (spot.id === "sign.scorch") {
+      const learned = learnSolarFrom(save, "scorch");
+      if (learned.ok) commit(learned.save);
+      setDialogue({
+        nodes: [{ id: "scorch.1", speaker: "Scorched vein", text: learned.ok ? learned.text : learned.reason }],
+        index: "scorch.1",
+      });
       return;
     }
     if (spot.kind === "shop") {
@@ -553,6 +676,7 @@ function Explore({
           "flag.woods_cleared": "The shrine path is still a smear of light. Clear the flicker first.",
           "flag.chapter_complete": "The trail beyond the prism is still just weather. The Warden's question comes first.",
           "flag.moss_hymn": "The barrow mouth is shut. The moss has not accepted a hymn.",
+          "flag.nessa_joined": "The river stair is Nessa's road. Walk with her before Lowbell.",
         };
         push(why[exit.requires] ?? "Not yet.");
         return;
@@ -675,6 +799,23 @@ function Explore({
       if (spot.id === "puzzle.moss") {
         setMossPick([]);
         setPuzzle("moss");
+        return;
+      }
+      if (spot.id === "puzzle.bell") {
+        setPuzzle("bell");
+        return;
+      }
+      if (spot.id === "puzzle.kiln") {
+        if (flag(save, "flag.braziers")) {
+          const learned = learnSolarFrom(save, "kiln");
+          if (learned.ok) {
+            commit(learned.save);
+            push(learned.text);
+          } else push(learned.reason);
+          return;
+        }
+        setKilnPick([]);
+        setPuzzle("kiln");
       }
     }
   }, [save, map, commit, onBattle, push]);
@@ -683,7 +824,7 @@ function Explore({
     const next = bumpBond(save, id);
     commit(next);
     const bond = next.bonds[id] ?? 1;
-    const text = companionAside(id, bond, wardenMemory(next));
+    const text = companionAside(id, bond, wardenMemory(next)) + choiceCoda(id, next.flags);
     setDialogue({ nodes: [{ id: `${id}.bond`, speaker: id === "mira" ? "Mira" : id === "kael" ? "Kael" : "Nessa", text }], index: `${id}.bond` });
   }
 
@@ -691,6 +832,30 @@ function Explore({
     if (!dialogue) return;
     let nextSave = save;
     const node = dialogue.nodes.find((n) => n.id === dialogue.index);
+    if (choice?.flag?.startsWith("choice.")) {
+      const [, who, value] = choice.flag.split(".");
+      if (who === "mira" || who === "kael" || who === "nessa") {
+        const chosen = chooseCompanion(save, who, value as "record" | "blank" | "law" | "people" | "spring" | "verse");
+        if (chosen) {
+          commit(chosen);
+          const said =
+            value === "record"
+              ? EXPANSE_COPY.shelfRecord
+              : value === "blank"
+                ? EXPANSE_COPY.shelfBlank
+                : value === "law"
+                  ? EXPANSE_COPY.pellLaw
+                  : value === "people"
+                    ? EXPANSE_COPY.pellPeople
+                    : value === "spring"
+                      ? EXPANSE_COPY.motherSpring
+                      : EXPANSE_COPY.motherVerse;
+          push(said);
+        }
+      }
+      setDialogue(null);
+      return;
+    }
     if (choice?.flag) nextSave = setFlag(nextSave, choice.flag);
     const grant = node?.grant;
     if (!choice && grant) nextSave = setFlag(nextSave, grant);
@@ -740,6 +905,43 @@ function Explore({
     setPuzzle(null);
     push("The hymn takes. Somewhere ahead, a mouth in the hill decides to be a door.");
     playSfx("spell");
+  }
+
+  function submitKiln() {
+    const ok = kilnPick.length === 3 && kilnPick.every((r, i) => r === BRAZIER_ANSWER[i]);
+    if (!ok) {
+      push("The kiln stays dark. Flame, then stone, then flame again.");
+      setKilnPick([]);
+      return;
+    }
+    let next = setFlag(save, "flag.braziers");
+    const learned = learnSolarFrom(next, "kiln");
+    if (learned.ok) next = learned.save;
+    commit(next);
+    setPuzzle(null);
+    push(learned.ok ? learned.text : `${EXPANSE_COPY.kilnHot} ${learned.reason}`);
+    playSfx("spell");
+  }
+
+  function foldView() {
+    if (!save.ascensionUnlocked) {
+      push("Ascension is not awake. The shrine conduits are what fold the air.");
+      return;
+    }
+    const mode = save.mode === "ascension" ? "legacy" : "ascension";
+    commit({ ...save, mode });
+    push(mode === "ascension" ? "You look from inside the step." : "You look from the walk again.");
+  }
+
+  function ringBell(claim: "nine" | "ten") {
+    const view = save.mode === "ascension" ? "ascension" : "legacy";
+    const res = noteBell(save, view, claim);
+    commit(res.save);
+    push(res.text);
+    if (res.solved) {
+      setPuzzle(null);
+      playSfx("clock");
+    }
   }
 
   function lookTwice() {
@@ -863,6 +1065,8 @@ function Explore({
           <MenuButton tone="ghost" onClick={() => setPanel("journal")}>Journal</MenuButton>
           <MenuButton tone="ghost" onClick={() => setPanel("party")}>Party</MenuButton>
           <MenuButton tone="ghost" onClick={() => setPanel("bag")}>Bag</MenuButton>
+          <MenuButton tone="ghost" onClick={() => setPanel("arts")}>Arts</MenuButton>
+          <MenuButton tone="ghost" onClick={() => setPanel("atlas")}>Atlas</MenuButton>
           <MenuButton tone="ghost" onClick={onMenu}>Settings</MenuButton>
         </div>
       </header>
@@ -939,6 +1143,40 @@ function Explore({
           </div>
         </Modal>
       )}
+      {puzzle === "kiln" && (
+        <Modal title="River kiln" onClose={() => setPuzzle(null)}>
+          <p className="mb-3 text-sm">{EXPANSE_COPY.kilnNeed} Ember still has to be cast three times before noon will answer, and a spared guardian does not close this road.</p>
+          <div className="mb-3 flex gap-2">
+            {kilnPick.map((r, i) => (
+              <span key={r + i} className="rounded-md bg-ink px-2 py-1 text-amber">{r}</span>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["flame", "stone", "tide", "wind"].map((r) => (
+              <MenuButton key={r} tone="ghost" onClick={() => setKilnPick((p) => [...p, r].slice(0, 3))}>{r}</MenuButton>
+            ))}
+            <MenuButton onClick={submitKiln}>Feed the kiln</MenuButton>
+          </div>
+        </Modal>
+      )}
+      {puzzle === "bell" && (
+        <Modal title="Split bell" onClose={() => setPuzzle(null)}>
+          <p className="mb-2 text-sm">
+            Two truths. From the walk, read the face. From inside the step, read what is still ringing. Buttons only. No gesture, no headset.
+            {save.mode === "ascension" ? " You are inside the step." : " You are on the walk."}
+          </p>
+          <p className="mb-3 text-xs text-parchment/70">
+            {flag(save, "flag.bell_face") ? "Face recorded. " : "Face not yet. "}
+            {flag(save, "flag.bell_ghost") ? "Air recorded." : "Air not yet."}
+            {flag(save, "flag.nessa_verse") ? " Nessa let the new verse stand. Trust the air." : ""}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <MenuButton tone="ghost" onClick={foldView}>{save.mode === "ascension" ? "Look from the walk" : "Look from inside the step"}</MenuButton>
+            <MenuButton onClick={() => ringBell("nine")}>The face says nine and nine</MenuButton>
+            <MenuButton onClick={() => ringBell("ten")}>A tenth strike is still in the air</MenuButton>
+          </div>
+        </Modal>
+      )}
       {puzzle === "conduits" && (
         <Modal title="Conduit ring" onClose={() => setPuzzle(null)}>
           <p className="mb-2 text-sm">
@@ -954,7 +1192,7 @@ function Explore({
       )}
       {panel !== "none" && (
         <Modal
-          title={panel === "journal" ? "Journal" : panel === "party" ? "Party" : panel === "bag" ? "Bag" : panel === "shop" ? "Bram's stall" : panel === "rest" ? "The Ninth Wick" : "How to walk the Vale"}
+          title={panel === "journal" ? "Journal" : panel === "party" ? "Party" : panel === "bag" ? "Bag" : panel === "shop" ? "Bram's stall" : panel === "rest" ? "The Ninth Wick" : panel === "atlas" ? "The walked road" : panel === "arts" ? "Jobs and arts" : "How to walk the Vale"}
           onClose={() => setPanel("none")}
         >
           {panel === "journal" && (
@@ -1072,6 +1310,99 @@ function Explore({
               </MenuButton>
             </div>
           )}
+          {panel === "atlas" && (
+            <div className="flex flex-col gap-3">
+              <svg viewBox="0 0 560 230" className="w-full rounded-md bg-ink" role="img" aria-label="A map of walked roads and roads that are not open.">
+                {ATLAS_ROADS.map((road) => {
+                  const a = ATLAS.find((p) => p.id === road.from);
+                  const b = ATLAS.find((p) => p.id === road.to);
+                  if (!a || !b) return null;
+                  return (
+                    <line
+                      key={`${road.from}-${road.to}`}
+                      x1={a.x}
+                      y1={a.y}
+                      x2={b.x}
+                      y2={b.y}
+                      stroke={road.future ? "#8b6bb8" : "#4ec8c0"}
+                      strokeOpacity={road.future ? 0.35 : 0.55}
+                      strokeDasharray={road.future ? "4 4" : undefined}
+                    />
+                  );
+                })}
+                {ATLAS.map((place) => {
+                  const state = placeState(save, place);
+                  const fill = state === "here" ? "#e8b15a" : state === "walked" ? "#4ec8c0" : state === "open" ? "#8b6bb8" : "#3a3044";
+                  return (
+                    <g key={place.id}>
+                      <circle cx={place.x} cy={place.y} r={state === "here" ? 8 : 6} fill={fill} />
+                      <text x={place.x + 10} y={place.y + 4} fill="#f3e6c8" fontSize="11">{place.name}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+              <ul className="flex flex-col gap-2 text-sm">
+                {ATLAS.map((place) => {
+                  const state = placeState(save, place);
+                  const label = state === "here" ? "You are here" : state === "walked" ? "Walked" : state === "open" ? "Road open, not yet walked" : state === "locked" ? "Not open" : "Still shut";
+                  return (
+                    <li key={place.id} className="rounded-md bg-ink/50 p-2">
+                      <span className="text-amber">{place.name}</span>
+                      <span className="block text-parchment/70">{place.blurb} {label}.</span>
+                      {canTravel(save, place.id) && (
+                        <MenuButton
+                          tone="ghost"
+                          onClick={() => {
+                            const next = markPlace({ ...save, mapId: place.id, spawnId: place.spawn, encounter: null });
+                            commit(next);
+                            setPanel("none");
+                            startMusic(musicFor(place.id));
+                          }}
+                        >
+                          Travel
+                        </MenuButton>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          {panel === "arts" && (
+            <div className="flex max-h-[70vh] flex-col gap-3 overflow-auto text-sm">
+              <p className="text-parchment/80">
+                The trades that exist. Evolutions are earned in the world. Later jobs stay listed so the page can grow, and none of them can be chosen yet.
+              </p>
+              {JOB_KITS.map((job) => {
+                const held = job.bearer ? (save.knownSpells[job.bearer] ?? []) : [];
+                const unlocked = job.playable && (job.id === "job.wanderer" || save.jobsUnlocked.includes(job.id) || (job.bearer && save.party.includes(job.bearer)));
+                return (
+                  <div key={job.id} className="rounded-md bg-ink/50 p-2">
+                    <p className="font-semibold text-amber">
+                      {job.name} · {job.playable ? job.who : "Later"}
+                      {job.playable ? (unlocked ? " · open" : " · not yet") : ""}
+                    </p>
+                    <p className="text-parchment/80">{job.requires}</p>
+                    {job.arts.map((id) => {
+                      const art = ABILITIES[id];
+                      if (!art) return null;
+                      const earned = id.startsWith("act.") || id.startsWith("atk.") || held.includes(id) || (job.bearer === "wanderer" && id === "spell.ember");
+                      const wait = art.cost.cooldownTicks ? ` · ${art.cost.cooldownTicks} turn wait` : "";
+                      return (
+                        <p key={id} className={earned ? "text-parchment" : "text-parchment/50"}>
+                          {art.name}
+                          {earned ? "" : " — not earned"}
+                          {" · "}
+                          {art.cost.mp} MP{wait}. {art.blurb}
+                        </p>
+                      );
+                    })}
+                    <p className="text-parchment/70">{job.synergy}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {panel === "help" && (
             <ul className="list-disc pl-4 text-sm">
               <li>WASD or arrows step a tile. On a phone, use the pad.</li>
@@ -1114,6 +1445,10 @@ function blocked(mapId: string, x: number, y: number): boolean {
     if (x <= 0 || x >= 13 || y <= 0) return true;
     if (y >= 9 && x !== 7) return true;
   }
+  if (mapId === "map.lowbell") {
+    if (y <= 0 || y >= 10 || x >= 15) return true;
+    if (x <= 0 && y !== 5) return true;
+  }
   return false;
 }
 
@@ -1126,7 +1461,8 @@ function ahead(pos: { x: number; y: number }, facing: string) {
 
 function currentObjective(save: SaveGame): string {
   const cantorDone = flag(save, "flag.cantor_spared") || flag(save, "flag.cantor_defeated");
-  if (cantorDone) return "The Reach has gone quiet. The hymn still does not match the season.";
+  if (cantorDone && !flag(save, "flag.bell_solved")) return "Lowbell is down the river stair. The bell there wants the walk and the other view.";
+  if (cantorDone) return "The hour at Lowbell is recorded. It is not explained.";
   if (flag(save, "flag.chapter_complete") && !flag(save, "flag.nessa_joined")) return "Past the prism, Hollowwood is open. Someone on the trail has been waiting.";
   if (flag(save, "flag.nessa_joined") && !flag(save, "flag.moss_hymn")) return "Give the moss its hymn: wind, then flame, then stone.";
   if (flag(save, "flag.moss_hymn") && !cantorDone) return "The barrow mouth is open. The Cantor is singing.";
@@ -1142,7 +1478,17 @@ function currentObjective(save: SaveGame): string {
 }
 
 function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden" | "enc.thicket" | "enc.cantor"): EncounterState {
-  const party = save.party.map((pid) => prepareForBattle(save, pid));
+  const party = save.party.map((pid, i) => {
+    const mate = prepareForBattle(save, pid);
+    const slots = [
+      { x: -1.7, z: 1.8 },
+      { x: -0.5, z: 2.3 },
+      { x: 0.7, z: 1.8 },
+      { x: 1.7, z: 2.2 },
+    ];
+    mate.position = slots[i] ?? { x: 0, z: 2 };
+    return mate;
+  });
   const enemies =
     id === "enc.festival"
       ? [{ ...structuredClone(ENEMY_TEMPLATES.shardling), id: "shard-f", position: { x: 0, z: -1.6 } }]
@@ -1344,6 +1690,49 @@ function drawMap(ctx: CanvasRenderingContext2D, mapId: string, w: number, h: num
     ctx.fillStyle = "#e06a5c";
     ctx.fillRect(3 * TILE, 2 * TILE + 6, 10, 8);
   }
+  if (mapId === "map.lowbell") {
+    ctx.fillStyle = "#16343c";
+    ctx.fillRect(0, 8 * TILE, w * TILE, 3 * TILE);
+    ctx.strokeStyle = "#8fb8b0";
+    ctx.globalAlpha = 0.45;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, 8 * TILE + 18 + i * 10);
+      ctx.bezierCurveTo(w * TILE * 0.3, 8 * TILE + 8 + i * 10, w * TILE * 0.6, 8 * TILE + 28 + i * 8, w * TILE, 8 * TILE + 12 + i * 10);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#c9a36a";
+    ctx.fillRect(8 * TILE + 18, TILE + 8, 8, 70);
+    ctx.strokeStyle = "#e8b15a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(8 * TILE + 22, TILE + 22, 14, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(243,230,200,0.35)";
+    ctx.beginPath();
+    ctx.arc(5 * TILE + 22, 6 * TILE + 10, 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(5 * TILE + 22, 6 * TILE + 20);
+    ctx.lineTo(5 * TILE + 22, 8 * TILE + 8);
+    ctx.stroke();
+    ctx.fillStyle = "#4a3024";
+    ctx.fillRect(3 * TILE, 4 * TILE, 46, 22);
+    ctx.fillStyle = "#e8b15a";
+    ctx.fillRect(3 * TILE + 8, 4 * TILE + 8, 10, 8);
+    ctx.fillStyle = "#6a3030";
+    ctx.fillRect(12 * TILE, 6 * TILE, 46, 28);
+    ctx.fillStyle = "#e06a5c";
+    ctx.beginPath();
+    ctx.arc(12 * TILE + 16, 6 * TILE + 4, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#2a2018";
+    for (const px of [2, 6, 10, 14]) {
+      ctx.fillRect(px * TILE + 8, 8 * TILE - 16, 6, 22);
+    }
+  }
 }
 
 function drawFloor(ctx: CanvasRenderingContext2D, mapId: string, x: number, y: number) {
@@ -1353,6 +1742,7 @@ function drawFloor(ctx: CanvasRenderingContext2D, mapId: string, x: number, y: n
     : mapId === "map.woods" || mapId === "map.reach" ? (alt ? "#243222" : "#1c2a1a")
     : mapId === "map.barrow" ? (alt ? "#2a2218" : "#221c14")
     : mapId === "map.inn" || mapId === "map.smith" ? (alt ? "#4a3024" : "#3a261c")
+    : mapId === "map.lowbell" ? (alt ? "#3e3830" : "#343830")
     : alt ? "#4a3428" : "#3e2c22";
   ctx.fillStyle = tone;
   ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
@@ -1684,6 +2074,7 @@ function Battle({
   useEffect(() => {
     if (enc.phase !== "enemy" || enc.outcome !== "ongoing") return;
     const snapshot = enc;
+    const boss = enc.encounterId === "enc.warden" || enc.encounterId === "enc.cantor";
     enemyTimer.current = window.setTimeout(() => {
       if (encRef.current !== snapshot && encRef.current.tick !== snapshot.tick) return;
       const res = resolveEnemyTurn(encRef.current.phase === "enemy" ? encRef.current : snapshot);
@@ -1691,7 +2082,8 @@ function Battle({
       const last = res.state.events[res.state.events.length - 1];
       playSfx(last?.kind === "damage" ? "hurt" : "hit");
       commitEnc(res.state, last?.text);
-    }, save.settings.reducedMotion ? 180 : 480);
+    }, save.settings.reducedMotion ? 180 : boss ? 1100 : 480);
+    playSfx("warn");
     return () => {
       if (enemyTimer.current) window.clearTimeout(enemyTimer.current);
     };
@@ -1915,7 +2307,8 @@ function Battle({
         </div>
         {enc.intents[0] && (
           <p className="absolute right-3 bottom-3 max-w-xs rounded-md bg-ink/80 px-2 py-1 text-xs text-amber">
-            {enc.intents[0].telegraph}
+            <span className="block font-semibold">{ability(enc.intents[0].abilityId).name}</span>
+            {windupAdvice(enc.intents[0].abilityId)}
           </p>
         )}
       </div>
@@ -2096,11 +2489,21 @@ function drawArena(
     if (!c.alive && c.side === "enemy") continue;
     const pos = c.side === "party" && enc.mode === "ascension" && c.id === enc.activeActorId ? hero : c.position;
     const p = project(pos.x, c.side === "party" && enc.mode !== "ascension" ? 1.6 : pos.z);
-    ctx.fillStyle = c.side === "party" ? "#f3e6c8" : c.jobId === "enemy.warden" ? "#8b6bb8" : c.jobId === "enemy.cantor" ? "#6a8f4a" : c.jobId === "enemy.briarling" ? "#3d6b32" : c.jobId === "enemy.glowmoth" ? "#e8b15a" : "#4ec8c0";
+    const allyColor: Record<string, string> = { wanderer: "#f3e6c8", mira: "#7ec8c0", kael: "#d7c4a3", nessa: "#b7d48a" };
+    ctx.fillStyle = c.side === "party" ? (allyColor[c.id] ?? "#f3e6c8") : c.jobId === "enemy.warden" ? "#8b6bb8" : c.jobId === "enemy.cantor" ? "#6a8f4a" : c.jobId === "enemy.briarling" ? "#3d6b32" : c.jobId === "enemy.glowmoth" ? "#e8b15a" : "#4ec8c0";
     const rad = c.jobId === "enemy.warden" || c.jobId === "enemy.cantor" ? 28 : 16;
     ctx.beginPath();
     ctx.arc(p.px, p.py, rad, 0, Math.PI * 2);
     ctx.fill();
+    const intent = enc.intents.find((i) => i.actorId === c.id);
+    if (intent) {
+      ctx.strokeStyle = intent.abilityId.includes("dirge") || intent.abilityId.includes("rupture") || intent.abilityId.includes("pulse") ? "#e06a5c" : "#e8b15a";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(p.px, p.py, rad + 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
     if (c.jobId === "enemy.warden" || c.jobId === "enemy.cantor") {
       const open = c.jobId === "enemy.cantor" ? c.hp <= c.maxHp * 0.5 : c.statuses.some((s) => s.id === "exposed");
       ctx.strokeStyle = open ? "#e06a5c" : "#f3e6c8";

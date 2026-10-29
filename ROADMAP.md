@@ -16,20 +16,15 @@ Inn, blacksmith, equipment, levels, one job unlock, spell ranks, usable Temporal
 
 PR #1 repair: lockfile matches `npm ci` on Node 22 / npm 10.9, combat validation is authoritative, and the Warden's fate survives schema migration into chapter 2 lines.
 
-## Proposed PR #2 — do not start it inside PR #1
+## Rung 1c — Vale expanses (playable, this branch)
 
-Open only after PR #1 is green and reviewed. No new combat clock, no accounts, no WebXR battle renderer. Suggested branch: `feature/vale-expanses`.
+Companion choices for Mira, Kael, and Nessa. Solar Flare and Memory Tide, earned, with neither Warden ending closing every door. A jobs screen for the kits that exist. Lowbell Landing, an atlas, and the split bell. Boss windups you can read. An early Sight mystery that does not name the late chronicle.
 
-1. Companion scenes with a real choice each, still remembering Warden and Cantor outcomes at higher bonds. Not a dating sim.
-2. Job identity beyond the Elementalist unlock: a visible kit per job, still one rules core. No full job tree.
-3. Two spell evolutions tied to a kept choice (spared Warden leans tide, defeated Warden leans flame). Ranks stay numeric until the evolution fires.
-4. One more cross-mode secret in the Reach that both Legacy and Ascension can set, and neither is required to finish the chapter.
-5. Cantor and Warden windups that telegraph one beat longer, with the existing Sidestep still the dodge. No iframe system.
-6. One new painted region on the road out of the Reach, canvas scenery, no tileset pack.
-7. An early temporal mystery that spends Sight and writes a journal line. It must not name the Door, the white room, or anything on the public ban list.
-8. A world map of the places already walkable, plus the new region as a locked trail. Not an airship.
+Branch: `feature/vale-expanses`. Not merged from this workspace.
 
-Explicitly out of PR #2: multiplayer, cloud saves, headset locomotion, the Pleroma hub, and replacing the preview shell.
+## Still after this
+
+A third lived-in region, more evolutions, a real job change, companion scenes past one choice, and any headset battle. Do not start those inside this PR.
 
 ## Rung 2 — switching and comfort
 
