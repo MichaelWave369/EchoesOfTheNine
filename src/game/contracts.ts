@@ -4,7 +4,7 @@
  * Spoiler-gated payloads live behind `gate` and are never rendered in public UI.
  */
 
-export const SCHEMA_VERSION = 2 as const;
+export const SCHEMA_VERSION = 3 as const;
 
 export interface ChoiceRecord {
   id: string;
@@ -268,6 +268,12 @@ export interface SaveGame {
   jobsUnlocked: string[];
   discoveries: string[];
   choiceLog: ChoiceRecord[];
+  /** Spells the wanderer has earned. Job changes consult this. They do not delete it. */
+  earnedSpells: string[];
+  /** Active temporal overlay, if the other hour is still up. Not a renderer object. */
+  sightScene: string | null;
+  /** Steps left before the overlay fades. The clue remains in the journal. */
+  sightSteps: number;
   /** Future-only. Never render this list or its name in chapter UI. */
   echoMemory: string[];
   /** Future-only counter. Never label it in public UI. */

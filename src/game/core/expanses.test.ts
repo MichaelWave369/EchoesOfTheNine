@@ -92,7 +92,9 @@ describe("vale expanses", () => {
     let save = markPlace(freshSave("Ash"));
     assert.equal(canTravel(save, "map.lowbell"), false);
     assert.equal(canTravel(save, "map.ferry"), false);
-    assert.equal(ATLAS.find((p) => p.id === "map.ferry")?.locked, true);
+    assert.equal(canTravel(save, "map.sky"), false);
+    assert.equal(ATLAS.find((p) => p.id === "map.sky")?.locked, true);
+    assert.equal(ATLAS.find((p) => p.id === "map.ferry")?.locked, undefined);
     save = setFlag(save, "flag.temporal_sight");
     save.sightCharges = 2;
     save.mapId = "map.lowbell";
@@ -184,7 +186,7 @@ describe("vale expanses", () => {
   });
 
   it("draws future roads without letting them be walked, and every open kit names a real art", () => {
-    assert.ok(ATLAS_ROADS.some((r) => r.to === "map.ferry" && r.future));
+    assert.ok(ATLAS_ROADS.some((r) => r.to === "map.sky" && r.future));
     assert.equal(canTravel(markPlace(setFlag(freshSave("Ash"), "flag.nessa_joined")), "map.ferry"), false);
     for (const job of JOB_KITS.filter((j) => j.playable)) {
       assert.ok(job.arts.length > 0, job.id);

@@ -1,5 +1,6 @@
 import type { CombatantState, EquipLoadout, SaveGame } from "../contracts.ts";
 import { CHARACTERS } from "./characters.ts";
+import { beginSight, spellsForJob } from "./crossing.ts";
 
 export interface GearDef {
   id: string;
@@ -97,6 +98,31 @@ export const GEAR: Record<string, GearDef> = {
     speed: 1,
     price: 0,
   },
+  "armor.mist_cloak": {
+    id: "armor.mist_cloak",
+    name: "Mist Cloak",
+    blurb: "Tamsin swears it was fog this morning. It keeps a little of the river off your ribs.",
+    slot: "armor",
+    defense: 4,
+    price: 34,
+  },
+  "weapon.river_hook": {
+    id: "weapon.river_hook",
+    name: "River Hook",
+    blurb: "A boathook that decided to be a weapon. It likes a Riverward's hand.",
+    slot: "weapon",
+    attack: 8,
+    price: 0,
+  },
+  "accessory.departure_thread": {
+    id: "accessory.departure_thread",
+    name: "Departure Thread",
+    blurb: "A cord from a ferryman who sat down. It keeps two hours without choosing one.",
+    slot: "accessory",
+    speed: 2,
+    defense: 1,
+    price: 0,
+  },
 };
 
 export const SHOP_IDS = ["weapon.glass_needle", "weapon.oath_blade", "armor.lantern_coat", "armor.pine_mail", "item.lantern_salve", "item.dew_vial"] as const;
@@ -152,6 +178,7 @@ export function applySynergy(save: SaveGame, id: string, attack: number, speed: 
   let a = attack;
   let s = speed;
   if (id === "wanderer" && jobId === "job.elementalist" && load?.weapon === "weapon.glass_needle") a += 2;
+  if (id === "wanderer" && jobId === "job.riverward" && load?.weapon === "weapon.river_hook") a += 3;
   if (id === "kael" && load?.weapon === "weapon.oath_blade") a += 2;
   if (id === "nessa" && load?.accessory === "accessory.reed_loop") s += 1;
   return { attack: a, speed: s, maxMp, mp: Math.min(mp, maxMp) };
@@ -236,6 +263,8 @@ export function useSight(save: SaveGame): { ok: true; save: SaveGame; text: stri
   if (save.sightCharges <= 0) return { ok: false, reason: "The sight is tired. Sleep at the Ninth Wick." };
   const next = structuredClone(save);
   next.sightCharges -= 1;
+  const scene = beginSight(next);
+  if (scene) return { ok: true, save: scene.save, text: scene.text };
   let text = "For a breath the room is half a step ahead of itself. Nothing hidden keeps.";
   const note = (id: string, line: string) => {
     if (!next.discoveries.includes(id)) next.discoveries.push(id);
@@ -247,16 +276,6 @@ export function useSight(save: SaveGame): { ok: true; save: SaveGame; text: stri
   else if (next.mapId === "map.reach") note("flag.sight_cache", "West of the hymn stone the moss is lying. Something small is underneath.");
   else if (next.mapId === "map.barrow") note("flag.sight_barrow", "The left root was not always a root. A cache waits behind it.");
   else if (next.mapId === "map.shrine") note("flag.sight_shrine", "The floor inscription flickers. Your name stays. The date does not finish forming.");
-  else if (next.mapId === "map.lowbell") {
-    note(
-      "flag.sight_lowbell",
-      "The clapper's shadow finishes a strike the bronze never starts. For a blink a second bell hangs on an empty rope. The hour feels rehearsed, and unfinished.",
-    );
-    if (!next.choiceLog.some((c) => c.id === "sight.lowbell")) {
-      next.choiceLog.push({ id: "sight.lowbell", value: "unfinished-hour" });
-    }
-    if (!next.discoveries.includes("disc.unfinished_hour")) next.discoveries.push("disc.unfinished_hour");
-  }
   return { ok: true, save: next, text };
 }
 
@@ -270,8 +289,7 @@ export function learnElementalist(save: SaveGame): SaveGame {
   const next = structuredClone(save);
   if (!next.jobsUnlocked.includes("job.elementalist")) next.jobsUnlocked.push("job.elementalist");
   if (next.roster["wanderer"]) next.roster["wanderer"].jobId = "job.elementalist";
-  const known = next.knownSpells["wanderer"] ?? ["spell.ember"];
-  if (!known.includes("spell.flare")) next.knownSpells["wanderer"] = [...known, "spell.flare"];
+  next.knownSpells["wanderer"] = spellsForJob("job.elementalist", next.earnedSpells ?? []);
   if (!next.choiceLog.some((c) => c.id === "job.wanderer")) {
     next.choiceLog.push({ id: "job.wanderer", value: "elementalist" });
   }

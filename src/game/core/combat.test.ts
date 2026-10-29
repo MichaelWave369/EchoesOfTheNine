@@ -350,7 +350,10 @@ describe("living world", () => {
       delete old[key];
     }
     const back = deserialize(JSON.stringify(old));
-    assert.equal(back.schema, 2);
+    assert.equal(back.schema, 3);
+    assert.deepEqual(back.earnedSpells, []);
+    assert.equal(back.sightScene, null);
+    assert.equal(back.sightSteps, 0);
     assert.equal(back.wardenOutcome, "spared");
     assert.equal(back.flags["flag.warden_spared"], true);
     assert.equal(back.chapterComplete, true);

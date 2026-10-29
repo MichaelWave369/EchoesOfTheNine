@@ -1,4 +1,5 @@
 import type { SaveGame } from "../contracts.ts";
+import { grantEarned } from "./crossing.ts";
 import { refreshQuests, setFlag } from "../chronicle/save.ts";
 
 /**
@@ -28,8 +29,10 @@ export const ATLAS: AtlasPlace[] = [
   { id: "map.reach", name: "Hollowwood", blurb: "A second season, and Nessa.", x: 380, y: 55, requires: "flag.chapter_complete", spawn: "shrine_side" },
   { id: "map.barrow", name: "Cantor's Barrow", blurb: "The song under the hill.", x: 490, y: 40, requires: "flag.moss_hymn", spawn: "mouth" },
   { id: "map.lowbell", name: "Lowbell Landing", blurb: "A river market whose bell does not agree with itself.", x: 400, y: 160, requires: "flag.nessa_joined", spawn: "reach_stair" },
-  { id: "map.ferry", name: "Far ferry", blurb: "The water goes on. The boat does not, yet.", x: 520, y: 190, locked: true, spawn: "" },
-  { id: "map.highroad", name: "High road", blurb: "A road above the pines. Not open.", x: 250, y: 24, locked: true, spawn: "" },
+  { id: "map.ferry", name: "Mistwater Crossing", blurb: "Fog, an abandoned station, and a ferry that left twice.", x: 520, y: 200, requires: "flag.bell_solved", spawn: "lowbell_dock" },
+  { id: "map.hold", name: "Twice-Kept Hold", blurb: "The station's flooded stair, and a plate that remembers an older cut.", x: 590, y: 150, requires: "flag.spoke_hale", spawn: "door" },
+  { id: "map.highroad", name: "High road gate", blurb: "The stair above the mist. The country beyond is still weather.", x: 500, y: 36, requires: "flag.ferry_complete", spawn: "stair" },
+  { id: "map.sky", name: "Open water", blurb: "Past the mist the river does not offer a boat. Not this chapter.", x: 640, y: 220, locked: true, spawn: "" },
 ];
 
 export const ATLAS_ROADS: { from: string; to: string; future?: boolean }[] = [
@@ -38,8 +41,10 @@ export const ATLAS_ROADS: { from: string; to: string; future?: boolean }[] = [
   { from: "map.shrine", to: "map.reach" },
   { from: "map.reach", to: "map.barrow" },
   { from: "map.reach", to: "map.lowbell" },
-  { from: "map.lowbell", to: "map.ferry", future: true },
-  { from: "map.shrine", to: "map.highroad", future: true },
+  { from: "map.lowbell", to: "map.ferry" },
+  { from: "map.ferry", to: "map.hold" },
+  { from: "map.ferry", to: "map.highroad" },
+  { from: "map.ferry", to: "map.sky", future: true },
 ];
 
 export const JOB_KITS: {
@@ -106,6 +111,17 @@ export const JOB_KITS: {
     arts: ["atk.strike", "spell.shear", "act.defend", "act.dodge"],
     kit: ["Strike", "Shear", "Defend", "Sidestep"],
     synergy: "A spared Cantor's reed loop sits one step quicker on a spellblade.",
+    playable: true,
+  },
+  {
+    id: "job.riverward",
+    name: "Riverward",
+    who: "You, after the hold",
+    bearer: "wanderer",
+    requires: "Open the Twice-Kept Hold. Stillwater and Echo Lash come with the trade. Double Wake is earned later.",
+    arts: ["atk.strike", "spell.stillwater", "spell.echo_lash", "spell.double_wake"],
+    kit: ["Strike", "Stillwater", "Echo Lash", "Double Wake, once earned"],
+    synergy: "A river hook in a Riverward's hand hits harder. It does not refresh a breath.",
     playable: true,
   },
   {
@@ -257,7 +273,8 @@ export function learnSolarFrom(
   if (source === "kiln" && !save.flags["flag.braziers"]) return { ok: false, reason: EXPANSE_COPY.kilnNeed };
   if (source === "scorch" && !save.flags["flag.warden_defeated"]) return { ok: false, reason: EXPANSE_COPY.solarNeedCause };
   const next = teach(save, "wanderer", "spell.solar", EXPANSE_COPY.solarLearned, "spell.solar");
-  const marked = setFlag(next, source === "kiln" ? "flag.solar_kiln" : "flag.solar_scorch");
+  const earned = grantEarned(next, "spell.solar");
+  const marked = setFlag(earned, source === "kiln" ? "flag.solar_kiln" : "flag.solar_scorch");
   return { ok: true, save: marked, text: EXPANSE_COPY.solarLearned };
 }
 
@@ -333,5 +350,9 @@ export function windupAdvice(abilityId: string): string {
   if (abilityId === "enemy.cantor_dirge") return "Hollow Dirge hits the whole party. Defend, or Sidestep the one it would land on.";
   if (abilityId === "enemy.briar_lash") return "One lash, honestly wound. Sidestep.";
   if (abilityId === "enemy.mote_flare") return "Flame on the wing. Sidestep or take it on a guard.";
+  if (abilityId === "enemy.double_departure") return "Double Departure hits everyone. Defend. Sidestep will not cover the party.";
+  if (abilityId === "enemy.gangplank") return "Gangplank chooses one of you. Sidestep that one, or brace.";
+  if (abilityId === "enemy.mist_lash") return "Tide, with a wrist. Sidestep or brace.";
+  if (abilityId === "enemy.lantern_wisp" || abilityId === "enemy.spark_tap") return "Flame. Tide bites a lantern. Fire slides off.";
   return "A short windup. Sidestep, brace, or answer.";
 }
