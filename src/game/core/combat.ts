@@ -9,6 +9,7 @@ import type {
   StatusInstance,
 } from "../contracts.ts";
 import { ability } from "../content/abilities.ts";
+import { CHARACTERS } from "../content/characters.ts";
 import { computeDamage, computeHeal } from "./formulas.ts";
 import { rollCrit } from "./rng.ts";
 
@@ -140,7 +141,12 @@ function rewardFor(state: EncounterState, mercy: boolean): RewardGrant {
 
 function grantReward(state: EncounterState, mercy: boolean) {
   const reward = rewardFor(state, mercy);
-  if (state.rewardsGranted.includes(reward.id)) {
+  const rival = reward.id.endsWith(".mercy")
+    ? reward.id.replace(/\.mercy$/, ".defeat")
+    : reward.id.endsWith(".defeat")
+      ? reward.id.replace(/\.defeat$/, ".mercy")
+      : null;
+  if (state.rewardsGranted.includes(reward.id) || (rival && state.rewardsGranted.includes(rival))) {
     state.pendingReward = null;
     push(state, { kind: "reward_skipped", text: "This outcome was already recorded. No second payout." });
     return;
@@ -271,29 +277,73 @@ function chooseEnemyIntent(state: EncounterState, actor: CombatantState): Intent
   };
 }
 
+const KIND_FOR_ABILITY: Record<string, CombatAction["kind"]> = {
+  attack: "attack",
+  spell: "cast",
+  defend: "defend",
+  item: "item",
+  dodge: "dodge",
+  interact: "interact",
+};
+
+const PARTY_BASICS = ["atk.strike", "act.defend", "act.dodge"];
+
+function partyMayUse(actor: CombatantState, abilityId: string): boolean {
+  const ab = ABILITIES_SAFE(abilityId);
+  if (ab?.kind === "item") return true;
+  if (actor.knownAbilities && actor.knownAbilities.length > 0) return actor.knownAbilities.includes(abilityId);
+  const listed = CHARACTERS[actor.id]?.abilities ?? [];
+  return new Set([...listed, ...PARTY_BASICS]).has(abilityId);
+}
+
 export function validateAction(state: EncounterState, action: CombatAction): string | null {
   if (state.outcome !== "ongoing") return "Encounter is already resolved.";
-  if (state.phase === "switch_lock") return "Views are still settling.";
-  const actor = actorOf(state, action.actorId);
-  if (!actor || !actor.alive) return "Actor cannot act.";
-  if (state.activeActorId !== actor.id && action.kind !== "switch") return "Not this combatant's turn.";
-  if (actor.side === "enemy" && action.modeOrigin !== "legacy" && action.kind !== "switch") {
-    /* enemies resolve through the same pipeline; callers pass their intent */
+  if (state.phase === "switch_lock" || state.phase === "resolve") return "Views are still settling.";
+  if (state.phase === "victory" || state.phase === "defeat" || state.phase === "mercy") {
+    return "Encounter is already resolved.";
   }
+  const actor = actorOf(state, action.actorId);
+  if (!actor || !actor.alive || actor.hp <= 0) return "Actor cannot act.";
+
   if (action.kind === "switch") {
+    if (state.phase !== "player") return "You can only change view on your turn.";
+    if (actor.side !== "party") return "Only an ally may change the view.";
+    if (state.activeActorId !== actor.id) return "Only the actor whose turn it is may change the view.";
     if (!state.switchUnlocked) return "Ascension is not yet awake.";
     if (state.switchLock > 0) return "Switch is locked.";
     return null;
   }
+
+  if (actor.side === "party" && state.phase !== "player") return "It is not a party turn.";
+  if (actor.side === "enemy" && state.phase !== "enemy") return "It is not an enemy turn.";
+  if (state.activeActorId !== actor.id) return "Not this combatant's turn.";
+
   const ab = ABILITIES_SAFE(action.abilityId);
   if (!ab) return "Unknown ability.";
+  if (KIND_FOR_ABILITY[ab.kind] !== action.kind) return `${ab.name} is not that kind of action.`;
+  if (actor.side === "enemy" && !ab.id.startsWith("enemy.")) return "Enemies cannot borrow ally arts.";
+  if (actor.side === "party" && !partyMayUse(actor, ab.id)) return `${actor.name} does not know ${ab.name}.`;
   if ((actor.cooldowns[ab.id] ?? 0) > 0) return `${ab.name} is still cooling.`;
   if (actor.mp < ab.cost.mp) return `Not enough MP for ${ab.name}.`;
   if (ab.kind === "item") {
-    /* inventory checked by the world layer via a pre-validated flag on the action id existing */
+    const have = state.pack?.[ab.id] ?? 0;
+    if (have <= 0) return `${ab.name} is not in the pack.`;
   }
-  if (ab.targeting === "one_enemy" || ab.targeting === "all_enemies") {
-    if (action.targetIds.length === 0 && ab.targeting === "one_enemy") return "Choose a target.";
+  if (ab.targeting === "one_enemy") {
+    const foeIds = action.targetIds.filter((id) => {
+      const target = actorOf(state, id);
+      return !!target && target.alive && target.hp > 0 && target.side !== actor.side;
+    });
+    if (action.targetIds.some((id) => actorOf(state, id)?.side === actor.side)) return "That is not a foe.";
+    if (actor.side === "party" && foeIds.length === 0) return "Choose a living foe.";
+  }
+  if (ab.targeting === "one_ally") {
+    if (action.targetIds.length === 0) return "Choose an ally.";
+    const bad = action.targetIds.some((id) => {
+      const target = actorOf(state, id);
+      return !target || !target.alive || target.hp <= 0 || target.side !== actor.side;
+    });
+    if (bad) return "Choose a living ally.";
   }
   return null;
 }
@@ -471,14 +521,19 @@ function resolveTargets(
   }
   if (targeting === "one_ally") {
     const ids = action.targetIds.length ? action.targetIds : [actor.id];
-    return ids.map((id) => actorOf(state, id)).filter((c): c is CombatantState => !!c && c.alive);
+    return ids
+      .map((id) => actorOf(state, id))
+      .filter((c): c is CombatantState => !!c && c.alive && c.side === actor.side);
   }
-  const ids = action.targetIds;
-  const found = ids.map((id) => actorOf(state, id)).filter((c): c is CombatantState => !!c && c.alive);
+  const found = action.targetIds
+    .map((id) => actorOf(state, id))
+    .filter((c): c is CombatantState => !!c && c.alive && c.side !== actor.side);
   if (found.length) return found;
-  const fallbackSide = actor.side === "party" ? "enemy" : "party";
-  const foe = living(state, fallbackSide)[0];
-  return foe ? [foe] : [];
+  if (actor.side === "enemy") {
+    const foe = living(state, "party")[0];
+    return foe ? [foe] : [];
+  }
+  return [];
 }
 
 export function proposeAction(state: EncounterState, action: CombatAction): ActionResult {
@@ -510,6 +565,15 @@ export function resolveDeterministically(state: EncounterState, action: CombatAc
 
   const actor = actorOf(state, action.actorId);
   if (!actor) return state;
+  const ab = ABILITIES_SAFE(action.abilityId);
+  if (ab?.kind === "item") {
+    const have = state.pack?.[ab.id] ?? 0;
+    if (have <= 0) {
+      push(state, { kind: "item_empty", actorId: actor.id, abilityId: ab.id, text: `${ab.name} is not in the pack.` });
+      return state;
+    }
+    state.pack = { ...(state.pack ?? {}), [ab.id]: have - 1 };
+  }
   applyEffects(state, actor, action);
   checkOutcome(state);
   if (state.outcome === "ongoing") openTurn(state);
@@ -521,13 +585,15 @@ export function resolveEnemyTurn(state: EncounterState): ActionResult {
   if (state.phase !== "enemy" || !state.activeActorId) {
     return { ok: false, reason: "No enemy intent is ready.", state };
   }
-  const intent = state.intents.find((i) => i.actorId === state.activeActorId);
+  const intent = state.intents.find((i) => i.actorId === state.activeActorId && i.committed);
   if (!intent) return { ok: false, reason: "Missing telegraph.", state };
+  const ab = ABILITIES_SAFE(intent.abilityId);
+  if (!ab) return { ok: false, reason: "Unknown enemy art.", state };
   const action: CombatAction = {
     version: 1,
     actorId: intent.actorId,
     abilityId: intent.abilityId,
-    kind: intent.abilityId.startsWith("spell") || intent.abilityId.includes("flare") || intent.abilityId.includes("rupture") || intent.abilityId.includes("pulse") ? "cast" : "attack",
+    kind: KIND_FOR_ABILITY[ab.kind] ?? "attack",
     targetIds: intent.targetIds,
     modeOrigin: state.mode,
     timeOrTurn: state.turnIndex,
@@ -535,10 +601,23 @@ export function resolveEnemyTurn(state: EncounterState): ActionResult {
   return proposeAction(state, action);
 }
 
-export function tryMercy(state: EncounterState): ActionResult {
+export interface MercyRules {
+  /** Cantor mercy is legal only after the Warden was spared. Hiding a button is not the rule. */
+  wardenSpared?: boolean;
+}
+
+export function tryMercy(state: EncounterState, rules?: MercyRules): ActionResult {
+  if (state.outcome !== "ongoing") return { ok: false, reason: "Encounter is already resolved.", state };
   const warden = state.combatants.find((c) => c.jobId === "enemy.warden" && c.alive);
   const cantor = state.combatants.find((c) => c.jobId === "enemy.cantor" && c.alive);
   if (state.encounterId === "enc.cantor") {
+    if (!rules?.wardenSpared) {
+      return {
+        ok: false,
+        reason: "The Cantor will not take mercy from hands that ended the Warden. The song can still be finished.",
+        state,
+      };
+    }
     if (!cantor) return { ok: false, reason: "The song has already ended.", state };
     if (cantor.hp > cantor.maxHp * 0.5) {
       return { ok: false, reason: "The dirge is still too loud. Bring it under half, or finish it.", state };

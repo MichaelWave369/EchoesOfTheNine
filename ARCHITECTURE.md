@@ -28,7 +28,19 @@ Camera objects, AudioContext, DOM nodes, XR session handles, `aimEvidence`. Aim 
 
 ## Mode switch
 
-Accepted on the acting ally's turn. Costs that turn (`switch` kind). Copies no new reward id. Does not reroll enemy intent, phase, cooldowns, or `rngState`. A one-tick settle follows. Live switching in the middle of a hit animation is not a separate clock; the safe point is the turn boundary. That limitation is intentional for this slice.
+Accepted only from the living ally whose turn it is, and only while the phase is `player`. An enemy, a bystander, or a telegraph cannot fold the view. The switch costs that turn. It copies no new reward id and does not reroll enemy intent, phase, cooldowns, or `rngState`. A one-tick settle follows.
+
+## Mercy and items
+
+`tryMercy` is the rule, not the button. Warden mercy still needs the exposed seam. Cantor mercy also requires `wardenSpared` from the chronicle; omitting it fails closed. A boss pays mercy or defeat, never both. Item abilities read `encounter.pack`, decrement it, and do nothing if the count is missing or zero. The battle UI copies the local pack in and writes the returned counts back. It does not keep a second consumption path.
+
+## Sovereign boundary
+
+The playable game does not import accounts, the database client, multiplayer, or any API secret. Chronicles stay in `localStorage` plus JSON export. Schema 1 saves migrate to schema 2 and keep `wardenOutcome`, including into the Reach quest and companion lines.
+
+Grok Build preview files (`src/lib/auth`, `src/lib/db`, `src/lib/multiplayer`, `server/`, `public/__grok/`, the PWA scripts) stay in the tree because the live preview and the TanStack Start shell need them. Nothing in `src/game` calls them. `npm run build` still runs `scripts/migrate.mjs`, which exits without touching a database when `DATABASE_URL` is absent. That is the CI path.
+
+This is not yet a GitHub Pages bundle. The host is TanStack Start with a Nitro server so the preview can boot. A later static export can wrap the same `src/game` rules without accounts. Do not delete the preview shell to force that early.
 
 ## Spoiler gates
 

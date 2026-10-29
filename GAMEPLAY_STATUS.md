@@ -23,12 +23,13 @@ Honest labels. Updated after the living Vale and Hollowwood Reach.
 - Cross-mode 1: rune order on the wall, conduit ring by buttons. Shared flags. Unlocks Ascension, Temporal Sight (3 charges), and Elementalist.
 - Temporal Sight: a button. Costs one charge. Inn refills to three. Reveals the clock pebble, lying moss, the barrow root, or a shrine flicker. No headset required.
 - Cross-mode 2: moss hymn (wind, flame, stone) opens the barrow. Sight reveals the cache the hymn does not.
-- Two Warden outcomes and two Cantor outcomes. Cantor's mercy button appears only if the Warden was spared. Defeat remains available either way. Unique rewards pay once.
-- Chapter close for the Awakening, then a second close after the Cantor. Neither names the late chronicle.
+- Two Warden outcomes and two Cantor outcomes. Cantor mercy is refused by `tryMercy` unless the Warden was spared, even if a caller shows the button. Defeat remains available either way. Mercy and defeat payouts cannot both be collected. Companion lines and the Reach close keep the Warden's fate after the bond deepens.
+- Mode switch only on the active ally's player turn. Wrong targets, unknown arts, and missing items are rejected by the core. Items decrement `encounter.pack`.
+- Schema 2 saves. Schema 1 chronicles migrate, keep the Warden outcome, and reopen the Reach quest when the chapter was already complete.
 - Settings: text size, captions, mute, volume, reduced motion, contrast, camera comfort label.
 - Button-only path for every mandatory beat, including both puzzles. Scripted chapter-1 playthrough still passes.
 - Procedural music for Vale, woods, shrine, inn, Reach, barrow, and battle. Mute works.
-- Gamepad d-pad moves. Face button (south) acts.
+- Gamepad: map d-pad moves, A confirms once, B closes a talk or bag. Battle A strikes, B braces, X sidesteps, Y changes view when Ascension is awake. D-pad moves inside the Ascension ring.
 
 ## Partial
 
@@ -57,7 +58,7 @@ Honest labels. Updated after the living Vale and Hollowwood Reach.
 
 ## Tests that ran
 
-`node --experimental-strip-types --test src/game/core/combat.test.ts` — 18 passed, 0 failed.
+`node --experimental-strip-types --test src/game/core/combat.test.ts` — 22 passed, 0 failed.
 
 - Seeded Ember from Legacy and Ascension: identical HP, MP, cooldown, RNG.
 - Insufficient MP: no damage.

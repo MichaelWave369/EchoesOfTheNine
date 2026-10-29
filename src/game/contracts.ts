@@ -109,6 +109,8 @@ export interface CombatantState {
   mercyEligible?: boolean;
   /** Ranks copied in at encounter start. The core may read these. UI may not invent them mid-hit. */
   spellRanks?: Record<string, number>;
+  /** Arts this ally may actually call. Copied at battle start. The core rejects anything else. */
+  knownAbilities?: string[];
 }
 
 export interface Intent {
@@ -148,6 +150,11 @@ export interface EncounterState {
   switchUnlocked: boolean;
   outcome: "ongoing" | "victory" | "defeat" | "mercy";
   events: CombatEvent[];
+  /**
+   * Item counts bound for this resolution. Item actions fail closed when absent
+   * and decrement here when they resolve. Not a second inventory.
+   */
+  pack?: Record<string, number>;
 }
 
 export interface CombatEvent {

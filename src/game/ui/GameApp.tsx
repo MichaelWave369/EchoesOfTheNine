@@ -4,6 +4,7 @@ import { CHARACTERS, ENEMY_TEMPLATES, JOBS } from "../content/characters.ts";
 import { ability, ABILITIES } from "../content/abilities.ts";
 import { DIALOGUE, ITEMS, MAPS, MOSS_ANSWER, RUNE_ANSWER, type MapHotspot } from "../content/world.ts";
 import { buyItem, equipItem, GEAR, learnElementalist, levelForXp, prepareForBattle, restParty, SHOP_IDS, useSight, withGear } from "../content/gear.ts";
+import { companionAside, reachClose, wardenMemory } from "../content/memory.ts";
 import {
   applyReward,
   bumpBond,
@@ -313,7 +314,7 @@ function TitleScreen({
           </MenuButton>
         </div>
         <p className="mt-6 max-w-md text-xs leading-relaxed text-parchment/60">
-          {xr?.reason ?? "Checking for a headset…"} {xrMsg ?? ""} Keyboard and mouse carry the whole chapter. Gamepad: A confirm, B back, d-pad move.
+          {xr?.reason ?? "Checking for a headset…"} {xrMsg ?? ""} Keyboard and mouse carry the whole chapter. Gamepad: A confirms, B closes a talk or bag, d-pad moves. In a fight, A strikes, B braces, X sidesteps, Y changes view when Ascension is awake.
         </p>
         <p className="mt-6 text-[11px] tracking-widest text-amber/80 uppercase">9:09</p>
       </div>
@@ -456,6 +457,7 @@ function Explore({
   const [puzzle, setPuzzle] = useState<null | "runes" | "conduits" | "moss">(null);
   const [conduit, setConduit] = useState(0);
   const moved = useRef(false);
+  const padPrev = useRef<boolean[]>([]);
 
   useEffect(() => {
     setPos({ x: spawn.x, y: spawn.y });
@@ -681,34 +683,7 @@ function Explore({
     const next = bumpBond(save, id);
     commit(next);
     const bond = next.bonds[id] ?? 1;
-    const spared = flag(next, "flag.warden_spared");
-    const defeated = flag(next, "flag.warden_defeated");
-    let text = "I'm with you.";
-    if (id === "mira") {
-      text = bond >= 2
-        ? "I keep a blank page for the date on the floor. I will not guess it. If you ever read it, tell me only whether we were kind."
-        : spared
-          ? "The pact is in the margin, not the victory column. I like the margin. It has room."
-          : defeated
-            ? "I left a blank line where a name might have gone. I am not angry. I am keeping the line."
-            : "I'm with you. If the shrine starts editing our names, I want it in the book.";
-    } else if (id === "kael") {
-      text = bond >= 2
-        ? "The oath was to the living on the path. If a song asks me to choose it over a person, I already know which way the sword points. Away."
-        : spared
-          ? "You asked it to sleep. That is an oath I can keep walking beside."
-          : defeated
-            ? "It is done. I will not call it glory. I will call it finished, and I will still discuss blood before anyone spends it."
-            : "Still here. If it asks for blood, we discuss it. That part did not expire.";
-    } else {
-      text = bond >= 2
-        ? "My mother said the moss used to rhyme with spring. It doesn't. I want the new verse, not a sermon about why the wood feels early."
-        : spared
-          ? "Your archivist writes pacts. Good. The Reach prefers people who can stop."
-          : defeated
-            ? "You ended a guardian. I will not preach. Just don't end the next song only because your hands are already warm."
-            : "The thicket bites if you walk through it like a tourist. Wind cuts it cleaner than pride.";
-    }
+    const text = companionAside(id, bond, wardenMemory(next));
     setDialogue({ nodes: [{ id: `${id}.bond`, speaker: id === "mira" ? "Mira" : id === "kael" ? "Kael" : "Nessa", text }], index: `${id}.bond` });
   }
 
@@ -844,16 +819,27 @@ function Explore({
     const pad = () => {
       const pads = navigator.getGamepads?.() ?? [];
       const p = pads[0];
-      if (!p || dialogue || puzzle) return;
+      const prev = padPrev.current;
+      padPrev.current = p ? p.buttons.map((b) => b.pressed) : [];
+      if (!p) return;
+      const edge = (i: number) => Boolean(p.buttons[i]?.pressed) && !prev[i];
+      if (dialogue || puzzle || panel !== "none") {
+        if (edge(1)) {
+          setDialogue(null);
+          setPuzzle(null);
+          setPanel("none");
+        }
+        return;
+      }
       if (p.buttons[12]?.pressed) tryStep(0, -1);
       if (p.buttons[13]?.pressed) tryStep(0, 1);
       if (p.buttons[14]?.pressed) tryStep(-1, 0);
       if (p.buttons[15]?.pressed) tryStep(1, 0);
-      if (p.buttons[0]?.pressed) interact();
+      if (edge(0)) interact();
     };
     const id = window.setInterval(pad, 180);
     return () => window.clearInterval(id);
-  }, [tryStep, dialogue, puzzle, interact]);
+  }, [tryStep, dialogue, puzzle, panel, interact]);
 
   useEffect(() => {
     if (save.mapId !== "map.vale") return;
@@ -989,6 +975,17 @@ function Explore({
           {panel === "party" && <PartyStrip save={save} verbose />}
           {panel === "bag" && (
             <ul className="flex flex-col gap-2 text-sm">
+              <li className="rounded-md bg-ink/40 p-2 text-parchment/80">
+                {save.party.map((who) => {
+                  const load = save.equipment?.[who];
+                  const worn = [load?.weapon, load?.armor, load?.accessory].filter(Boolean).map((id) => GEAR[id!]!.name);
+                  return (
+                    <span key={who} className="block">
+                      {save.roster[who]?.name ?? who}: {worn.length ? worn.join(", ") : "unarmed"}
+                    </span>
+                  );
+                })}
+              </li>
               {save.inventory.filter((s) => s.qty > 0).map((s) => {
                 const gear = GEAR[s.itemId];
                 const item = ITEMS[s.itemId];
@@ -1556,6 +1553,7 @@ function Battle({
   const asc = useRef({ x: 0, z: 2.2, keys: new Set<string>() });
   const [ascPos, setAscPos] = useState({ x: 0, z: 2.2 });
   const enemyTimer = useRef<number | null>(null);
+  const battlePad = useRef<boolean[]>([]);
 
   const active = enc.combatants.find((c) => c.id === enc.activeActorId);
   const foes = enc.combatants.filter((c) => c.side === "enemy");
@@ -1570,6 +1568,14 @@ function Battle({
   function commitEnc(nextEnc: EncounterState, note?: string) {
     const base = saveRef.current;
     let nextSave: SaveGame = { ...base, encounter: nextEnc, mode: nextEnc.mode };
+    if (nextEnc.pack) {
+      nextSave = {
+        ...nextSave,
+        inventory: nextSave.inventory.map((slot) =>
+          slot.itemId in nextEnc.pack! ? { ...slot, qty: Math.max(0, nextEnc.pack![slot.itemId] ?? 0) } : slot,
+        ),
+      };
+    }
     if (nextEnc.pendingReward && !base.flags[`rewarded.${nextEnc.pendingReward.id}`]) {
       nextSave = applyReward(nextSave, nextEnc.pendingReward);
     }
@@ -1611,15 +1617,8 @@ function Battle({
   function doAction(action: CombatAction) {
     const current = encRef.current;
     if (current.outcome !== "ongoing") return;
-    if (action.kind === "item") {
-      const base = saveRef.current;
-      const slot = base.inventory.find((i) => ITEMS[i.itemId]?.useAbility === action.abilityId && i.qty > 0);
-      if (!slot) {
-        push("That pouch is empty.");
-        return;
-      }
-    }
     const stamped = structuredClone(current);
+    stamped.pack = Object.fromEntries(saveRef.current.inventory.map((slot) => [slot.itemId, slot.qty]));
     if (stamped.mode === "ascension") {
       const mover = stamped.combatants.find((c) => c.id === action.actorId && c.side === "party");
       if (mover) mover.position = { x: asc.current.x, z: asc.current.z };
@@ -1629,11 +1628,6 @@ function Battle({
       push(res.reason ?? "That did not hold.");
       playSfx("ui");
       return;
-    }
-    if (action.kind === "item") {
-      const base = saveRef.current;
-      const slot = base.inventory.find((i) => ITEMS[i.itemId]?.useAbility === action.abilityId);
-      if (slot) slot.qty = Math.max(0, slot.qty - 1);
     }
     if (action.kind === "cast") {
       const base = saveRef.current;
@@ -1697,7 +1691,7 @@ function Battle({
       const last = res.state.events[res.state.events.length - 1];
       playSfx(last?.kind === "damage" ? "hurt" : "hit");
       commitEnc(res.state, last?.text);
-    }, save.settings.reducedMotion ? 250 : 700);
+    }, save.settings.reducedMotion ? 180 : 480);
     return () => {
       if (enemyTimer.current) window.clearTimeout(enemyTimer.current);
     };
@@ -1804,6 +1798,52 @@ function Battle({
     };
   }, [enc, active?.id, save.ascensionUnlocked]);
 
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const pads = navigator.getGamepads?.() ?? [];
+      const p = pads[0];
+      const prev = battlePad.current;
+      battlePad.current = p ? p.buttons.map((b) => b.pressed) : [];
+      if (!p || enc.phase !== "player" || enc.outcome !== "ongoing" || !active || active.side !== "party") return;
+      const edge = (i: number) => Boolean(p.buttons[i]?.pressed) && !prev[i];
+      if (enc.mode === "ascension") {
+        if (p.buttons[14]?.pressed) asc.current.x = clamp(asc.current.x - 0.35, -3.2, 3.2);
+        if (p.buttons[15]?.pressed) asc.current.x = clamp(asc.current.x + 0.35, -3.2, 3.2);
+        if (p.buttons[12]?.pressed) asc.current.z = clamp(asc.current.z - 0.35, -0.2, 3.4);
+        if (p.buttons[13]?.pressed) asc.current.z = clamp(asc.current.z + 0.35, -0.2, 3.4);
+      }
+      if (edge(0)) {
+        const foe = enc.mode === "ascension" ? nearestFoe(enc, asc.current) : enc.combatants.find((c) => c.side === "enemy" && c.alive);
+        const strike = active.id === "kael" ? "atk.oathcut" : "atk.strike";
+        if (foe) {
+          doAction({
+            version: 1,
+            actorId: active.id,
+            abilityId: strike,
+            kind: "attack",
+            targetIds: [foe.id],
+            modeOrigin: enc.mode,
+            timeOrTurn: enc.turnIndex,
+          });
+        }
+      }
+      if (edge(1)) chooseAbility("act.defend", "defend");
+      if (edge(2) && (CHARACTERS[active.id]?.abilities ?? []).includes("act.dodge")) chooseAbility("act.dodge", "dodge");
+      if (edge(3) && save.ascensionUnlocked) {
+        doAction({
+          version: 1,
+          actorId: active.id,
+          abilityId: "act.defend",
+          kind: "switch",
+          targetIds: [],
+          modeOrigin: enc.mode,
+          timeOrTurn: enc.turnIndex,
+        });
+      }
+    }, 140);
+    return () => window.clearInterval(id);
+  }, [enc, active, save.ascensionUnlocked]);
+
   const abilitiesFor = active
     ? [...new Set([...(CHARACTERS[active.id]?.abilities ?? ["atk.strike", "act.defend"]), ...(save.knownSpells[active.id] ?? [])])]
     : [];
@@ -1861,8 +1901,10 @@ function Battle({
             <p className="font-display text-4xl">{enc.encounterId === "enc.cantor" ? "Thorn Cantor" : "Crystal Warden"}</p>
             <p className="mt-2 max-w-md text-sm text-parchment/80">
               {enc.encounterId === "enc.cantor"
-                ? "A song with thorns. Bring it under half if you mean to ask it to stop."
-                : "A guardian that has not been spoken to kindly in a long while."}
+                ? flag(save, "flag.warden_spared") || save.wardenOutcome === "spared"
+                  ? "A song with thorns. Bring it under half if you mean to ask it to stop. Mercy here remembers the Warden you spared."
+                  : "A song with thorns. The Warden was not spared, so this one will not accept a softer ending. Finish the note."
+                : "A guardian that has not been spoken to kindly in a long while. Stoneguard, then Tide, opens a choice."}
             </p>
           </div>
         )}
@@ -1885,6 +1927,16 @@ function Battle({
           {enc.phase === "switch_lock" && <p>The two views agree with each other…</p>}
           {enc.phase === "player" && active && (
             <div className="flex flex-col gap-2">
+              {enc.encounterId === "enc.cantor" && foes.some((f) => f.alive && f.hp <= f.maxHp * 0.5) && (
+                <p className="text-sm text-amber">
+                  {flag(save, "flag.warden_spared") || save.wardenOutcome === "spared"
+                    ? "The dirge is thin enough to ask it to stop."
+                    : "The dirge is thin. It still will not take mercy."}
+                </p>
+              )}
+              {enc.encounterId === "enc.warden" && foes.some((f) => f.mercyEligible || f.statuses.some((s) => s.id === "exposed")) && (
+                <p className="text-sm text-teal">The core is open. Mercy and the last blow are both still true.</p>
+              )}
               <p className="text-sm text-teal">{active.name}'s turn. {enc.mode === "ascension" ? "WASD moves inside the ring. F or Cast strikes the nearest foe. Q dodges. The menu still works." : "Choose, then choose who wears it."}</p>
               {enc.mode === "ascension" && (
                 <div className="flex flex-wrap gap-2 lg:hidden">
@@ -1915,7 +1967,8 @@ function Battle({
                     <MenuButton
                       tone="ghost"
                       onClick={() => {
-                        const res = tryMercy(enc);
+                        const sparedWarden = flag(save, "flag.warden_spared") || save.wardenOutcome === "spared";
+                        const res = tryMercy(enc, { wardenSpared: sparedWarden });
                         if (!res.ok) {
                           push(res.reason ?? "Not yet.");
                           return;
@@ -2048,8 +2101,9 @@ function drawArena(
     ctx.beginPath();
     ctx.arc(p.px, p.py, rad, 0, Math.PI * 2);
     ctx.fill();
-    if (c.jobId === "enemy.warden") {
-      ctx.strokeStyle = c.statuses.some((s) => s.id === "exposed") ? "#e06a5c" : "#f3e6c8";
+    if (c.jobId === "enemy.warden" || c.jobId === "enemy.cantor") {
+      const open = c.jobId === "enemy.cantor" ? c.hp <= c.maxHp * 0.5 : c.statuses.some((s) => s.id === "exposed");
+      ctx.strokeStyle = open ? "#e06a5c" : "#f3e6c8";
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.lineWidth = 1;
@@ -2078,9 +2132,7 @@ function Ending({ save, onTitle, onAgain }: { save: SaveGame; onTitle: () => voi
       {reach ? (
         <>
           <p>
-            {cantorKind
-              ? `${save.playerName}, the Cantor lets the vine go. Nessa ties the leftover note into a loop and does not call it a trophy. The Reach exhales like a wood that has been holding a verse too long.`
-              : `${save.playerName}, the barrow goes quiet. Nessa does not congratulate you. She listens, once, to be sure the thicket is not learning the ending by heart.`}
+            {reachClose(save.playerName, wardenMemory(save), cantorKind)} The Reach exhales like a wood that has been holding a verse too long.
           </p>
           <p>
             The hymn still does not match any season Lantern Vale keeps. Mira writes the notes and leaves the margin empty. Somewhere under the clock, a warm stone is not a door. Not yet. The drawing Nim made is still only a drawing.

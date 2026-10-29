@@ -7,6 +7,7 @@ import { DIALOGUE, MAPS, MOSS_ANSWER, PUBLIC_STRING_BAN } from "../content/world
 import { learnElementalist, prepareForBattle, useSight } from "../content/gear.ts";
 import type { CombatAction, CombatantState } from "../contracts.ts";
 import { assertPlayable, scriptedCrystalAwakening } from "./playthrough.ts";
+import { companionAside, reachClose, wardenMemory } from "../content/memory.ts";
 
 function foe(template: keyof typeof ENEMY_TEMPLATES, id: string, position: { x: number; z: number }): CombatantState {
   return { ...structuredClone(ENEMY_TEMPLATES[template]), id, position };
@@ -311,7 +312,9 @@ describe("living world", () => {
     });
     assert.equal(tryMercy(s).ok, false);
     s.combatants.find((c) => c.id === "cantor")!.hp = 80;
-    const spared = tryMercy(s);
+    assert.equal(tryMercy(s).ok, false);
+    assert.equal(tryMercy(s, { wardenSpared: false }).ok, false);
+    const spared = tryMercy(s, { wardenSpared: true });
     assert.equal(spared.ok, true);
     assert.equal(spared.state.pendingReward?.id, "reward.cantor.mercy");
     let save = applyReward(freshSave("Ash"), spared.state.pendingReward!);
@@ -355,6 +358,10 @@ describe("living world", () => {
     assert.deepEqual(back.echoMemory, []);
     assert.equal(back.gnosis, 0);
     assert.ok(back.quests.some((q) => q.id === "quest.reach"));
+    assert.equal(back.quests.find((q) => q.id === "quest.reach")?.status, "active");
+    assert.equal(wardenMemory(back), "spared");
+    assert.match(companionAside("nessa", 3, "spared"), /stopped once/);
+    assert.match(reachClose(back.playerName, "spared", true), /still sleeping/);
   });
 
   it("elementalist and the reach gates stay behind their discoveries", () => {
@@ -365,5 +372,111 @@ describe("living world", () => {
     assert.deepEqual([...MOSS_ANSWER], ["wind", "flame", "stone"]);
     assert.equal(MAPS["map.shrine"]?.exits.find((e) => e.to === "map.reach")?.requires, "flag.chapter_complete");
     assert.equal(MAPS["map.reach"]?.exits.find((e) => e.to === "map.barrow")?.requires, "flag.moss_hymn");
+  });
+
+  it("a defeated warden stays defeated after schema migration and into the Reach", () => {
+    const modern = freshSave("Ash");
+    modern.wardenOutcome = "defeated";
+    modern.flags["flag.warden_defeated"] = true;
+    modern.chapterComplete = true;
+    const raw = JSON.parse(serialize(modern)) as Record<string, unknown>;
+    raw.schema = 1;
+    delete raw.equipment;
+    delete raw.choiceLog;
+    const back = deserialize(JSON.stringify(raw));
+    assert.equal(back.wardenOutcome, "defeated");
+    assert.equal(wardenMemory(back), "defeated");
+    assert.match(companionAside("mira", 1, "defeated"), /blank line/);
+    assert.match(companionAside("mira", 4, "defeated"), /blank line/);
+    assert.doesNotMatch(companionAside("kael", 3, "defeated"), /sleep/);
+    assert.match(reachClose("Ash", "defeated", false), /still fallen/);
+    assert.equal(back.quests.find((q) => q.id === "quest.reach")?.status, "active");
+  });
+
+  it("rejects a mode switch that is not the active ally's turn", () => {
+    const s = createEncounter({
+      encounterId: "enc.woods",
+      seed: 5,
+      party: partyTrio(),
+      enemies: [foe("shardling", "s", { x: 0, z: -1 })],
+      switchUnlocked: true,
+    });
+    s.phase = "player";
+    s.activeActorId = "kael";
+    const outsider = proposeAction(s, act({ actorId: "wanderer", abilityId: "act.defend", kind: "switch" }));
+    assert.equal(outsider.ok, false);
+    assert.equal(outsider.state.mode, "legacy");
+    s.phase = "enemy";
+    s.activeActorId = "s";
+    const enemyPhase = proposeAction(s, act({ actorId: "kael", abilityId: "act.defend", kind: "switch" }));
+    assert.equal(enemyPhase.ok, false);
+    assert.equal(enemyPhase.state.mode, "legacy");
+  });
+
+  it("rejects the wrong target, an unknown art, and an empty pack", () => {
+    const s = createEncounter({
+      encounterId: "enc.woods",
+      seed: 8,
+      party: partyTrio(),
+      enemies: [foe("shardling", "s", { x: 0, z: -1 })],
+    });
+    s.phase = "player";
+    s.activeActorId = "wanderer";
+    const before = s.combatants.find((c) => c.id === "mira")!.hp;
+    const allyHit = proposeAction(s, act({ actorId: "wanderer", abilityId: "atk.strike", kind: "attack", targetIds: ["mira"] }));
+    assert.equal(allyHit.ok, false);
+    assert.equal(allyHit.state.combatants.find((c) => c.id === "mira")!.hp, before);
+    const flare = proposeAction(s, act({ actorId: "wanderer", abilityId: "spell.flare", kind: "cast", targetIds: ["s"] }));
+    assert.equal(flare.ok, false);
+    s.combatants.find((c) => c.id === "wanderer")!.knownAbilities = ["atk.strike", "spell.ember", "spell.flare", "act.defend"];
+    s.combatants.find((c) => c.id === "wanderer")!.mp = 40;
+    const learned = proposeAction(s, act({ actorId: "wanderer", abilityId: "spell.flare", kind: "cast", targetIds: ["s"] }));
+    assert.equal(learned.ok, true, learned.reason);
+    const dry = proposeAction(s, act({ actorId: "wanderer", abilityId: "item.lantern_salve", kind: "item", targetIds: ["wanderer"] }));
+    assert.equal(dry.ok, false);
+    s.pack = { "item.lantern_salve": 1 };
+    s.combatants.find((c) => c.id === "wanderer")!.hp = 20;
+    const used = proposeAction(s, act({ actorId: "wanderer", abilityId: "item.lantern_salve", kind: "item", targetIds: ["wanderer"] }));
+    assert.equal(used.ok, true, used.reason);
+    assert.equal(used.state.pack?.["item.lantern_salve"], 0);
+    assert.ok((used.state.combatants.find((c) => c.id === "wanderer")?.hp ?? 0) > 20);
+  });
+
+  it("same seed and same strikes stay identical, and a rival payout is refused", () => {
+    const play = () => {
+      let s = createEncounter({
+        encounterId: "enc.woods",
+        seed: 4242,
+        party: partyTrio(),
+        enemies: [foe("shardling", "s", { x: 0, z: -1 })],
+      });
+      for (let i = 0; i < 6 && s.outcome === "ongoing"; i++) {
+        if (s.phase === "enemy") {
+          const res = resolveEnemyTurn(s);
+          assert.equal(res.ok, true, res.reason);
+          s = res.state;
+        } else if (s.phase === "player" && s.activeActorId) {
+          const foeId = s.combatants.find((c) => c.side === "enemy" && c.alive)?.id ?? "s";
+          const abilityId = s.activeActorId === "kael" ? "atk.oathcut" : "atk.strike";
+          const res = proposeAction(s, act({ actorId: s.activeActorId, abilityId, kind: "attack", targetIds: [foeId] }));
+          assert.equal(res.ok, true, res.reason);
+          s = res.state;
+        } else break;
+      }
+      return fingerprint(s);
+    };
+    assert.equal(play(), play());
+    const cantor = createEncounter({
+      encounterId: "enc.cantor",
+      seed: 3,
+      party: partyTrio(),
+      enemies: [foe("cantor", "cantor", { x: 0, z: -2 })],
+      rewardsAlready: ["reward.cantor.defeat"],
+    });
+    cantor.combatants.find((c) => c.id === "cantor")!.hp = 40;
+    const mercy = tryMercy(cantor, { wardenSpared: true });
+    assert.equal(mercy.ok, true);
+    assert.equal(mercy.state.pendingReward, null);
+    assert.deepEqual(mercy.state.rewardsGranted, ["reward.cantor.defeat"]);
   });
 });

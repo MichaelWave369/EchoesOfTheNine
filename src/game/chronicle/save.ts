@@ -236,6 +236,12 @@ export function migrateSave(parsed: SaveGame): SaveGame {
   next.runeOrder = next.runeOrder ?? [];
   next.journal = next.journal ?? [];
   next.flags = next.flags ?? {};
+  if (next.chapterComplete) next.flags["flag.chapter_complete"] = next.flags["flag.chapter_complete"] ?? true;
+  if (next.flags["flag.chapter_complete"]) next.chapterComplete = true;
+  if (next.flags["flag.cantor_spared"] || next.flags["flag.cantor_defeated"]) {
+    next.flags["flag.chapter_complete"] = true;
+    next.chapterComplete = true;
+  }
   next.inventory = next.inventory ?? [];
   next.party = next.party?.length ? next.party : ["wanderer"];
   next.wardenOutcome = next.wardenOutcome ?? "none";

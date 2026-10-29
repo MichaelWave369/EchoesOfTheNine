@@ -1,4 +1,5 @@
 import type { CombatantState, EquipLoadout, SaveGame } from "../contracts.ts";
+import { CHARACTERS } from "./characters.ts";
 
 export interface GearDef {
   id: string;
@@ -129,6 +130,9 @@ export function prepareForBattle(save: SaveGame, id: string): CombatantState {
     }
   }
   geared.spellRanks = ranks;
+  geared.knownAbilities = [
+    ...new Set([...(CHARACTERS[id]?.abilities ?? []), ...(save.knownSpells[id] ?? []), "atk.strike", "act.defend", "act.dodge"]),
+  ];
   return geared;
 }
 
