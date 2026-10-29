@@ -35,6 +35,7 @@ jobs:
         run: |
           test -s dist-pages/index.html
           test -d dist-pages/assets
+          node scripts/check-pages-style.mjs
           touch dist-pages/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
