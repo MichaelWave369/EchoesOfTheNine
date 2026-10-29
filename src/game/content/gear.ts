@@ -1,0 +1,227 @@
+import type { CombatantState, EquipLoadout, SaveGame } from "../contracts.ts";
+import { CHARACTERS } from "./characters.ts";
+
+export interface GearDef {
+  id: string;
+  name: string;
+  blurb: string;
+  slot: "weapon" | "armor" | "accessory";
+  attack?: number;
+  defense?: number;
+  speed?: number;
+  price: number;
+}
+
+export const GEAR: Record<string, GearDef> = {
+  "weapon.festival_knife": {
+    id: "weapon.festival_knife",
+    name: "Festival Knife",
+    blurb: "A bread knife that has seen exactly one heroic moment, and is ready for another.",
+    slot: "weapon",
+    attack: 3,
+    price: 0,
+  },
+  "weapon.glass_needle": {
+    id: "weapon.glass_needle",
+    name: "Glass Needle",
+    blurb: "Bram swears it was a pine needle yesterday. It pokes like it remembers being a sword.",
+    slot: "weapon",
+    attack: 6,
+    price: 36,
+  },
+  "weapon.oath_blade": {
+    id: "weapon.oath_blade",
+    name: "Oath Blade",
+    blurb: "Heavy, plain, and unwilling to be decorative.",
+    slot: "weapon",
+    attack: 7,
+    price: 48,
+  },
+  "armor.lantern_coat": {
+    id: "armor.lantern_coat",
+    name: "Lantern Coat",
+    blurb: "Quilted against festival sparks. Also, slightly, against teeth.",
+    slot: "armor",
+    defense: 3,
+    price: 28,
+  },
+  "armor.pine_mail": {
+    id: "armor.pine_mail",
+    name: "Pine Mail",
+    blurb: "Bark plates and stubbornness.",
+    slot: "armor",
+    defense: 5,
+    price: 40,
+  },
+  "accessory.clock_charm": {
+    id: "accessory.clock_charm",
+    name: "Loose Minute",
+    blurb: "A warm pebble from under the clock. It does not tell time. It keeps up.",
+    slot: "accessory",
+    speed: 3,
+    price: 0,
+  },
+  "accessory.reed_loop": {
+    id: "accessory.reed_loop",
+    name: "Reed Loop",
+    blurb: "The Cantor's leftover note, tied in a circle. Quiet, if you were kind.",
+    slot: "accessory",
+    defense: 2,
+    speed: 1,
+    price: 0,
+  },
+};
+
+export const SHOP_IDS = ["weapon.glass_needle", "weapon.oath_blade", "armor.lantern_coat", "armor.pine_mail", "item.lantern_salve", "item.dew_vial"] as const;
+
+export const GROWTH: Record<string, { hp: number; mp: number; attack: number; defense: number }> = {
+  wanderer: { hp: 8, mp: 3, attack: 2, defense: 1 },
+  mira: { hp: 5, mp: 5, attack: 1, defense: 1 },
+  kael: { hp: 10, mp: 2, attack: 2, defense: 2 },
+  nessa: { hp: 7, mp: 4, attack: 2, defense: 1 },
+};
+
+export function levelForXp(xp: number): number {
+  return Math.min(8, 3 + Math.floor(Math.max(0, xp) / 45));
+}
+
+export function syncLevels(save: SaveGame): SaveGame {
+  const target = levelForXp(save.xp);
+  for (const id of save.party) {
+    const c = save.roster[id];
+    const g = GROWTH[id];
+    if (!c || !g) continue;
+    while (c.level < target) {
+      c.level += 1;
+      c.maxHp += g.hp;
+      c.hp += g.hp;
+      c.maxMp += g.mp;
+      c.mp += g.mp;
+      c.attack += g.attack;
+      c.defense += g.defense;
+    }
+  }
+  return save;
+}
+
+export function withGear(base: CombatantState, load?: EquipLoadout): CombatantState {
+  const next = structuredClone(base);
+  for (const id of [load?.weapon, load?.armor, load?.accessory]) {
+    if (!id) continue;
+    const g = GEAR[id];
+    if (!g) continue;
+    next.attack += g.attack ?? 0;
+    next.defense += g.defense ?? 0;
+    next.speed += g.speed ?? 0;
+  }
+  return next;
+}
+
+export function prepareForBattle(save: SaveGame, id: string): CombatantState {
+  const raw = save.roster[id];
+  if (!raw) throw new Error(`No such ally ${id}`);
+  const geared = withGear(raw, save.equipment[id]);
+  const ranks: Record<string, number> = {};
+  const known = new Set([...(save.knownSpells[id] ?? [])]);
+  for (const [abilityId, casts] of Object.entries(save.spellMastery)) {
+    if (!known.size || known.has(abilityId) || casts > 0) {
+      const rank = Math.floor(casts / 3);
+      if (rank > 0) ranks[abilityId] = rank;
+    }
+  }
+  geared.spellRanks = ranks;
+  geared.knownAbilities = [
+    ...new Set([...(CHARACTERS[id]?.abilities ?? []), ...(save.knownSpells[id] ?? []), "atk.strike", "act.defend", "act.dodge"]),
+  ];
+  return geared;
+}
+
+export function buyItem(save: SaveGame, itemId: string): { ok: true; save: SaveGame } | { ok: false; reason: string } {
+  const gear = GEAR[itemId];
+  const price = gear?.price ?? (itemId === "item.lantern_salve" ? 12 : itemId === "item.dew_vial" ? 15 : 0);
+  if (!price) return { ok: false, reason: "Bram will not sell that." };
+  if (save.gold < price) return { ok: false, reason: "That is more gold than the purse admits." };
+  const next = structuredClone(save);
+  next.gold -= price;
+  const slot = next.inventory.find((s) => s.itemId === itemId);
+  if (slot) slot.qty += 1;
+  else next.inventory.push({ itemId, qty: 1 });
+  return { ok: true, save: next };
+}
+
+export function equipItem(save: SaveGame, who: string, itemId: string): SaveGame | null {
+  const gear = GEAR[itemId];
+  if (!gear || !save.roster[who]) return null;
+  const slot = save.inventory.find((s) => s.itemId === itemId && s.qty > 0);
+  if (!slot) return null;
+  const next = structuredClone(save);
+  const held = next.inventory.find((s) => s.itemId === itemId);
+  if (!held || held.qty <= 0) return null;
+  held.qty -= 1;
+  const load = next.equipment[who] ?? {};
+  const previous = load[gear.slot];
+  if (previous) {
+    const back = next.inventory.find((s) => s.itemId === previous);
+    if (back) back.qty += 1;
+    else next.inventory.push({ itemId: previous, qty: 1 });
+  }
+  load[gear.slot] = itemId;
+  next.equipment[who] = load;
+  return next;
+}
+
+export function restParty(save: SaveGame): { ok: true; save: SaveGame } | { ok: false; reason: string } {
+  const cost = 8;
+  if (save.gold < cost) return { ok: false, reason: "A night at the Wick is eight gold. The benches outside are free and unpopular." };
+  const next = structuredClone(save);
+  next.gold -= cost;
+  next.sightCharges = 3;
+  for (const id of next.party) {
+    const c = next.roster[id];
+    if (!c) continue;
+    c.hp = c.maxHp;
+    c.mp = c.maxMp;
+    c.alive = true;
+  }
+  return { ok: true, save: next };
+}
+
+export function useSight(save: SaveGame): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
+  if (!save.flags["flag.temporal_sight"]) return { ok: false, reason: "The sight is not awake." };
+  if (save.sightCharges <= 0) return { ok: false, reason: "The sight is tired. Sleep at the Ninth Wick." };
+  const next = structuredClone(save);
+  next.sightCharges -= 1;
+  let text = "For a breath the room is half a step ahead of itself. Nothing hidden keeps.";
+  const note = (id: string, line: string) => {
+    if (!next.discoveries.includes(id)) next.discoveries.push(id);
+    next.flags[id] = true;
+    text = line;
+    if (!next.journal.includes(line)) next.journal.push(line);
+  };
+  if (next.mapId === "map.vale") note("flag.sight_clock", "Under the clock, a stone sits wrong. It is warm, and it is not a door.");
+  else if (next.mapId === "map.reach") note("flag.sight_cache", "West of the hymn stone the moss is lying. Something small is underneath.");
+  else if (next.mapId === "map.barrow") note("flag.sight_barrow", "The left root was not always a root. A cache waits behind it.");
+  else if (next.mapId === "map.shrine") note("flag.sight_shrine", "The floor inscription flickers. Your name stays. The date does not finish forming.");
+  return { ok: true, save: next, text };
+}
+
+export function learnElementalist(save: SaveGame): SaveGame {
+  if (
+    save.jobsUnlocked.includes("job.elementalist") &&
+    save.knownSpells["wanderer"]?.includes("spell.flare")
+  ) {
+    return save;
+  }
+  const next = structuredClone(save);
+  if (!next.jobsUnlocked.includes("job.elementalist")) next.jobsUnlocked.push("job.elementalist");
+  if (next.roster["wanderer"]) next.roster["wanderer"].jobId = "job.elementalist";
+  const known = next.knownSpells["wanderer"] ?? ["spell.ember"];
+  if (!known.includes("spell.flare")) next.knownSpells["wanderer"] = [...known, "spell.flare"];
+  if (!next.choiceLog.some((c) => c.id === "job.wanderer")) {
+    next.choiceLog.push({ id: "job.wanderer", value: "elementalist" });
+  }
+  if (!next.journal.some((line) => line.includes("Elementalist"))) {
+    next.journal.push("The conduits left a second trade in your hands: Elementalist. Flare is yours.");
+  }
+  return next;
+}

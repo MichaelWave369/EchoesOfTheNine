@@ -61,6 +61,20 @@ export const XR_BINDINGS: XrInputBinding = {
     "Trigger and the Cast button both emit CombatAction kind 'cast' with the same ability id. Hand pose is aimEvidence and is never damage authority. Seated and standing are both valid. Room-scale sprinting is not required and is not rewarded.",
 };
 
+/**
+ * Future headset presentation. Empty on purpose.
+ * A later adapter may fill these. The desktop game must not call them to function.
+ * Not a claim that Quest 3, haptics, or hand tracking were tested.
+ */
+export interface XrPresentationHooks {
+  mountBattle?: (encounterId: string) => void;
+  unmountBattle?: () => void;
+  spatialInteract?: (hotspotId: string) => void;
+  haptic?: (pulse: "light" | "heavy") => void;
+}
+
+export const XR_PRESENTATION: XrPresentationHooks = {};
+
 export async function requestReferenceSession(): Promise<{ ok: boolean; message: string }> {
   const cap = await detectXr();
   const xr = xrOf();

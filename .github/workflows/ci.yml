@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Game tests
+        run: node --experimental-strip-types --test src/game/core/combat.test.ts
+      - name: Production build
+        run: npm run build
+        env:
+          # Absent on purpose. scripts/migrate.mjs exits 0 without a database.
+          DATABASE_URL: ""

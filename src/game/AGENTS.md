@@ -9,7 +9,7 @@ Read the repo root `GAMEPLAY_STATUS.md` before claiming a feature works. The mas
 3. **Unique rewards.** New payouts need a stable id. `rewardsGranted` and `flag.rewarded.<id>` both exist so a reload cannot double them. Keep both.
 4. **Mercy is a real ending**, not a weaker kill. Do not delete `tryMercy` or make it grant the defeat item.
 5. **Button path.** Every new mandatory puzzle needs a click or key that does not require a pointer gesture or a headset.
-6. **Saves.** `SaveGame.version` is 1. Adding fields is fine; renaming or dropping fields needs a migrator and a round-trip test. Renderer objects never go into the save.
+6. **Saves.** `SaveGame.version` is 1. `schema` is 2. Schema 1 chronicles migrate in `deserialize` — do not reject them. New fields need a default in `migrateSave` and a round-trip test. Renderer objects never go into the save. Do not render `echoMemory` or `gnosis`.
 7. **Future content** in `FUTURE_CONTENT` stays `playable: false` until a rung actually ships it. Do not wire those ids to buttons "so the menu looks full."
 8. **XR copy.** Never write that Quest 3 was tested unless a person wore one. `src/game/xr/adapter.ts` is the boundary.
 

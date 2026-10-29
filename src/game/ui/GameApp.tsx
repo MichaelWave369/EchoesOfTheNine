@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CombatAction, EncounterState, SaveGame } from "../contracts.ts";
-import { CHARACTERS, ENEMY_TEMPLATES } from "../content/characters.ts";
+import { CHARACTERS, ENEMY_TEMPLATES, JOBS } from "../content/characters.ts";
 import { ability, ABILITIES } from "../content/abilities.ts";
-import { DIALOGUE, ITEMS, MAPS, RUNE_ANSWER, type MapHotspot } from "../content/world.ts";
+import { DIALOGUE, ITEMS, MAPS, MOSS_ANSWER, RUNE_ANSWER, type MapHotspot } from "../content/world.ts";
+import { buyItem, equipItem, GEAR, learnElementalist, levelForXp, prepareForBattle, restParty, SHOP_IDS, useSight, withGear } from "../content/gear.ts";
+import { companionAside, reachClose, wardenMemory } from "../content/memory.ts";
 import {
   applyReward,
+  bumpBond,
   clearLocal,
   deserialize,
   flag,
@@ -24,6 +27,27 @@ type Screen = "title" | "name" | "explore" | "battle" | "ending";
 type Toast = { id: number; text: string };
 
 const TILE = 48;
+
+function musicFor(mapId: string): "vale" | "woods" | "shrine" | "reach" | "barrow" | "inn" | "battle" | "title" {
+  if (mapId === "map.shrine") return "shrine";
+  if (mapId === "map.woods") return "woods";
+  if (mapId === "map.reach") return "reach";
+  if (mapId === "map.barrow") return "barrow";
+  if (mapId === "map.inn" || mapId === "map.smith") return "inn";
+  return "vale";
+}
+
+const SPEAKER_HUE: Record<string, number> = {
+  Lira: 24,
+  Nim: 48,
+  Mira: 168,
+  Kael: 210,
+  Nessa: 128,
+  Salla: 330,
+  Bram: 16,
+  "Elder Voss": 42,
+  You: 38,
+};
 
 function useToasts() {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -94,8 +118,8 @@ export function GameApp() {
             unlockAudio();
             playSfx("ui");
             setSave(loaded);
-            startMusic(loaded.chapterComplete ? "shrine" : loaded.mapId === "map.vale" ? "vale" : "woods");
-            setScreen(loaded.chapterComplete ? "ending" : loaded.encounter ? "battle" : "explore");
+            startMusic(musicFor(loaded.mapId));
+            setScreen(loaded.encounter ? "battle" : "explore");
           }}
           onSettings={() => {
             setFromTitle(true);
@@ -145,14 +169,15 @@ export function GameApp() {
           save={save}
           commit={commit}
           push={push}
-          onLeave={(next, victory) => {
+          onLeave={(next, victory, encounterId) => {
             commit(next);
-            if (next.chapterComplete) {
-              startMusic("shrine");
+            const closing = encounterId === "enc.warden" || encounterId === "enc.cantor";
+            if (closing && victory) {
+              startMusic(encounterId === "enc.cantor" ? "reach" : "shrine");
               playSfx("victory");
               setScreen("ending");
             } else {
-              startMusic(next.mapId === "map.vale" ? "vale" : next.mapId === "map.shrine" ? "shrine" : "woods");
+              startMusic(musicFor(next.mapId));
               setScreen("explore");
               if (!victory) push("You wake at the last safe step. The story has not closed.");
             }
@@ -164,8 +189,14 @@ export function GameApp() {
           save={save}
           onTitle={() => setScreen("title")}
           onAgain={() => {
-            const next = { ...save, chapterComplete: false, mapId: "map.shrine", spawnId: "door", encounter: null };
+            const next = {
+              ...save,
+              mapId: flag(save, "flag.cantor_spared") || flag(save, "flag.cantor_defeated") ? "map.reach" : "map.shrine",
+              spawnId: flag(save, "flag.cantor_spared") || flag(save, "flag.cantor_defeated") ? "shrine_side" : "door",
+              encounter: null,
+            };
             commit(next);
+            startMusic(musicFor(next.mapId));
             setScreen("explore");
           }}
         />
@@ -283,7 +314,7 @@ function TitleScreen({
           </MenuButton>
         </div>
         <p className="mt-6 max-w-md text-xs leading-relaxed text-parchment/60">
-          {xr?.reason ?? "Checking for a headset…"} {xrMsg ?? ""} Keyboard and mouse carry the whole chapter. Gamepad: A confirm, B back, d-pad move.
+          {xr?.reason ?? "Checking for a headset…"} {xrMsg ?? ""} Keyboard and mouse carry the whole chapter. Gamepad: A confirms, B closes a talk or bag, d-pad moves. In a fight, A strikes, B braces, X sidesteps, Y changes view when Ascension is awake.
         </p>
         <p className="mt-6 text-[11px] tracking-widest text-amber/80 uppercase">9:09</p>
       </div>
@@ -420,11 +451,13 @@ function Explore({
     nodes: { id: string; speaker: string; text: string; choices?: { label: string; next: string; flag?: string }[]; next?: string; grant?: string }[];
     index: string;
   } | null>(null);
-  const [panel, setPanel] = useState<"none" | "journal" | "party" | "bag" | "help">("none");
+  const [panel, setPanel] = useState<"none" | "journal" | "party" | "bag" | "help" | "shop" | "rest">("none");
   const [runePick, setRunePick] = useState<string[]>(save.runeOrder);
-  const [puzzle, setPuzzle] = useState<null | "runes" | "conduits">(null);
+  const [mossPick, setMossPick] = useState<string[]>([]);
+  const [puzzle, setPuzzle] = useState<null | "runes" | "conduits" | "moss">(null);
   const [conduit, setConduit] = useState(0);
   const moved = useRef(false);
+  const padPrev = useRef<boolean[]>([]);
 
   useEffect(() => {
     setPos({ x: spawn.x, y: spawn.y });
@@ -473,23 +506,55 @@ function Explore({
     playSfx("ui");
     if (spot.kind === "npc" || spot.kind === "sign") {
       if (spot.id === "npc.mira" && flag(save, "flag.mira_joined")) {
-        openTalk("mira.here");
+        openTalk("mira");
         return;
       }
       if (spot.id === "npc.kael" && flag(save, "flag.kael_joined")) {
-        openTalk("kael.here");
+        openTalk("kael");
         return;
       }
-      const nodes = DIALOGUE[spot.id];
+      if (spot.id === "npc.nessa" && flag(save, "flag.nessa_joined")) {
+        openTalk("nessa");
+        return;
+      }
+      if (spot.id === "npc.clock" && flag(save, "flag.sight_clock") && !flag(save, "flag.got_charm")) {
+        let next = setFlag(save, "flag.got_charm");
+        next.inventory.push({ itemId: "accessory.clock_charm", qty: 1 });
+        commit(next);
+        push("A warm pebble comes loose under the clock. It keeps pace with you.");
+        return;
+      }
+      const key =
+        spot.id === "npc.voss"
+          ? flag(save, "flag.warden_spared")
+            ? "npc.voss.spared"
+            : flag(save, "flag.warden_defeated")
+              ? "npc.voss.defeated"
+              : "npc.voss"
+          : spot.id;
+      const nodes = DIALOGUE[key];
       if (!nodes) return;
       setDialogue({ nodes, index: nodes[0]!.id });
+      return;
+    }
+    if (spot.kind === "shop") {
+      setPanel("shop");
+      return;
+    }
+    if (spot.kind === "rest") {
+      setPanel("rest");
       return;
     }
     if (spot.kind === "exit") {
       const exit = map.exits.find((e) => e.id === spot.id);
       if (!exit) return;
       if (exit.requires && !flag(save, exit.requires)) {
-        push(exit.requires === "flag.woods_cleared" ? "The shrine path is still a smear of light. Clear the flicker first." : "Not yet.");
+        const why: Record<string, string> = {
+          "flag.woods_cleared": "The shrine path is still a smear of light. Clear the flicker first.",
+          "flag.chapter_complete": "The trail beyond the prism is still just weather. The Warden's question comes first.",
+          "flag.moss_hymn": "The barrow mouth is shut. The moss has not accepted a hymn.",
+        };
+        push(why[exit.requires] ?? "Not yet.");
         return;
       }
       if (exit.to === "map.woods" && !flag(save, "flag.mira_joined")) {
@@ -498,10 +563,43 @@ function Explore({
       }
       const next = writeLocal({ ...save, mapId: exit.to, spawnId: exit.spawn, encounter: null });
       commit(next);
-      startMusic(exit.to === "map.vale" ? "vale" : exit.to === "map.shrine" ? "shrine" : "woods");
+      startMusic(musicFor(exit.to));
       return;
     }
     if (spot.kind === "item") {
+      if (spot.id === "item.cache") {
+        if (!flag(save, "flag.sight_cache")) {
+          push("The moss looks ordinary. Too ordinary, if you have not looked twice.");
+          return;
+        }
+        if (flag(save, "flag.got_cache")) {
+          push("The cache is a dent in the ground now.");
+          return;
+        }
+        let next = setFlag(save, "flag.got_cache");
+        const slot = next.inventory.find((i) => i.itemId === "item.dew_vial");
+        if (slot) slot.qty += 1;
+        else next.inventory.push({ itemId: "item.dew_vial", qty: 1 });
+        commit(next);
+        push("A dew vial, hidden under moss that was lying about being moss.");
+        return;
+      }
+      if (spot.id === "item.root") {
+        if (!flag(save, "flag.sight_barrow")) {
+          push("A root. It is doing an excellent impression of a root.");
+          return;
+        }
+        if (flag(save, "flag.got_root")) {
+          push("The latch is open and empty.");
+          return;
+        }
+        let next = setFlag(save, "flag.got_root");
+        next.inventory.push({ itemId: "item.hollow_resin", qty: 1 });
+        next.gold += 18;
+        commit(next);
+        push("Hollow resin, and a few coins that did not want to be a root.");
+        return;
+      }
       if (flag(save, "flag.got_salve")) {
         push("The crate is empty. Pim would approve of the thoroughness.");
         return;
@@ -543,6 +641,22 @@ function Explore({
         onBattle(makeEncounter(save, "enc.warden"));
         return;
       }
+      if (spot.id === "battle.thicket") {
+        if (flag(save, "flag.thicket_cleared") || flag(save, "flag.cleared.enc.thicket")) {
+          push("The briars are only briars.");
+          return;
+        }
+        onBattle(makeEncounter(save, "enc.thicket"));
+        return;
+      }
+      if (spot.id === "battle.cantor") {
+        if (flag(save, "flag.cantor_spared") || flag(save, "flag.cantor_defeated")) {
+          push("The barrow keeps a finished song.");
+          return;
+        }
+        onBattle(makeEncounter(save, "enc.cantor"));
+        return;
+      }
     }
     if (spot.kind === "puzzle") {
       if (spot.id === "puzzle.runes") {
@@ -556,16 +670,21 @@ function Explore({
           return;
         }
         setPuzzle("conduits");
+        return;
+      }
+      if (spot.id === "puzzle.moss") {
+        setMossPick([]);
+        setPuzzle("moss");
       }
     }
   }, [save, map, commit, onBattle, push]);
 
-  function openTalk(id: "mira.here" | "kael.here") {
-    const line =
-      id === "mira.here"
-        ? { id, speaker: "Mira", text: "I'm with you. If the shrine starts editing our names, I want it in the book." }
-        : { id, speaker: "Kael", text: "Still here. If it asks for blood, we discuss it. That part did not expire." };
-    setDialogue({ nodes: [line], index: id });
+  function openTalk(id: "mira" | "kael" | "nessa") {
+    const next = bumpBond(save, id);
+    commit(next);
+    const bond = next.bonds[id] ?? 1;
+    const text = companionAside(id, bond, wardenMemory(next));
+    setDialogue({ nodes: [{ id: `${id}.bond`, speaker: id === "mira" ? "Mira" : id === "kael" ? "Kael" : "Nessa", text }], index: `${id}.bond` });
   }
 
   function advanceDialogue(choice?: { label: string; next: string; flag?: string }) {
@@ -580,6 +699,9 @@ function Explore({
     }
     if (grant === "flag.kael_joined" || choice?.flag === "flag.kael_joined") {
       nextSave = recruit(setFlag(nextSave, "flag.kael_joined"), "kael");
+    }
+    if (grant === "flag.nessa_joined" || choice?.flag === "flag.nessa_joined") {
+      nextSave = recruit(setFlag(nextSave, "flag.nessa_joined"), "nessa");
     }
     if (grant === "flag.clock_anomaly") playSfx("clock");
     if (nextSave !== save) commit(nextSave);
@@ -606,6 +728,31 @@ function Explore({
     playSfx("spell");
   }
 
+  function submitMoss() {
+    const ok = mossPick.length === 3 && mossPick.every((r, i) => r === MOSS_ANSWER[i]);
+    if (!ok) {
+      push("The moss shrugs. It wanted wind, then flame, then stone.");
+      setMossPick([]);
+      return;
+    }
+    const next = setFlag(save, "flag.moss_hymn");
+    commit(next);
+    setPuzzle(null);
+    push("The hymn takes. Somewhere ahead, a mouth in the hill decides to be a door.");
+    playSfx("spell");
+  }
+
+  function lookTwice() {
+    const seen = useSight(save);
+    if (!seen.ok) {
+      push(seen.reason);
+      return;
+    }
+    commit(seen.save);
+    push(seen.text);
+    playSfx("spell");
+  }
+
   function turnConduit(dir: number) {
     if (!save.ascensionUnlocked && save.mode !== "ascension") {
       /* button-only path is always available once runes are known — spec: keyboard complete */
@@ -620,10 +767,14 @@ function Explore({
       next.conduitsAligned = true;
       next.ascensionUnlocked = true;
       next.mode = "ascension";
+      if (!flag(save, "flag.conduits_aligned")) {
+        next = learnElementalist(next);
+        next.sightCharges = 3;
+      }
       commit(next);
       setPuzzle(null);
       playSfx("spell");
-      push("The conduits match. For a breath you see the shrine twice. Ascension is awake.");
+      push("The conduits match. For a breath you see the shrine twice. Ascension is awake. Flare answers when you call it.");
     } else {
       push(`Conduit settles on ${order[nextIdx]}. It wants the last of the rune order.`);
     }
@@ -668,15 +819,27 @@ function Explore({
     const pad = () => {
       const pads = navigator.getGamepads?.() ?? [];
       const p = pads[0];
-      if (!p || dialogue || puzzle) return;
+      const prev = padPrev.current;
+      padPrev.current = p ? p.buttons.map((b) => b.pressed) : [];
+      if (!p) return;
+      const edge = (i: number) => Boolean(p.buttons[i]?.pressed) && !prev[i];
+      if (dialogue || puzzle || panel !== "none") {
+        if (edge(1)) {
+          setDialogue(null);
+          setPuzzle(null);
+          setPanel("none");
+        }
+        return;
+      }
       if (p.buttons[12]?.pressed) tryStep(0, -1);
       if (p.buttons[13]?.pressed) tryStep(0, 1);
       if (p.buttons[14]?.pressed) tryStep(-1, 0);
       if (p.buttons[15]?.pressed) tryStep(1, 0);
+      if (edge(0)) interact();
     };
     const id = window.setInterval(pad, 180);
     return () => window.clearInterval(id);
-  }, [tryStep, dialogue, puzzle]);
+  }, [tryStep, dialogue, puzzle, panel, interact]);
 
   useEffect(() => {
     if (save.mapId !== "map.vale") return;
@@ -714,10 +877,15 @@ function Explore({
           <p className="text-sm text-parchment/80">{map.blurb}</p>
           <PartyStrip save={save} />
           <p className="text-xs text-parchment/60">Move WASD or arrows. E, Enter, or the lantern button speaks, opens, and fights. J journal, I bag, P party.</p>
-          <p className="text-xs text-amber">{save.gold} gold · {save.xp} xp</p>
+          <p className="text-xs text-amber">{save.gold} gold · {save.xp} xp · circle {levelForXp(save.xp)}</p>
           {save.ascensionUnlocked && <p className="text-xs text-teal">Ascension is awake. Battles can be stepped into.</p>}
           {flag(save, "flag.temporal_sight") && (
-            <p className="text-xs text-violet">Temporal Sight: a hinge-shaped seam ghosts the shrine floor. It cannot be used. Not yet.</p>
+            <MenuButton tone="ghost" onClick={lookTwice}>
+              Temporal Sight ({save.sightCharges})
+            </MenuButton>
+          )}
+          {flag(save, "flag.temporal_sight") && (
+            <p className="text-xs text-violet">Sight spends a charge and shows what the room is hiding. The Wick restores it. Buttons only.</p>
           )}
           {save.chapterComplete && (
             <MenuButton onClick={onEnding}>Read the chapter's close</MenuButton>
@@ -752,6 +920,25 @@ function Explore({
           </div>
         </Modal>
       )}
+      {puzzle === "moss" && (
+        <Modal title="Moss hymn" onClose={() => setPuzzle(null)}>
+          <p className="mb-3 text-sm">Three notes, in the order Nessa keeps. Buttons are enough. The other view is not required, but standing close when you looked twice still matters.</p>
+          <div className="mb-3 flex gap-2">
+            {mossPick.map((r, i) => (
+              <span key={r + i} className="rounded-md bg-ink px-2 py-1 text-teal">{r}</span>
+            ))}
+            {mossPick.length === 0 && <span className="text-parchment/50">The moss is listening.</span>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["wind", "flame", "stone", "tide"].map((r) => (
+              <MenuButton key={r} tone="ghost" disabled={mossPick.includes(r)} onClick={() => setMossPick((p) => [...p, r].slice(0, 3))}>
+                {r}
+              </MenuButton>
+            ))}
+            <MenuButton onClick={submitMoss}>Give the hymn</MenuButton>
+          </div>
+        </Modal>
+      )}
       {puzzle === "conduits" && (
         <Modal title="Conduit ring" onClose={() => setPuzzle(null)}>
           <p className="mb-2 text-sm">
@@ -766,7 +953,10 @@ function Explore({
         </Modal>
       )}
       {panel !== "none" && (
-        <Modal title={panel === "journal" ? "Journal" : panel === "party" ? "Party" : panel === "bag" ? "Bag" : "How to walk the Vale"} onClose={() => setPanel("none")}>
+        <Modal
+          title={panel === "journal" ? "Journal" : panel === "party" ? "Party" : panel === "bag" ? "Bag" : panel === "shop" ? "Bram's stall" : panel === "rest" ? "The Ninth Wick" : "How to walk the Vale"}
+          onClose={() => setPanel("none")}
+        >
           {panel === "journal" && (
             <div className="flex flex-col gap-3">
               {save.quests.filter((q) => q.status !== "hidden").map((q) => (
@@ -785,14 +975,102 @@ function Explore({
           {panel === "party" && <PartyStrip save={save} verbose />}
           {panel === "bag" && (
             <ul className="flex flex-col gap-2 text-sm">
-              {save.inventory.map((s) => (
-                <li key={s.itemId}>
-                  <span className="text-amber">{ITEMS[s.itemId]?.name ?? s.itemId}</span> × {s.qty}
-                  <span className="block text-parchment/70">{ITEMS[s.itemId]?.blurb}</span>
-                </li>
-              ))}
-              {save.inventory.length === 0 && <li>Empty pockets. Pim would despair.</li>}
+              <li className="rounded-md bg-ink/40 p-2 text-parchment/80">
+                {save.party.map((who) => {
+                  const load = save.equipment?.[who];
+                  const worn = [load?.weapon, load?.armor, load?.accessory].filter(Boolean).map((id) => GEAR[id!]!.name);
+                  return (
+                    <span key={who} className="block">
+                      {save.roster[who]?.name ?? who}: {worn.length ? worn.join(", ") : "unarmed"}
+                    </span>
+                  );
+                })}
+              </li>
+              {save.inventory.filter((s) => s.qty > 0).map((s) => {
+                const gear = GEAR[s.itemId];
+                const item = ITEMS[s.itemId];
+                return (
+                  <li key={s.itemId} className="rounded-md bg-ink/50 p-2">
+                    <span className="text-amber">{gear?.name ?? item?.name ?? s.itemId}</span> × {s.qty}
+                    <span className="block text-parchment/70">{gear?.blurb ?? item?.blurb ?? "A thing from the road."}</span>
+                    {gear && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {save.party.map((who) => (
+                          <MenuButton
+                            key={who}
+                            tone="ghost"
+                            onClick={() => {
+                              const next = equipItem(save, who, s.itemId);
+                              if (!next) {
+                                push("That will not sit on them.");
+                                return;
+                              }
+                              commit(next);
+                              push(`${gear.name} equipped.`);
+                            }}
+                          >
+                            Equip {save.roster[who]?.name ?? who}
+                          </MenuButton>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+              {save.inventory.filter((s) => s.qty > 0).length === 0 && <li>Empty pockets. Pim would despair.</li>}
             </ul>
+          )}
+          {panel === "shop" && (
+            <div className="flex flex-col gap-3 text-sm">
+              <p>Bram looks at your purse the way a baker looks at an oven: professionally, and without romance.</p>
+              {SHOP_IDS.map((id) => {
+                const gear = GEAR[id];
+                const price = gear?.price ?? (id === "item.lantern_salve" ? 12 : 15);
+                const name = gear?.name ?? ITEMS[id]?.name ?? id;
+                return (
+                  <div key={id} className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-amber">{name}</p>
+                      <p className="text-parchment/70">{gear?.blurb ?? ITEMS[id]?.blurb} · {price} gold</p>
+                    </div>
+                    <MenuButton
+                      tone="ghost"
+                      onClick={() => {
+                        const bought = buyItem(save, id);
+                        if (!bought.ok) {
+                          push(bought.reason);
+                          return;
+                        }
+                        commit(setFlag(bought.save, "flag.bought_gear"));
+                        push(`Bought ${name}.`);
+                      }}
+                    >
+                      Buy
+                    </MenuButton>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {panel === "rest" && (
+            <div className="flex flex-col gap-3 text-sm">
+              <p>Salla taps the ledger. Eight gold. Beds, lamps, and the kind of quiet that puts a person's breath back where they left it.</p>
+              <MenuButton
+                onClick={() => {
+                  const rested = restParty(save);
+                  if (!rested.ok) {
+                    push(rested.reason);
+                    return;
+                  }
+                  commit(setFlag(rested.save, "flag.rested"));
+                  setPanel("none");
+                  push("You sleep. The party wakes mended. Sight, if it is yours, has three looks left.");
+                  playSfx("heal");
+                }}
+              >
+                Rest (8 gold)
+              </MenuButton>
+            </div>
           )}
           {panel === "help" && (
             <ul className="list-disc pl-4 text-sm">
@@ -821,6 +1099,21 @@ function blocked(mapId: string, x: number, y: number): boolean {
   if (mapId === "map.shrine") {
     if (x <= 1 || x >= 14 || y <= 1) return true;
   }
+  if (mapId === "map.inn") {
+    if (x === 0 || x === 9 || y === 0 || (y >= 7 && x !== 5)) return true;
+    if (x >= 1 && x <= 2 && y >= 2 && y <= 3) return true;
+  }
+  if (mapId === "map.smith") {
+    if (x === 0 || x === 7 || y === 0 || (y >= 6 && x !== 4)) return true;
+  }
+  if (mapId === "map.reach") {
+    if (y <= 1 || y >= 11) return true;
+    if ((x === 9 || x === 14) && (y <= 3 || y >= 9)) return true;
+  }
+  if (mapId === "map.barrow") {
+    if (x <= 0 || x >= 13 || y <= 0) return true;
+    if (y >= 9 && x !== 7) return true;
+  }
   return false;
 }
 
@@ -832,7 +1125,12 @@ function ahead(pos: { x: number; y: number }, facing: string) {
 }
 
 function currentObjective(save: SaveGame): string {
-  if (save.chapterComplete) return "The chapter is told. The shrine keeps its quiet.";
+  const cantorDone = flag(save, "flag.cantor_spared") || flag(save, "flag.cantor_defeated");
+  if (cantorDone) return "The Reach has gone quiet. The hymn still does not match the season.";
+  if (flag(save, "flag.chapter_complete") && !flag(save, "flag.nessa_joined")) return "Past the prism, Hollowwood is open. Someone on the trail has been waiting.";
+  if (flag(save, "flag.nessa_joined") && !flag(save, "flag.moss_hymn")) return "Give the moss its hymn: wind, then flame, then stone.";
+  if (flag(save, "flag.moss_hymn") && !cantorDone) return "The barrow mouth is open. The Cantor is singing.";
+  if (flag(save, "flag.chapter_complete")) return "The shrine is quiet. A trail at the prism's far side leads into the Reach.";
   if (!flag(save, "flag.clock_anomaly")) return "Walk the festival. The clock is north of the square. Nim is sketching nearby.";
   if (!flag(save, "flag.mira_joined")) return "Find Mira by the east lanterns. The woods should not be walked alone.";
   if (!flag(save, "flag.kael_joined")) return "East, into Glasspine. Kael keeps the path.";
@@ -843,8 +1141,8 @@ function currentObjective(save: SaveGame): string {
   return "Listen to how the shrine ends.";
 }
 
-function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden"): EncounterState {
-  const party = save.party.map((pid) => structuredClone(save.roster[pid]!)).filter(Boolean);
+function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden" | "enc.thicket" | "enc.cantor"): EncounterState {
+  const party = save.party.map((pid) => prepareForBattle(save, pid));
   const enemies =
     id === "enc.festival"
       ? [{ ...structuredClone(ENEMY_TEMPLATES.shardling), id: "shard-f", position: { x: 0, z: -1.6 } }]
@@ -853,7 +1151,14 @@ function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.w
             { ...structuredClone(ENEMY_TEMPLATES.shardling), id: "shard-w", position: { x: -0.8, z: -1.6 } },
             { ...structuredClone(ENEMY_TEMPLATES.glowmoth), id: "moth-w", position: { x: 0.9, z: -1.3 } },
           ]
-        : [{ ...structuredClone(ENEMY_TEMPLATES.warden), id: "warden", position: { x: 0, z: -2.2 } }];
+        : id === "enc.thicket"
+          ? [
+              { ...structuredClone(ENEMY_TEMPLATES.briarling), id: "briar-a", position: { x: -0.7, z: -1.5 } },
+              { ...structuredClone(ENEMY_TEMPLATES.briarling), id: "briar-b", position: { x: 0.8, z: -1.2 } },
+            ]
+          : id === "enc.cantor"
+            ? [{ ...structuredClone(ENEMY_TEMPLATES.cantor), id: "cantor", position: { x: 0, z: -2.1 } }]
+            : [{ ...structuredClone(ENEMY_TEMPLATES.warden), id: "warden", position: { x: 0, z: -2.2 } }];
   return createEncounter({
     encounterId: id,
     seed: hashSeed(save.playerName + id),
@@ -943,9 +1248,15 @@ function drawMap(ctx: CanvasRenderingContext2D, mapId: string, w: number, h: num
   if (mapId === "map.shrine") {
     sky.addColorStop(0, "#241830");
     sky.addColorStop(1, "#120e16");
-  } else if (mapId === "map.woods") {
-    sky.addColorStop(0, "#142018");
+  } else if (mapId === "map.woods" || mapId === "map.reach") {
+    sky.addColorStop(0, mapId === "map.reach" ? "#1a2414" : "#142018");
     sky.addColorStop(1, "#0c140e");
+  } else if (mapId === "map.barrow") {
+    sky.addColorStop(0, "#1a140e");
+    sky.addColorStop(1, "#0c0a08");
+  } else if (mapId === "map.inn" || mapId === "map.smith") {
+    sky.addColorStop(0, "#2a1a16");
+    sky.addColorStop(1, "#140e0c");
   } else {
     sky.addColorStop(0, "#2a1c28");
     sky.addColorStop(1, "#1a1214");
@@ -996,18 +1307,61 @@ function drawMap(ctx: CanvasRenderingContext2D, mapId: string, w: number, h: num
     ctx.fill();
     ctx.globalAlpha = 1;
   }
+  if (mapId === "map.reach") {
+    for (const [tx, ty] of [[3, 3], [7, 2], [12, 8], [15, 3], [5, 9]] as const) {
+      ctx.fillStyle = "#243018";
+      ctx.beginPath();
+      ctx.moveTo(tx * TILE + 24, ty * TILE);
+      ctx.lineTo(tx * TILE + 46, ty * TILE + 42);
+      ctx.lineTo(tx * TILE + 2, ty * TILE + 42);
+      ctx.fill();
+      ctx.fillStyle = "#6a8f4a";
+      ctx.fillRect(tx * TILE + 20, ty * TILE + 36, 8, 10);
+    }
+  }
+  if (mapId === "map.barrow") {
+    ctx.fillStyle = "#3a2a18";
+    ctx.beginPath();
+    ctx.moveTo(2 * TILE, 4 * TILE);
+    ctx.quadraticCurveTo(4 * TILE, 1 * TILE, 6 * TILE, 4 * TILE);
+    ctx.fill();
+    ctx.fillStyle = "#2a2016";
+    ctx.fillRect(6 * TILE, 2 * TILE, 3 * TILE, 2 * TILE);
+  }
+  if (mapId === "map.inn") {
+    ctx.fillStyle = "#e8b15a";
+    for (const [lx, ly] of [[2, 2], [7, 2], [3, 4]] as const) {
+      ctx.beginPath();
+      ctx.arc(lx * TILE + 16, ly * TILE + 12, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#5a3028";
+    ctx.fillRect(1 * TILE + 8, 2 * TILE + 16, 28, 16);
+  }
+  if (mapId === "map.smith") {
+    ctx.fillStyle = "#6a4030";
+    ctx.fillRect(2 * TILE, 2 * TILE, TILE * 2, 20);
+    ctx.fillStyle = "#e06a5c";
+    ctx.fillRect(3 * TILE, 2 * TILE + 6, 10, 8);
+  }
 }
 
 function drawFloor(ctx: CanvasRenderingContext2D, mapId: string, x: number, y: number) {
   const alt = (x + y) % 2 === 0;
-  ctx.fillStyle = mapId === "map.shrine" ? (alt ? "#3a3044" : "#322838") : mapId === "map.woods" ? (alt ? "#243222" : "#1c2a1a") : alt ? "#4a3428" : "#3e2c22";
+  const tone =
+    mapId === "map.shrine" ? (alt ? "#3a3044" : "#322838")
+    : mapId === "map.woods" || mapId === "map.reach" ? (alt ? "#243222" : "#1c2a1a")
+    : mapId === "map.barrow" ? (alt ? "#2a2218" : "#221c14")
+    : mapId === "map.inn" || mapId === "map.smith" ? (alt ? "#4a3024" : "#3a261c")
+    : alt ? "#4a3428" : "#3e2c22";
+  ctx.fillStyle = tone;
   ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
   ctx.strokeStyle = "rgba(0,0,0,0.18)";
   ctx.strokeRect(x * TILE + 0.5, y * TILE + 0.5, TILE - 1, TILE - 1);
 }
 
 function drawWall(ctx: CanvasRenderingContext2D, mapId: string, x: number, y: number) {
-  ctx.fillStyle = mapId === "map.shrine" ? "#16121c" : mapId === "map.woods" ? "#101810" : "#1a120e";
+  ctx.fillStyle = mapId === "map.shrine" ? "#16121c" : mapId === "map.barrow" ? "#100e0c" : mapId === "map.woods" || mapId === "map.reach" ? "#101810" : "#1a120e";
   ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
   ctx.fillStyle = mapId === "map.shrine" ? "#3a3048" : "#2a2018";
   ctx.fillRect(x * TILE + 6, y * TILE + 8, TILE - 12, TILE - 16);
@@ -1064,19 +1418,46 @@ function PartyStrip({ save, verbose = false }: { save: SaveGame; verbose?: boole
         const c = save.roster[id];
         const def = CHARACTERS[id];
         if (!c) return null;
+        const worn = withGear(c, save.equipment?.[id]);
+        const jobName = Object.values(JOBS).find((j) => j.id === c.jobId)?.name ?? def?.title;
         return (
           <li key={id} className="rounded-md bg-ink/60 p-2">
-            <div className="flex items-baseline justify-between">
-              <span className="font-semibold">{c.name}</span>
-              <span className="text-xs text-parchment/60">{def?.title}</span>
+            <div className="flex items-center gap-2">
+              <Portrait hue={def?.portraitHue ?? 30} name={c.name} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-semibold">{c.name}</span>
+                  <span className="text-xs text-parchment/60">Lv {c.level} · {jobName}</span>
+                </div>
+                <Meter label="HP" value={c.hp} max={c.maxHp} color="bg-danger" />
+                <Meter label="MP" value={c.mp} max={c.maxMp} color="bg-teal" />
+              </div>
             </div>
-            <Meter label="HP" value={c.hp} max={c.maxHp} color="bg-danger" />
-            <Meter label="MP" value={c.mp} max={c.maxMp} color="bg-teal" />
-            {verbose && <p className="mt-1 text-xs text-parchment/70">{def?.voice}</p>}
+            {verbose && (
+              <p className="mt-1 text-xs text-parchment/70">
+                {def?.voice} Atk {worn.attack} · Def {worn.defense} · Spd {worn.speed}
+                {save.bonds?.[id] ? ` · bond ${save.bonds[id]}` : ""}
+                {save.equipment?.[id]?.weapon ? ` · ${GEAR[save.equipment[id]!.weapon!]?.name ?? "weapon"}` : ""}
+                {save.equipment?.[id]?.armor ? ` · ${GEAR[save.equipment[id]!.armor!]?.name ?? "armor"}` : ""}
+                {save.equipment?.[id]?.accessory ? ` · ${GEAR[save.equipment[id]!.accessory!]?.name ?? "charm"}` : ""}
+              </p>
+            )}
           </li>
         );
       })}
     </ul>
+  );
+}
+
+function Portrait({ hue, name }: { hue: number; name: string }) {
+  return (
+    <span
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-amber/40 font-display text-lg text-parchment"
+      style={{ background: `radial-gradient(circle at 35% 30%, hsl(${hue} 55% 48%), hsl(${hue} 30% 16%) 70%)` }}
+      aria-hidden
+    >
+      {name.slice(0, 1)}
+    </span>
   );
 }
 
@@ -1110,19 +1491,22 @@ function DialogueBox({
 }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink-2/95 p-4" role="dialog" aria-label={speaker}>
-      <div className="mx-auto max-w-3xl">
-        <p className="text-xs tracking-widest text-amber uppercase">{speaker}</p>
-        <p className="mt-1 text-lg">{text}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {choices?.length ? (
-            choices.map((c) => (
-              <MenuButton key={c.label} onClick={() => onChoice(c)}>
-                {c.label}
-              </MenuButton>
-            ))
-          ) : (
-            <MenuButton onClick={onNext}>Continue</MenuButton>
-          )}
+      <div className="mx-auto flex max-w-3xl gap-3">
+        <Portrait hue={SPEAKER_HUE[speaker] ?? 36} name={speaker} />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs tracking-widest text-amber uppercase">{speaker}</p>
+          <p className="mt-1 text-lg">{text}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {choices?.length ? (
+              choices.map((c) => (
+                <MenuButton key={c.label} onClick={() => onChoice(c)}>
+                  {c.label}
+                </MenuButton>
+              ))
+            ) : (
+              <MenuButton onClick={onNext}>Continue</MenuButton>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1154,12 +1538,13 @@ function Battle({
   save: SaveGame;
   commit: (s: SaveGame) => SaveGame;
   push: (t: string) => void;
-  onLeave: (s: SaveGame, victory: boolean) => void;
+  onLeave: (s: SaveGame, victory: boolean, encounterId: string) => void;
 }) {
   const enc = save.encounter!;
   const [pick, setPick] = useState<"root" | "magic" | "item" | "target">("root");
   const [pending, setPending] = useState<{ abilityId: string; kind: CombatAction["kind"] } | null>(null);
   const [floaters, setFloaters] = useState<{ id: number; text: string; x: number }[]>([]);
+  const [intro, setIntro] = useState(enc.encounterId === "enc.warden" || enc.encounterId === "enc.cantor");
   const encRef = useRef(enc);
   const saveRef = useRef(save);
   encRef.current = enc;
@@ -1168,6 +1553,7 @@ function Battle({
   const asc = useRef({ x: 0, z: 2.2, keys: new Set<string>() });
   const [ascPos, setAscPos] = useState({ x: 0, z: 2.2 });
   const enemyTimer = useRef<number | null>(null);
+  const battlePad = useRef<boolean[]>([]);
 
   const active = enc.combatants.find((c) => c.id === enc.activeActorId);
   const foes = enc.combatants.filter((c) => c.side === "enemy");
@@ -1182,6 +1568,14 @@ function Battle({
   function commitEnc(nextEnc: EncounterState, note?: string) {
     const base = saveRef.current;
     let nextSave: SaveGame = { ...base, encounter: nextEnc, mode: nextEnc.mode };
+    if (nextEnc.pack) {
+      nextSave = {
+        ...nextSave,
+        inventory: nextSave.inventory.map((slot) =>
+          slot.itemId in nextEnc.pack! ? { ...slot, qty: Math.max(0, nextEnc.pack![slot.itemId] ?? 0) } : slot,
+        ),
+      };
+    }
     if (nextEnc.pendingReward && !base.flags[`rewarded.${nextEnc.pendingReward.id}`]) {
       nextSave = applyReward(nextSave, nextEnc.pendingReward);
     }
@@ -1212,34 +1606,33 @@ function Battle({
     commit(nextSave);
     if (note) float(note);
     if (nextEnc.outcome === "victory" || nextEnc.outcome === "mercy") {
-      window.setTimeout(() => onLeave(nextSave, true), 1100);
+      playSfx("victory");
+      window.setTimeout(() => onLeave(nextSave, true, nextEnc.encounterId), 1100);
     }
     if (nextEnc.outcome === "defeat") {
-      window.setTimeout(() => onLeave(nextSave, false), 1100);
+      window.setTimeout(() => onLeave(nextSave, false, nextEnc.encounterId), 1100);
     }
   }
 
   function doAction(action: CombatAction) {
     const current = encRef.current;
     if (current.outcome !== "ongoing") return;
-    if (action.kind === "item") {
-      const base = saveRef.current;
-      const slot = base.inventory.find((i) => ITEMS[i.itemId]?.useAbility === action.abilityId && i.qty > 0);
-      if (!slot) {
-        push("That pouch is empty.");
-        return;
-      }
+    const stamped = structuredClone(current);
+    stamped.pack = Object.fromEntries(saveRef.current.inventory.map((slot) => [slot.itemId, slot.qty]));
+    if (stamped.mode === "ascension") {
+      const mover = stamped.combatants.find((c) => c.id === action.actorId && c.side === "party");
+      if (mover) mover.position = { x: asc.current.x, z: asc.current.z };
     }
-    const res = proposeAction(current, action);
+    const res = proposeAction(stamped, action);
     if (!res.ok) {
       push(res.reason ?? "That did not hold.");
       playSfx("ui");
       return;
     }
-    if (action.kind === "item") {
+    if (action.kind === "cast") {
       const base = saveRef.current;
-      const slot = base.inventory.find((i) => ITEMS[i.itemId]?.useAbility === action.abilityId);
-      if (slot) slot.qty = Math.max(0, slot.qty - 1);
+      const n = (base.spellMastery[action.abilityId] ?? 0) + 1;
+      base.spellMastery = { ...base.spellMastery, [action.abilityId]: n };
     }
     const last = res.state.events[res.state.events.length - 1];
     if (last?.kind === "damage" || last?.kind === "shield") playSfx("hit");
@@ -1298,13 +1691,19 @@ function Battle({
       const last = res.state.events[res.state.events.length - 1];
       playSfx(last?.kind === "damage" ? "hurt" : "hit");
       commitEnc(res.state, last?.text);
-    }, save.settings.reducedMotion ? 250 : 700);
+    }, save.settings.reducedMotion ? 180 : 480);
     return () => {
       if (enemyTimer.current) window.clearTimeout(enemyTimer.current);
     };
     // commitEnc closes over latest refs; re-bind only when the turn identity changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enc.tick, enc.phase, enc.activeActorId, save.settings.reducedMotion]);
+
+  useEffect(() => {
+    if (!intro) return;
+    const t = window.setTimeout(() => setIntro(false), save.settings.reducedMotion ? 350 : 1700);
+    return () => window.clearTimeout(t);
+  }, [intro, save.settings.reducedMotion]);
 
   useEffect(() => {
     const c = arena.current;
@@ -1399,7 +1798,55 @@ function Battle({
     };
   }, [enc, active?.id, save.ascensionUnlocked]);
 
-  const abilitiesFor = active ? (CHARACTERS[active.id]?.abilities ?? ["atk.strike", "act.defend"]) : [];
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const pads = navigator.getGamepads?.() ?? [];
+      const p = pads[0];
+      const prev = battlePad.current;
+      battlePad.current = p ? p.buttons.map((b) => b.pressed) : [];
+      if (!p || enc.phase !== "player" || enc.outcome !== "ongoing" || !active || active.side !== "party") return;
+      const edge = (i: number) => Boolean(p.buttons[i]?.pressed) && !prev[i];
+      if (enc.mode === "ascension") {
+        if (p.buttons[14]?.pressed) asc.current.x = clamp(asc.current.x - 0.35, -3.2, 3.2);
+        if (p.buttons[15]?.pressed) asc.current.x = clamp(asc.current.x + 0.35, -3.2, 3.2);
+        if (p.buttons[12]?.pressed) asc.current.z = clamp(asc.current.z - 0.35, -0.2, 3.4);
+        if (p.buttons[13]?.pressed) asc.current.z = clamp(asc.current.z + 0.35, -0.2, 3.4);
+      }
+      if (edge(0)) {
+        const foe = enc.mode === "ascension" ? nearestFoe(enc, asc.current) : enc.combatants.find((c) => c.side === "enemy" && c.alive);
+        const strike = active.id === "kael" ? "atk.oathcut" : "atk.strike";
+        if (foe) {
+          doAction({
+            version: 1,
+            actorId: active.id,
+            abilityId: strike,
+            kind: "attack",
+            targetIds: [foe.id],
+            modeOrigin: enc.mode,
+            timeOrTurn: enc.turnIndex,
+          });
+        }
+      }
+      if (edge(1)) chooseAbility("act.defend", "defend");
+      if (edge(2) && (CHARACTERS[active.id]?.abilities ?? []).includes("act.dodge")) chooseAbility("act.dodge", "dodge");
+      if (edge(3) && save.ascensionUnlocked) {
+        doAction({
+          version: 1,
+          actorId: active.id,
+          abilityId: "act.defend",
+          kind: "switch",
+          targetIds: [],
+          modeOrigin: enc.mode,
+          timeOrTurn: enc.turnIndex,
+        });
+      }
+    }, 140);
+    return () => window.clearInterval(id);
+  }, [enc, active, save.ascensionUnlocked]);
+
+  const abilitiesFor = active
+    ? [...new Set([...(CHARACTERS[active.id]?.abilities ?? ["atk.strike", "act.defend"]), ...(save.knownSpells[active.id] ?? [])])]
+    : [];
   const magic = abilitiesFor.filter((id) => ABILITIES[id]?.kind === "spell");
   const attacks = abilitiesFor.filter((id) => ABILITIES[id]?.kind === "attack");
 
@@ -1413,7 +1860,17 @@ function Battle({
       <header className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-xs tracking-[0.22em] text-amber uppercase">{enc.mode === "legacy" ? "Legacy" : "Ascension"} · {enc.encounterId.replace("enc.", "")}</p>
-          <h2 className="font-display text-2xl">{enc.encounterId === "enc.warden" ? "Crystal Warden" : enc.encounterId === "enc.festival" ? "Lantern crash" : "Glasspine flicker"}</h2>
+          <h2 className="font-display text-2xl">
+            {enc.encounterId === "enc.warden"
+              ? "Crystal Warden"
+              : enc.encounterId === "enc.cantor"
+                ? "Thorn Cantor"
+                : enc.encounterId === "enc.thicket"
+                  ? "Briar thicket"
+                  : enc.encounterId === "enc.festival"
+                    ? "Lantern crash"
+                    : "Glasspine flicker"}
+          </h2>
         </div>
         {save.ascensionUnlocked && enc.outcome === "ongoing" && (
           <MenuButton
@@ -1438,6 +1895,19 @@ function Battle({
       </header>
       <div className="relative overflow-hidden rounded-md border border-line bg-ink">
         <canvas ref={arena} className="block h-[320px] w-full" />
+        {intro && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/75 text-center">
+            <p className="text-xs tracking-[0.28em] text-teal uppercase">{enc.encounterId === "enc.cantor" ? "The barrow answers" : "The prism wakes"}</p>
+            <p className="font-display text-4xl">{enc.encounterId === "enc.cantor" ? "Thorn Cantor" : "Crystal Warden"}</p>
+            <p className="mt-2 max-w-md text-sm text-parchment/80">
+              {enc.encounterId === "enc.cantor"
+                ? flag(save, "flag.warden_spared") || save.wardenOutcome === "spared"
+                  ? "A song with thorns. Bring it under half if you mean to ask it to stop. Mercy here remembers the Warden you spared."
+                  : "A song with thorns. The Warden was not spared, so this one will not accept a softer ending. Finish the note."
+                : "A guardian that has not been spoken to kindly in a long while. Stoneguard, then Tide, opens a choice."}
+            </p>
+          </div>
+        )}
         <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1">
           {floaters.map((f) => (
             <span key={f.id} className="text-sm text-amber-2">{f.text.slice(0, 80)}</span>
@@ -1457,6 +1927,16 @@ function Battle({
           {enc.phase === "switch_lock" && <p>The two views agree with each other…</p>}
           {enc.phase === "player" && active && (
             <div className="flex flex-col gap-2">
+              {enc.encounterId === "enc.cantor" && foes.some((f) => f.alive && f.hp <= f.maxHp * 0.5) && (
+                <p className="text-sm text-amber">
+                  {flag(save, "flag.warden_spared") || save.wardenOutcome === "spared"
+                    ? "The dirge is thin enough to ask it to stop."
+                    : "The dirge is thin. It still will not take mercy."}
+                </p>
+              )}
+              {enc.encounterId === "enc.warden" && foes.some((f) => f.mercyEligible || f.statuses.some((s) => s.id === "exposed")) && (
+                <p className="text-sm text-teal">The core is open. Mercy and the last blow are both still true.</p>
+              )}
               <p className="text-sm text-teal">{active.name}'s turn. {enc.mode === "ascension" ? "WASD moves inside the ring. F or Cast strikes the nearest foe. Q dodges. The menu still works." : "Choose, then choose who wears it."}</p>
               {enc.mode === "ascension" && (
                 <div className="flex flex-wrap gap-2 lg:hidden">
@@ -1479,18 +1959,22 @@ function Battle({
                   <MenuButton onClick={() => chooseAbility(attacks[0] ?? "atk.strike", "attack")}>Attack</MenuButton>
                   <MenuButton tone="ghost" onClick={() => setPick("magic")}>Magic</MenuButton>
                   <MenuButton tone="ghost" onClick={() => chooseAbility("act.defend", "defend")}>Defend</MenuButton>
+                  {abilitiesFor.includes("act.dodge") && (
+                    <MenuButton tone="ghost" onClick={() => chooseAbility("act.dodge", "dodge")}>Sidestep</MenuButton>
+                  )}
                   <MenuButton tone="ghost" onClick={() => setPick("item")}>Item</MenuButton>
-                  {enc.encounterId === "enc.warden" && (
+                  {(enc.encounterId === "enc.warden" || (enc.encounterId === "enc.cantor" && flag(save, "flag.warden_spared"))) && (
                     <MenuButton
                       tone="ghost"
                       onClick={() => {
-                        const res = tryMercy(enc);
+                        const sparedWarden = flag(save, "flag.warden_spared") || save.wardenOutcome === "spared";
+                        const res = tryMercy(enc, { wardenSpared: sparedWarden });
                         if (!res.ok) {
                           push(res.reason ?? "Not yet.");
                           return;
                         }
                         playSfx("heal");
-                        commitEnc(res.state, "The Warden bows.");
+                        commitEnc(res.state, enc.encounterId === "enc.cantor" ? "The Cantor lets go." : "The Warden bows.");
                       }}
                     >
                       Offer mercy
@@ -1612,13 +2096,14 @@ function drawArena(
     if (!c.alive && c.side === "enemy") continue;
     const pos = c.side === "party" && enc.mode === "ascension" && c.id === enc.activeActorId ? hero : c.position;
     const p = project(pos.x, c.side === "party" && enc.mode !== "ascension" ? 1.6 : pos.z);
-    ctx.fillStyle = c.side === "party" ? "#f3e6c8" : c.jobId === "enemy.warden" ? "#8b6bb8" : c.jobId === "enemy.glowmoth" ? "#e8b15a" : "#4ec8c0";
-    const rad = c.jobId === "enemy.warden" ? 28 : 16;
+    ctx.fillStyle = c.side === "party" ? "#f3e6c8" : c.jobId === "enemy.warden" ? "#8b6bb8" : c.jobId === "enemy.cantor" ? "#6a8f4a" : c.jobId === "enemy.briarling" ? "#3d6b32" : c.jobId === "enemy.glowmoth" ? "#e8b15a" : "#4ec8c0";
+    const rad = c.jobId === "enemy.warden" || c.jobId === "enemy.cantor" ? 28 : 16;
     ctx.beginPath();
     ctx.arc(p.px, p.py, rad, 0, Math.PI * 2);
     ctx.fill();
-    if (c.jobId === "enemy.warden") {
-      ctx.strokeStyle = c.statuses.some((s) => s.id === "exposed") ? "#e06a5c" : "#f3e6c8";
+    if (c.jobId === "enemy.warden" || c.jobId === "enemy.cantor") {
+      const open = c.jobId === "enemy.cantor" ? c.hp <= c.maxHp * 0.5 : c.statuses.some((s) => s.id === "exposed");
+      ctx.strokeStyle = open ? "#e06a5c" : "#f3e6c8";
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.lineWidth = 1;
@@ -1638,23 +2123,42 @@ function drawArena(
 
 function Ending({ save, onTitle, onAgain }: { save: SaveGame; onTitle: () => void; onAgain: () => void }) {
   const spared = save.wardenOutcome === "spared";
+  const reach = flag(save, "flag.cantor_spared") || flag(save, "flag.cantor_defeated");
+  const cantorKind = flag(save, "flag.cantor_spared");
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-4 px-5 py-12">
-      <p className="text-xs tracking-[0.28em] text-teal uppercase">Chapter I complete</p>
-      <h2 className="font-display text-5xl">The Crystal Awakening</h2>
-      <p>
-        {spared
-          ? `${save.playerName}, the Warden sleeps. Mira writes the pact in the margin, not the victory column. Kael puts his sword away like a person, not a gate.`
-          : `${save.playerName}, the prism goes dark. The Vale will call it a victory. Mira does not argue. She only leaves a blank line where a name might have gone.`}
+      <p className="text-xs tracking-[0.28em] text-teal uppercase">{reach ? "Into the Reach" : "Chapter I complete"}</p>
+      <h2 className="font-display text-5xl">{reach ? "A song out of season" : "The Crystal Awakening"}</h2>
+      {reach ? (
+        <>
+          <p>
+            {reachClose(save.playerName, wardenMemory(save), cantorKind)} The Reach exhales like a wood that has been holding a verse too long.
+          </p>
+          <p>
+            The hymn still does not match any season Lantern Vale keeps. Mira writes the notes and leaves the margin empty. Somewhere under the clock, a warm stone is not a door. Not yet. The drawing Nim made is still only a drawing.
+          </p>
+          <p className="text-amber-2">Something in the wood is early. It has not said its name, and you do not owe it one tonight.</p>
+        </>
+      ) : (
+        <>
+          <p>
+            {spared
+              ? `${save.playerName}, the Warden sleeps. Mira writes the pact in the margin, not the victory column. Kael puts his sword away like a person, not a gate.`
+              : `${save.playerName}, the prism goes dark. The Vale will call it a victory. Mira does not argue. She only leaves a blank line where a name might have gone.`}
+          </p>
+          <p>
+            On the shrine floor your name is still cut beside a date the village does not own. Nim's wooden door is still only a drawing. The clock in Lantern Vale is still willing to strike ten while wearing nine and nine.
+          </p>
+          <p className="text-amber-2">North of the prism, the trees keep a second season. The trail is open if you want it. The festival will still be there when you come back.</p>
+        </>
+      )}
+      <p className="text-sm text-parchment/60">
+        What you chose is kept: the Warden {spared ? "sleeps" : "fell"}
+        {reach ? `, and the Cantor ${cantorKind ? "was spared" : "was silenced"}` : ""}. Gold {save.gold}. The rest of the road can wait.
       </p>
-      <p>
-        On the shrine floor your name is still cut beside a date the village does not own. Nim's wooden door is still only a drawing. The clock in Lantern Vale is still willing to strike ten while wearing nine and nine.
-      </p>
-      <p className="text-amber-2">Something older than the festival is awake now. It is not finished introducing itself.</p>
-      <p className="text-sm text-parchment/60">What you chose is kept: {spared ? "mercy" : "a fallen guardian"}. Gold {save.gold}. The rest of the Nine is not in this chapter, and it does not need to be, tonight.</p>
       <div className="mt-4 flex flex-wrap gap-3">
         <MenuButton onClick={onTitle}>Title</MenuButton>
-        <MenuButton tone="ghost" onClick={onAgain}>Walk the shrine again</MenuButton>
+        <MenuButton tone="ghost" onClick={onAgain}>{reach ? "Walk the Reach again" : "Walk on"}</MenuButton>
       </div>
     </div>
   );
