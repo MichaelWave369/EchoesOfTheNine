@@ -11,6 +11,7 @@ All pictures in `public/game/art` are original work made for Echoes of the Nine 
 | `house.png`, `clock.png`, `stall.png`, `well.png`, `lantern.png`, `pine.png` | Vale and roadside stamps. |
 | `skiff.png` | The First Stay. |
 | `vale-night.jpg` | Title painting of the festival, cropped so the HTML title stays the headline. |
+| `battle-vale.jpg`, `battle-woods.jpg`, `battle-shrine.jpg`, `battle-mist.jpg`, `battle-ridge.jpg`, `battle-ascent.jpg` | Battle plates. One painted field per region family, plus the ascent ring. Display only. |
 
 Type on the page is Fraunces and Source Sans 3, already loaded as web fonts. No other third-party type or sprite set is used.
 

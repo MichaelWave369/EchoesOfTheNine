@@ -22,6 +22,12 @@ export const ART_FILES = [
   "pine.png",
   "skiff.png",
   "vale-night.jpg",
+  "battle-vale.jpg",
+  "battle-woods.jpg",
+  "battle-shrine.jpg",
+  "battle-mist.jpg",
+  "battle-ridge.jpg",
+  "battle-ascent.jpg",
 ] as const;
 
 export type Pose = "idle" | "walk" | "attack" | "cast" | "hurt" | "victory";
@@ -184,23 +190,71 @@ export function hotspotActor(id: string): string | null {
 }
 
 export function groundKind(mapId: string, x: number, y: number, path: boolean, tick: number, reduced: boolean): number {
-  const n = (x * 3 + y * 5) % 2;
+  const j = tileJitter(x, y);
+  const n = j > 0.58 ? 1 : 0;
   const water = !reduced && Math.floor(tick / 8) % 2 === 1 ? 9 : 8;
   if (mapId === "map.lowbell" && y >= 8) return water;
   if (mapId === "map.ferry" && y >= 9) return water;
   if (mapId === "map.hold" && y >= 6) return water;
   if (mapId === "map.vale") {
-    if (!path && (x + y) % 11 === 0) return 11;
-    if (x <= 2 || y >= 12) return 3 + n;
+    if (!path && j > 0.84) return 11;
+    if (!path && j < 0.07) return 2;
+    if (x <= 2 || y >= 12) return j > 0.5 ? 4 : 3;
+    if (path && j > 0.82) return 2;
     return n;
   }
-  if (mapId === "map.inn" || mapId === "map.smith") return 5;
-  if (mapId === "map.woods" || mapId === "map.reach") return path ? 2 : 3 + n;
-  if (mapId === "map.barrow" || mapId === "map.cave") return 2;
-  if (mapId === "map.shrine" || mapId === "map.glass") return 6;
-  if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth") return 7;
-  if (mapId === "map.lowbell" || mapId === "map.ferry" || mapId === "map.hold") return path ? 7 : 2;
-  return path ? 2 : 3;
+  if (mapId === "map.inn" || mapId === "map.smith") return j > 0.72 ? 2 : 5;
+  if (mapId === "map.woods" || mapId === "map.reach") return path ? (j > 0.66 ? 1 : 2) : j > 0.55 ? 4 : 3;
+  if (mapId === "map.barrow" || mapId === "map.cave") return j > 0.7 ? 7 : 2;
+  if (mapId === "map.shrine" || mapId === "map.glass") return j > 0.78 ? 7 : 6;
+  if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth") return j > 0.74 ? 1 : 7;
+  if (mapId === "map.lowbell" || mapId === "map.ferry" || mapId === "map.hold") return path ? (j > 0.6 ? 1 : 7) : j > 0.5 ? 2 : 7;
+  return path ? (j > 0.5 ? 1 : 2) : j > 0.5 ? 4 : 3;
+}
+
+/** Deterministic 0..1 break-up so neighboring tiles are not a checker. */
+export function tileJitter(x: number, y: number): number {
+  const n = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453);
+  return n - Math.floor(n);
+}
+
+export function battleArt(encounterId: string, ascension: boolean): string {
+  if (ascension) return "battle-ascent.jpg";
+  if (encounterId === "enc.woods" || encounterId === "enc.thicket" || encounterId === "enc.cantor") return "battle-woods.jpg";
+  if (encounterId === "enc.warden") return "battle-shrine.jpg";
+  if (encounterId === "enc.ferryman" || encounterId === "enc.crossing" || encounterId === "enc.vault") return "battle-mist.jpg";
+  if (encounterId === "enc.galekeeper" || encounterId === "enc.gust") return "battle-ridge.jpg";
+  return "battle-vale.jpg";
+}
+
+export type ElementTone = "fire" | "water" | "wind" | "life" | "steel" | "arcane";
+
+/** Display tint only. The combat core still decides the numbers. */
+export function elementOf(abilityId?: string): { tone: ElementTone; color: string } {
+  const id = abilityId ?? "";
+  if (/ember|solar|fire/.test(id)) return { tone: "fire", color: "#e07a3a" };
+  if (/tide|wake|river|mist|dew/.test(id)) return { tone: "water", color: "#4ec8c0" };
+  if (/gust|gale|crosswind|wind/.test(id)) return { tone: "wind", color: "#d7e4f2" };
+  if (/mend|heal|salve|resin|hymn/.test(id)) return { tone: "life", color: "#8fce6a" };
+  if (/strike|oath|knife|lash|cut/.test(id)) return { tone: "steel", color: "#f3e6c8" };
+  return { tone: "arcane", color: "#c8b0e8" };
+}
+
+export function portraitMood(text: string): string {
+  const t = text.toLowerCase();
+  if (/sorry|afraid|wrong|hurt|fall|wait|smudge|flicker|quiet/.test(t)) return "brightness(0.82) saturate(0.75)";
+  if (/glad|oath|lead|laugh|festival|remember|kind|yes/.test(t)) return "saturate(1.3) brightness(1.06)";
+  return "none";
+}
+
+/** Where a follow camera looks. Does not move the walker or the collision grid. */
+export function cameraOrigin(tileX: number, tileY: number, width: number, height: number): { x: number; y: number } {
+  const w = Math.max(1, width);
+  const h = Math.max(1, height);
+  return {
+    x: Math.min(1, Math.max(0, (tileX + 0.5) / w)),
+    y: Math.min(1, Math.max(0, (tileY + 0.5) / h)),
+  };
 }
 
 export function blit(

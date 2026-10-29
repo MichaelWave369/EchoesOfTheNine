@@ -77,10 +77,21 @@
   to { transform: translateY(-72px); opacity: 0.15; }
 }
 
+.dialogue-rise,
+.dialogue-face {
+  animation: dialogue-rise 240ms ease-out;
+}
+
+@keyframes dialogue-rise {
+  from { transform: translateY(12px); opacity: 0.4; }
+  to { transform: none; opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .motion-ok { animation: none !important; transition: none !important; }
   .lantern-flicker { animation: none !important; }
   .skiff-rise { animation: none !important; }
+  .dialogue-rise, .dialogue-face { animation: none !important; }
 }
 
 @keyframes lantern-glow {

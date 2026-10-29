@@ -75,7 +75,7 @@ import {
 import { createEncounter, proposeAction, resolveEnemyTurn, tryMercy } from "../core/combat.ts";
 import { configureAudio, resumeAudio, playSfx, startMusic, unlockAudio } from "../audio.ts";
 import { paintArena, paintExploration } from "./art.ts";
-import { artUrl, portraitSpec, warmArt } from "./sprites.ts";
+import { artUrl, cameraOrigin, portraitMood, portraitSpec, warmArt } from "./sprites.ts";
 import { detectXr, requestReferenceSession, XR_BINDINGS, type XrCapability } from "../xr/adapter.ts";
 
 type Screen = "title" | "name" | "explore" | "battle" | "ending";
@@ -318,7 +318,7 @@ export function GameApp() {
           showBackToTitle={fromTitle}
         />
       )}
-      <div className="pointer-events-none fixed bottom-4 left-1/2 z-50 flex w-[min(92vw,420px)] -translate-x-1/2 flex-col gap-2">
+      <div className="pointer-events-none fixed bottom-28 left-1/2 z-30 flex w-[min(92vw,420px)] -translate-x-1/2 flex-col gap-2 sm:bottom-4">
         {toasts.map((t) => (
           <div key={t.id} className="rounded-md border border-line bg-ink-2/95 px-3 py-2 text-center text-sm text-parchment shadow-lg">
             {t.text}
@@ -537,6 +537,7 @@ function Explore({
     index: string;
   } | null>(null);
   const [panel, setPanel] = useState<"none" | "journal" | "party" | "bag" | "help" | "shop" | "stall" | "rest" | "atlas" | "arts" | "board" | "skiff">("none");
+  const [followCam, setFollowCam] = useState(true);
   const [runePick, setRunePick] = useState<string[]>(save.runeOrder);
   const [mossPick, setMossPick] = useState<string[]>([]);
   const [kilnPick, setKilnPick] = useState<string[]>([]);
@@ -1372,6 +1373,7 @@ function Explore({
           <MenuButton tone="ghost" onClick={() => setPanel("bag")}>Bag</MenuButton>
           <MenuButton tone="ghost" onClick={() => setPanel("arts")}>Arts</MenuButton>
           <MenuButton tone="ghost" onClick={() => setPanel("atlas")}>Atlas</MenuButton>
+          <MenuButton tone="ghost" onClick={() => setFollowCam((v) => !v)}>{followCam ? "Whole map" : "Close in"}</MenuButton>
           <MenuButton tone="ghost" onClick={onMenu}>Settings</MenuButton>
         </div>
       </header>
@@ -1386,6 +1388,7 @@ function Explore({
             party={save.party}
             hotspots={map.hotspots}
             reduced={save.settings.reducedMotion}
+            follow={followCam}
             sight={Boolean(save.sightScene) && save.sightSteps > 0 && (save.sightScene === `sight.${map.id.replace("map.", "")}` || (map.id === "map.lowbell" && save.sightScene === "sight.lowbell") || (map.id === "map.ferry" && save.sightScene === "sight.ferry") || (map.id === "map.hold" && save.sightScene === "sight.hold") || (map.id === "map.highroad" && save.sightScene === "sight.stair"))}
             appearance={save.appearance}
             sightSteps={save.sightSteps}
@@ -2192,6 +2195,7 @@ function MapCanvas({
   sight = false,
   appearance = "lantern",
   sightSteps = 0,
+  follow = true,
 }: {
   mapId: string;
   width: number;
@@ -2204,6 +2208,7 @@ function MapCanvas({
   sight?: boolean;
   appearance?: string;
   sightSteps?: number;
+  follow?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [tick, setTick] = useState(0);
@@ -2251,7 +2256,34 @@ function MapCanvas({
       sightSteps: sight ? sightSteps : 0,
     });
   }, [mapId, width, height, pos, facing, party, hotspots, reduced, sight, tick, hover, appearance, moving, sightSteps]);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const look = cameraOrigin(pos.x, pos.y, width, height);
+  useEffect(() => {
+    const canvas = ref.current;
+    const frame = frameRef.current;
+    if (!canvas) return;
+    if (!follow || !frame) {
+      canvas.style.transform = "";
+      return;
+    }
+    const mapCssW = canvas.clientWidth || frame.clientWidth;
+    const mapCssH = canvas.clientHeight || mapCssW * (height / Math.max(1, width));
+    const tilePx = frame.clientWidth < 720 ? 72 : 84;
+    const zoom = Math.min(4.2, Math.max(1.15, (tilePx * width) / Math.max(1, mapCssW)));
+    const focusX = look.x * mapCssW * zoom;
+    const focusY = look.y * mapCssH * zoom;
+    const place = (view: number, content: number, focus: number) => {
+      if (content <= view) return (view - content) / 2;
+      return Math.min(0, Math.max(view - content, view / 2 - focus));
+    };
+    const dx = place(frame.clientWidth, mapCssW * zoom, focusX);
+    const dy = place(frame.clientHeight, mapCssH * zoom, focusY);
+    canvas.style.transformOrigin = "0 0";
+    canvas.style.transition = reduced ? "none" : "transform 140ms linear";
+    canvas.style.transform = `translate(${dx}px, ${dy}px) scale(${zoom})`;
+  }, [follow, look.x, look.y, width, height, reduced, tick]);
   return (
+    <div ref={frameRef} className={follow ? "relative h-[62vh] max-h-[520px] min-h-56 overflow-hidden" : "relative"}>
     <canvas
       ref={ref}
       className="block w-full"
@@ -2266,11 +2298,12 @@ function MapCanvas({
       }}
       onMouseLeave={() => setHover(null)}
     />
+    </div>
   );
 }
 
 function Pad({ onMove, onAct }: { onMove: (x: number, y: number) => void; onAct: () => void }) {
-  const b = "min-h-11 min-w-11 rounded-md border border-line bg-ink text-parchment";
+  const b = "min-h-14 min-w-14 rounded-md border border-line bg-ink text-lg text-parchment";
   return (
     <div className="flex w-full items-center justify-between gap-3">
       <div className="grid grid-cols-3 gap-1">
@@ -2326,13 +2359,30 @@ function PartyStrip({ save, verbose = false }: { save: SaveGame; verbose?: boole
   );
 }
 
-function Portrait({ name, appearance, hue = 30 }: { name: string; appearance?: string; hue?: number }) {
+function Portrait({
+  name,
+  appearance,
+  hue = 30,
+  large = false,
+  mood = "none",
+}: {
+  name: string;
+  appearance?: string;
+  hue?: number;
+  large?: boolean;
+  mood?: string;
+}) {
   const spec = portraitSpec(name, appearance);
   const x = spec.cols <= 1 ? "0%" : `${(spec.col / (spec.cols - 1)) * 100}%`;
   const y = spec.rows <= 1 ? "0%" : `${(spec.row / (spec.rows - 1)) * 100}%`;
+  const filter = spec.filter === "none" ? mood : mood === "none" ? spec.filter : `${spec.filter} ${mood}`;
   return (
     <span
-      className="portrait inline-block h-11 w-11 shrink-0 rounded-md border border-amber/50 bg-ink"
+      className={
+        large
+          ? "portrait dialogue-face inline-block h-24 w-24 shrink-0 rounded-md border border-amber/50 bg-ink sm:h-28 sm:w-28"
+          : "portrait inline-block h-11 w-11 shrink-0 rounded-md border border-amber/50 bg-ink"
+      }
       style={{
         backgroundColor: `hsl(${hue} 30% 14%)`,
         backgroundImage: `url(${artUrl(spec.file)})`,
@@ -2340,7 +2390,7 @@ function Portrait({ name, appearance, hue = 30 }: { name: string; appearance?: s
         backgroundPosition: `${x} ${y}`,
         backgroundRepeat: "no-repeat",
         imageRendering: "pixelated",
-        filter: spec.filter === "none" ? undefined : spec.filter,
+        filter: filter === "none" ? undefined : filter,
       }}
       aria-hidden
     />
@@ -2378,9 +2428,9 @@ function DialogueBox({
   appearance?: string;
 }) {
   return (
-    <div className="dialogue-plate fixed inset-x-0 bottom-0 z-40 border-t border-amber/40 bg-ink-2/95 p-4" role="dialog" aria-label={speaker}>
+    <div className="dialogue-plate dialogue-rise fixed inset-x-0 bottom-0 z-40 border-t border-amber/40 bg-ink-2/95 p-4" role="dialog" aria-label={speaker}>
       <div className="mx-auto flex max-w-3xl gap-3">
-        <Portrait hue={SPEAKER_HUE[speaker] ?? 36} name={speaker} appearance={appearance} />
+        <Portrait hue={SPEAKER_HUE[speaker] ?? 36} name={speaker} appearance={appearance} large mood={portraitMood(text)} />
         <div className="min-w-0 flex-1">
           <p className="text-xs tracking-widest text-amber uppercase">{speaker}</p>
           <p className="mt-1 text-lg">{text}</p>
@@ -2803,7 +2853,7 @@ function Battle({
         )}
       </header>
       <div className="battle-stage relative overflow-hidden rounded-md border border-line bg-ink">
-        <canvas ref={arena} className="block h-[320px] w-full" />
+        <canvas ref={arena} className="block h-72 w-full sm:h-[440px]" />
         {intro && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/75 text-center">
             <p className="text-xs tracking-[0.28em] text-teal uppercase">

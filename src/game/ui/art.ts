@@ -7,7 +7,9 @@
  */
 
 import {
+  battleArt,
   blit,
+  elementOf,
   foeFrame,
   frameFor,
   groundKind,
@@ -505,7 +507,18 @@ function paintFloor(
 ) {
   const path = isPath(mapId, x, y, w, h);
   const kind = groundKind(mapId, x, y, path, tick, reduced);
-  if (blit(ctx, "tiles.png", kind % 4, Math.floor(kind / 4), 4, 4, x * TILE, y * TILE, TILE, TILE)) return;
+  const drew = blit(ctx, "tiles.png", kind % 4, Math.floor(kind / 4), 4, 4, x * TILE, y * TILE, TILE, TILE);
+  if (drew) {
+    const speck = (x * 13 + y * 7) % 9;
+    if (speck === 0) {
+      ctx.fillStyle = "rgba(12,8,10,0.22)";
+      ctx.fillRect(x * TILE + 10, y * TILE + 28, 6, 2);
+    } else if (speck === 4 && !path) {
+      ctx.fillStyle = "rgba(125,154,98,0.4)";
+      ctx.fillRect(x * TILE + 22, y * TILE + 12, 3, 6);
+    }
+    return;
+  }
   const alt = (x + y) % 2 === 0;
   const speck = (x * 7 + y * 13) % 5;
   ctx.fillStyle = alt ? look.ground[0] : look.ground[1];
@@ -823,6 +836,16 @@ function paintAmbience(ctx: CanvasRenderingContext2D, mapId: string, w: number, 
       ctx.fillRect(x, y, 3, 2);
     }
   }
+  if ((mapId === "map.ferry" || mapId === "map.hold" || mapId === "map.lowbell") && !reduced) {
+    ctx.fillStyle = "rgba(210,220,220,0.14)";
+    for (let i = 0; i < 3; i++) {
+      const x = ((tick * 1.4 + i * 90) % (w * TILE + 80)) - 40;
+      const y = TILE * 2 + i * 36;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 70, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
   if (mapId === "map.smith" && !reduced) {
     ctx.fillStyle = "rgba(180,180,180,0.35)";
     for (let i = 0; i < 4; i++) {
@@ -876,6 +899,16 @@ function paintMarker(ctx: CanvasRenderingContext2D, spot: Hotspot, showName: boo
   }
   ctx.fill();
   ctx.globalAlpha = 1;
+  if (showName && !reduced) {
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.45 + 0.35 * Math.sin(tick / 5);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, spot.y * TILE + 34, 16, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 1;
+  }
   if (!showName) return;
   const label = spot.label.slice(0, 18);
   ctx.font = "12px Source Sans 3, sans-serif";
@@ -1150,7 +1183,7 @@ type EncounterLike = {
   activeActorId: string | null;
   combatants: CombatantLike[];
   intents: { actorId: string; abilityId: string }[];
-  events: { kind: string; targetId?: string; abilityId?: string; actorId?: string; tick?: number }[];
+  events: { kind: string; targetId?: string; abilityId?: string; actorId?: string; tick?: number; amount?: number }[];
   tick?: number;
 };
 
@@ -1166,7 +1199,7 @@ export function paintArena(
   if (!ctx) return;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const w = canvas.clientWidth || 640;
-  const h = canvas.clientHeight || 320;
+  const h = canvas.clientHeight || 360;
   if (canvas.width !== Math.floor(w * dpr)) {
     canvas.width = Math.floor(w * dpr);
     canvas.height = Math.floor(h * dpr);
@@ -1174,112 +1207,213 @@ export function paintArena(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const tick = reduced ? 0 : now / 90;
   const asc = enc.mode === "ascension";
-  const sky = ctx.createLinearGradient(0, 0, 0, h);
-  const backdrop = battleBackdrop(enc.encounterId, asc);
-  sky.addColorStop(0, backdrop.top);
-  sky.addColorStop(1, backdrop.bottom);
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, w, h);
+  const art = battleArt(enc.encounterId, asc);
+  const plate = imageReady(art);
+  if (plate) {
+    ctx.drawImage(plate, 0, 0, w, h);
+    const scrim = ctx.createLinearGradient(0, h * 0.35, 0, h);
+    scrim.addColorStop(0, "rgba(8,4,10,0)");
+    scrim.addColorStop(1, "rgba(8,4,10,0.5)");
+    ctx.fillStyle = scrim;
+    ctx.fillRect(0, h * 0.35, w, h * 0.65);
+  } else {
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    const backdrop = battleBackdrop(enc.encounterId, asc);
+    sky.addColorStop(0, backdrop.top);
+    sky.addColorStop(1, backdrop.bottom);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = backdrop.ground;
+    ctx.beginPath();
+    ctx.ellipse(w / 2, h * 0.72, w * 0.42, h * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
   if (!reduced) {
-    ctx.fillStyle = "rgba(243,230,200,0.7)";
-    for (let i = 0; i < 16; i++) {
-      ctx.globalAlpha = 0.3 + 0.4 * Math.sin(tick / 8 + i);
-      ctx.fillRect((i * 73) % w, (i * 29) % (h * 0.4), 2, 2);
+    ctx.fillStyle = "rgba(243,230,200,0.65)";
+    for (let i = 0; i < 14; i++) {
+      ctx.globalAlpha = 0.25 + 0.35 * Math.sin(tick / 8 + i);
+      ctx.fillRect((i * 73 + tick) % w, (i * 19) % (h * 0.35), 2, 2);
     }
     ctx.globalAlpha = 1;
   }
-  ctx.fillStyle = backdrop.ground;
-  ctx.beginPath();
-  ctx.ellipse(w / 2, h * 0.7, w * 0.42, h * 0.2, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = asc ? "rgba(78,200,192,0.55)" : "rgba(232,177,90,0.4)";
-  ctx.stroke();
   if (asc) {
-    ctx.strokeStyle = "rgba(78,200,192,0.2)";
+    ctx.strokeStyle = "rgba(78,200,192,0.45)";
     for (let i = 1; i <= 3; i++) {
       ctx.beginPath();
-      ctx.ellipse(w / 2, h * 0.62, w * 0.12 * i, h * 0.07 * i, 0, 0, Math.PI * 2);
+      ctx.ellipse(w / 2, h * 0.68, w * 0.12 * i, h * 0.07 * i, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
-    const fence = [
-      [-3.2, -0.2],
-      [3.2, -0.2],
-      [3.2, 3.4],
-      [-3.2, 3.4],
-    ].map(([x, z]) => project(w, h, x ?? 0, z ?? 0));
-    ctx.strokeStyle = "rgba(243,230,200,0.35)";
-    ctx.beginPath();
-    fence.forEach((p, i) => (i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py)));
-    ctx.closePath();
-    ctx.stroke();
   }
-  const projectOf = (x: number, z: number) => project(w, h, x, z);
-  for (const c of enc.combatants) {
-    if (!c.alive && c.side === "enemy") continue;
-    const pos = c.side === "party" && asc && c.id === enc.activeActorId ? hero : c.position;
-    const z = c.side === "party" && !asc ? 1.6 : pos.z;
-    const p = projectOf(pos.x, z);
+
+  const party = enc.combatants.filter((c) => c.side === "party");
+  const foes = enc.combatants.filter((c) => c.side === "enemy" && c.alive);
+  type Slot = { c: CombatantLike; px: number; py: number };
+  const slots: Slot[] = [];
+  if (!asc) {
+    party.forEach((c, i) => {
+      if (w < 560) {
+        slots.push({ c, px: w * (0.26 + (i % 2) * 0.12), py: h * (0.46 + i * 0.22) });
+      } else {
+        slots.push({ c, px: w * (0.2 + (i % 2) * 0.07), py: h * (0.62 + i * 0.09) });
+      }
+    });
+    foes.forEach((c, i) => {
+      const big = foeFrame(c.jobId).big;
+      slots.push({
+        c,
+        px: w * (big ? 0.7 : 0.64 + (i % 2) * 0.1),
+        py: h * (big ? 0.74 : 0.56 + i * 0.11),
+      });
+    });
+  } else {
+    for (const c of enc.combatants) {
+      if (!c.alive && c.side === "enemy") continue;
+      const pos = c.side === "party" && c.id === enc.activeActorId ? hero : c.position;
+      const z = pos.z;
+      const p = project(w, h, pos.x, z);
+      slots.push({ c, px: p.px, py: p.py });
+    }
+  }
+  slots.sort((a, b) => a.py - b.py);
+
+  const last = enc.events[enc.events.length - 1];
+  const fresh = !!last && (last.tick == null || enc.tick == null || enc.tick - last.tick <= 1);
+  const actorSlot = last?.actorId ? slots.find((s) => s.c.id === last.actorId) : undefined;
+  const targetSlot = last?.targetId ? slots.find((s) => s.c.id === last.targetId) : undefined;
+  if (fresh && last && actorSlot && targetSlot && !reduced) {
+    const tone = elementOf(last.abilityId);
+    paintElement(ctx, actorSlot.px, actorSlot.py - 30, targetSlot.px, targetSlot.py - 36, tone.color, tick, last.kind === "heal");
+  }
+
+  for (const slot of slots) {
+    const { c, px, py } = slot;
     const pose = battlePose(enc, c, reduced, tick);
-    const lunge = pose === "attack" ? (c.side === "party" ? 16 : -16) : pose === "hurt" ? (c.side === "party" ? -10 : 10) : 0;
+    const lunge = pose === "attack" ? (c.side === "party" ? 22 : -22) : pose === "hurt" ? (c.side === "party" ? -12 : 12) : 0;
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(px + lunge, py + 4, 20, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
     if (c.side === "party") {
-      paintPerson(ctx, c.id, p.px + lunge, p.py, "s", tick, reduced, 1.45, c.id === "wanderer" ? appearance : "lantern", pose, false);
+      const battleScale = w < 560 ? 1.55 : 2.15;
+      paintPerson(ctx, c.id, px + lunge, py, "s", tick, reduced, battleScale, c.id === "wanderer" ? appearance : "lantern", pose, false);
     } else {
-      paintFoe(ctx, c, p.px + lunge, p.py, tick, reduced, pose);
+      paintFoe(ctx, c, px + lunge, py, tick, reduced, pose);
+    }
+    if (c.id === enc.activeActorId) {
+      ctx.strokeStyle = "#e8b15a";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(px, py + 6, 26, 8, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 1;
     }
     const intent = enc.intents.find((i) => i.actorId === c.id);
     if (intent) {
       const hot = /dirge|rupture|pulse|departure|gale/.test(intent.abilityId);
       ctx.strokeStyle = hot ? "#e06a5c" : "#e8b15a";
-      ctx.lineWidth = hot ? 4 : 3;
+      ctx.globalAlpha = 0.85;
       ctx.beginPath();
-      ctx.arc(p.px, p.py - 10, 26, 0, Math.PI * 2);
+      ctx.arc(px, py - 46, 18, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.lineWidth = 1;
+      ctx.globalAlpha = 1;
     }
-    const last = enc.events[enc.events.length - 1];
-    if (last?.kind === "damage" && last.targetId === c.id) {
-      ctx.strokeStyle = "#f3e6c8";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(p.px - 16, p.py - 18);
-      ctx.lineTo(p.px + 14, p.py + 4);
-      ctx.stroke();
-      ctx.lineWidth = 1;
+    if (fresh && last?.targetId === c.id && typeof last.amount === "number" && (last.kind === "damage" || last.kind === "heal" || last.kind === "shield")) {
+      const rise = reduced ? 0 : ((now % 700) / 700) * 22;
+      const tone = elementOf(last.abilityId);
+      ctx.save();
+      ctx.font = "700 22px Fraunces, serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = last.kind === "heal" ? "#8fce6a" : tone.color;
+      ctx.strokeStyle = "#140e18";
+      ctx.lineWidth = 3;
+      const label = last.kind === "heal" ? `+${last.amount}` : String(last.amount);
+      ctx.strokeText(label, px, py - 62 - rise);
+      ctx.fillText(label, px, py - 62 - rise);
+      ctx.restore();
     }
-    const label = c.name;
+    const words = c.statuses
+      .map((s) => (s.id === "exposed" ? "open" : s.id === "evading" ? "aside" : s.id === "guard" || s.id === "bracing" ? "brace" : ""))
+      .filter(Boolean);
+    if (words.length) {
+      ctx.save();
+      ctx.font = "11px Source Sans 3, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#4ec8c0";
+      ctx.fillText(words.join(" · "), px, py - 78);
+      ctx.restore();
+    }
+    ctx.save();
     ctx.font = "12px Source Sans 3, sans-serif";
     ctx.textAlign = "center";
-    const tw = ctx.measureText(label).width;
+    const tw = ctx.measureText(c.name).width;
     ctx.fillStyle = "rgba(12,8,14,0.82)";
-    roundRect(ctx, p.px - tw / 2 - 6, p.py + 16, tw + 12, 16, 4);
+    roundRect(ctx, px - tw / 2 - 6, py + 14, tw + 12, 16, 4);
     ctx.fill();
     ctx.fillStyle = "#f3e6c8";
-    ctx.fillText(label, p.px, p.py + 28);
+    ctx.fillText(c.name, px, py + 26);
     ctx.fillStyle = "#2a1414";
-    ctx.fillRect(p.px - 22, p.py - 36, 44, 5);
-    ctx.fillStyle = "#e06a5c";
-    ctx.fillRect(p.px - 22, p.py - 36, 44 * (c.hp / Math.max(1, c.maxHp)), 5);
-    if (c.id === enc.activeActorId) {
-      ctx.strokeStyle = "#e8b15a";
-      ctx.strokeRect(p.px - 18, p.py - 40, 36, 64);
-    }
-    ctx.textAlign = "left";
+    ctx.fillRect(px - 26, py - 8, 52, 5);
+    ctx.fillStyle = c.side === "party" ? "#e06a5c" : "#c98b4a";
+    ctx.fillRect(px - 26, py - 8, 52 * (c.hp / Math.max(1, c.maxHp)), 5);
+    ctx.restore();
   }
+
   const foesUp = enc.combatants.some((c) => c.side === "enemy" && c.alive);
   const partyUp = enc.combatants.some((c) => c.side === "party" && c.alive);
   if (!foesUp && partyUp) {
     ctx.save();
-    ctx.font = "20px Fraunces, serif";
+    ctx.font = "22px Fraunces, serif";
     ctx.textAlign = "center";
     const banner = "The light holds";
     const tw = ctx.measureText(banner).width;
     ctx.fillStyle = "rgba(12,8,14,0.82)";
-    roundRect(ctx, w / 2 - tw / 2 - 16, 18, tw + 32, 32, 6);
+    roundRect(ctx, w / 2 - tw / 2 - 16, 16, tw + 32, 34, 6);
     ctx.fill();
     ctx.fillStyle = "#f3e6c8";
     ctx.fillText(banner, w / 2, 40);
     ctx.restore();
+  } else if (!partyUp) {
+    ctx.save();
+    ctx.fillStyle = "rgba(8,4,10,0.45)";
+    ctx.fillRect(0, 0, w, h);
+    ctx.font = "22px Fraunces, serif";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#f3e6c8";
+    ctx.fillText("You fall, and wake.", w / 2, 40);
+    ctx.restore();
   }
+}
+
+function paintElement(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string,
+  tick: number,
+  heal: boolean,
+) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = 0.85;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  for (let i = 0; i < 6; i++) {
+    const t = (tick / 8 + i / 6) % 1;
+    const x = x1 + (x2 - x1) * t;
+    const y = y1 + (y2 - y1) * t;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, heal ? 5 : 3 + (i % 3), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 function project(w: number, h: number, x: number, z: number) {
@@ -1320,7 +1454,7 @@ function paintFoe(ctx: CanvasRenderingContext2D, c: CombatantLike, x: number, y:
   const age = tick - (foeBorn.get(c.id) ?? tick);
   const intro = reduced || !spec.big ? 1 : Math.min(1, 0.4 + Math.max(0, age) / 5);
   const bob = reduced ? 0 : Math.sin(tick / 6 + x) * 2;
-  const h = (spec.big ? 108 : 72) * intro;
+  const h = (spec.big ? 156 : 108) * intro;
   const w = h * 0.72;
   if (blit(ctx, "foes.png", spec.col, spec.row, 3, 3, x - w / 2, y - h + bob, w, h, pose === "hurt" ? "brightness(1.8)" : "none")) {
     if (pose === "attack" || pose === "cast") {
