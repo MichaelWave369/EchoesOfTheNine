@@ -53,6 +53,30 @@ GitHub Actions (`.github/workflows/ci.yml`) installs, typechecks, runs those tes
 
 Saves live in `localStorage` under `eotn.save.v1`. No account, no server, no API key.
 
+
+## Play on GitHub Pages (static React)
+
+The public game can be built as a standalone React site at `https://michaelwave369.github.io/EchoesOfTheNine/` using `.github/workflows/deploy-pages.yml`. This is a **separate Vite build**, so the existing Grok/TanStack preview is not replaced.
+
+1. In **Settings → Pages**, set **Build and deployment → Source** to **GitHub Actions** (once per repository).
+2. Merge the GitHub Pages deployment PR into `main`. Each future push to `main` automatically builds and deploys the latest playable game.
+3. Follow the workflow's deployment link or open `https://michaelwave369.github.io/EchoesOfTheNine/`.
+
+Local commands:
+
+```bash
+npm ci
+npm run dev:pages           # standalone browser entry, typically http://localhost:5173/EchoesOfTheNine/
+npm run build:pages         # writes dist-pages/
+npm run preview:pages
+```
+
+The Pages build has no server runtime, login, API key, or database. It imports the canonical `GameApp` and shares the existing combat, story and save code with Grok's build. GitHub Pages requires internet access to load the page, but after loading, the game itself is local-first; its saves stay in the browser's `localStorage`.
+
+**Save migration between URLs:** browser storage is separated by origin. Export the chronicle from the previous preview using **Settings → Export**, then open the Pages URL and use **Settings → Import**. Existing schema migrations still apply; the deployment does not automatically transfer another site's saves.
+
+**Custom domain:** the Vite build defaults to `/EchoesOfTheNine/`. If deploying to a root-domain URL later, set `PAGES_BASE_PATH=/` for the Pages build and configure the GitHub Pages custom domain separately. Do not repoint an unrelated Φ369 Labs site by mistake.
+
 ## Deploy
 
 This app builds with `npm run build`. The migrator exits cleanly when `DATABASE_URL` is absent, which is the intended configuration: nothing in the game is stored on a server. Publish the build output with the host you already use for this workspace. Do not add accounts to make saves "cloud." Export and import from Settings is the portable chronicle.
