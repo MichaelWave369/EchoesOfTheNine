@@ -6,6 +6,9 @@
 
 export const SCHEMA_VERSION = 4 as const;
 
+/** Cloak dye. Not a job, not a stat, not a story flag. */
+export type WandererAppearance = "lantern" | "festival" | "river" | "ridge";
+
 export interface ChoiceRecord {
   id: string;
   value: string;
@@ -241,6 +244,8 @@ export interface SaveGame {
   savedAt: string;
   slot: "auto" | "manual";
   playerName: string;
+  /** Cosmetic cloak. Old chronicles migrate to lantern. */
+  appearance: WandererAppearance;
   mapId: string;
   spawnId: string;
   mode: CombatMode;

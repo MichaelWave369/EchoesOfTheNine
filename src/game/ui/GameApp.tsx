@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CombatAction, EncounterState, SaveGame } from "../contracts.ts";
+import type { CombatAction, EncounterState, SaveGame, WandererAppearance } from "../contracts.ts";
 import { CHARACTERS, ENEMY_TEMPLATES, JOBS } from "../content/characters.ts";
 import { ability, ABILITIES } from "../content/abilities.ts";
 import { DIALOGUE, ITEMS, MAPS, MOSS_ANSWER, RUNE_ANSWER, type MapHotspot } from "../content/world.ts";
@@ -68,12 +68,14 @@ import {
   loadLocal,
   recruit,
   serialize,
+  setAppearance,
   setFlag,
   writeLocal,
 } from "../chronicle/save.ts";
 import { createEncounter, proposeAction, resolveEnemyTurn, tryMercy } from "../core/combat.ts";
 import { configureAudio, resumeAudio, playSfx, startMusic, unlockAudio } from "../audio.ts";
 import { paintArena, paintExploration } from "./art.ts";
+import { artUrl, portraitSpec, warmArt } from "./sprites.ts";
 import { detectXr, requestReferenceSession, XR_BINDINGS, type XrCapability } from "../xr/adapter.ts";
 
 type Screen = "title" | "name" | "explore" | "battle" | "ending";
@@ -138,6 +140,7 @@ export function GameApp() {
   const { toasts, push } = useToasts();
 
   useEffect(() => {
+    warmArt();
     setHasSave(!!loadLocal());
   }, [screen]);
 
@@ -200,8 +203,8 @@ export function GameApp() {
         <NameScreen
           name={name}
           setName={setName}
-          onBegin={() => {
-            const next = freshSave(name);
+          onBegin={(look) => {
+            const next = setAppearance(freshSave(name), look);
             commit(next);
             startMusic("vale");
             playSfx("ui");
@@ -403,43 +406,8 @@ function TitleScreen({
 function VillageBackdrop() {
   return (
     <div className="absolute inset-0" aria-hidden>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#3a2a4a_0%,#140e18_55%,#0c0810_100%)]" />
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 800 480" preserveAspectRatio="xMidYMax slice">
-        <g fill="#f3e6c8">
-          {Array.from({ length: 28 }).map((_, i) => (
-            <circle key={i} cx={(i * 67) % 800} cy={18 + (i % 5) * 14} r={i % 7 === 0 ? 1.6 : 0.8} className="lantern-flicker" />
-          ))}
-        </g>
-        <g fill="#1a120c">
-          <polygon points="0,480 0,280 120,210 210,290 210,480" />
-          <polygon points="160,480 170,250 290,170 400,260 400,480" />
-          <polygon points="470,480 480,230 620,150 760,250 760,480" />
-          <polygon points="700,480 710,290 800,230 800,480" />
-        </g>
-        <g fill="#2a1c16">
-          <polygon points="40,480 70,340 150,360 170,480" />
-          <polygon points="560,480 600,320 700,350 730,480" />
-        </g>
-        <g>
-          <polygon points="70,360 110,300 150,360" fill="#6a4030" />
-          <rect x="82" y="360" width="56" height="70" fill="#3a2418" />
-          <rect x="92" y="378" width="12" height="16" fill="#e8b15a" className="lantern-flicker" />
-          <rect x="118" y="378" width="12" height="16" fill="#f3d7a1" className="lantern-flicker" />
-          <polygon points="600,350 650,290 710,350" fill="#4a3428" />
-          <rect x="616" y="350" width="70" height="80" fill="#3a2418" />
-          <rect x="630" y="368" width="14" height="18" fill="#e8b15a" className="lantern-flicker" />
-          <rect x="658" y="368" width="14" height="18" fill="#4ec8c0" />
-        </g>
-        <rect x="360" y="150" width="70" height="210" fill="#24160f" />
-        <rect x="388" y="128" width="14" height="24" fill="#e8b15a" />
-        <circle cx="395" cy="196" r="28" fill="#1a120e" stroke="#e8b15a" strokeWidth="3" />
-        <line x1="395" y1="196" x2="395" y2="176" stroke="#f3e6c8" strokeWidth="2" />
-        <line x1="395" y1="196" x2="410" y2="204" stroke="#f3e6c8" strokeWidth="2" />
-        <g stroke="#e8b15a" fill="none">
-          <path d="M80 430 Q200 400 320 430" />
-          <path d="M460 430 Q580 400 720 430" />
-        </g>
-      </svg>
+      <img src={artUrl("vale-night.jpg")} alt="" className="absolute inset-0 h-full w-full object-cover object-bottom" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,24,0.78)_0%,rgba(20,14,24,0.18)_42%,rgba(20,14,24,0.78)_100%)]" />
     </div>
   );
 }
@@ -481,21 +449,28 @@ function NameScreen({
 }: {
   name: string;
   setName: (v: string) => void;
-  onBegin: () => void;
+  onBegin: (look: WandererAppearance) => void;
   onBack: () => void;
 }) {
+  const [look, setLook] = useState<WandererAppearance>("lantern");
+  const dyes: { id: WandererAppearance; label: string }[] = [
+    { id: "lantern", label: "Lantern" },
+    { id: "festival", label: "Festival" },
+    { id: "river", label: "River" },
+    { id: "ridge", label: "Ridge" },
+  ];
   return (
     <div className="relative min-h-screen overflow-hidden">
       <VillageBackdrop />
       <div className="relative z-10 mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-6 px-5">
       <p className="text-xs tracking-[0.28em] text-teal uppercase">Before the festival</p>
       <h2 className="font-display text-4xl">What do they call you in the Vale?</h2>
-      <p className="text-parchment/80">Any name. The clock will mispronounce it anyway. Sixteen letters is plenty.</p>
+      <p className="text-parchment/80">Any name. The clock will mispronounce it anyway. Sixteen letters is plenty. The cloak is only a dye.</p>
       <form
         className="flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          onBegin();
+          onBegin(look);
         }}
       >
         <label className="text-sm text-amber-2" htmlFor="hero-name">
@@ -510,8 +485,23 @@ function NameScreen({
           onChange={(e) => setName(e.target.value)}
           className="min-h-11 rounded-md border border-line bg-ink-2 px-3 text-lg text-parchment"
         />
+        <div className="flex items-center gap-3">
+          <Portrait name="Wanderer" appearance={look} />
+          <div className="flex flex-wrap gap-2">
+            {dyes.map((dye) => (
+              <button
+                key={dye.id}
+                type="button"
+                className={`min-h-11 rounded-md px-3 text-sm font-semibold ${look === dye.id ? "bg-amber text-ink" : "border border-line text-parchment"}`}
+                onClick={() => setLook(dye.id)}
+              >
+                {dye.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="mt-2 flex gap-3">
-          <MenuButton onClick={onBegin}>Begin</MenuButton>
+          <MenuButton onClick={() => onBegin(look)}>Begin</MenuButton>
           <MenuButton tone="ghost" onClick={onBack}>
             Back
           </MenuButton>
@@ -541,6 +531,7 @@ function Explore({
   const spawn = map.spawns[save.spawnId] ?? map.spawns[Object.keys(map.spawns)[0]!]!;
   const [pos, setPos] = useState({ x: spawn.x, y: spawn.y });
   const [facing, setFacing] = useState<"n" | "s" | "e" | "w">(spawn.facing);
+  const [lifting, setLifting] = useState<string | null>(null);
   const [dialogue, setDialogue] = useState<{
     nodes: { id: string; speaker: string; text: string; choices?: { label: string; next: string; flag?: string }[]; next?: string; grant?: string }[];
     index: string;
@@ -1396,7 +1387,14 @@ function Explore({
             hotspots={map.hotspots}
             reduced={save.settings.reducedMotion}
             sight={Boolean(save.sightScene) && save.sightSteps > 0 && (save.sightScene === `sight.${map.id.replace("map.", "")}` || (map.id === "map.lowbell" && save.sightScene === "sight.lowbell") || (map.id === "map.ferry" && save.sightScene === "sight.ferry") || (map.id === "map.hold" && save.sightScene === "sight.hold") || (map.id === "map.highroad" && save.sightScene === "sight.stair"))}
+            appearance={save.appearance}
+            sightSteps={save.sightSteps}
           />
+          {lifting && (
+            <div className="pointer-events-none absolute inset-0 z-20 flex items-end justify-center bg-ink/40 pb-8">
+              <img src={artUrl("skiff.png")} alt="" className="skiff-rise h-28 w-auto" />
+            </div>
+          )}
           <div className="flex flex-wrap gap-2 border-t border-line p-2 lg:hidden">
             <Pad onMove={tryStep} onAct={interact} />
           </div>
@@ -1439,6 +1437,7 @@ function Explore({
           speaker={node.speaker}
           text={node.text}
           choices={node.choices}
+          appearance={node.speaker === save.playerName ? save.appearance : undefined}
           onNext={() => advanceDialogue()}
           onChoice={(c) => advanceDialogue(c)}
         />
@@ -1604,6 +1603,14 @@ function Explore({
           {panel === "party" && (
             <div className="flex flex-col gap-3">
               <PartyStrip save={save} verbose />
+              <p className="text-xs text-parchment/70">The wanderer's cloak is a dye. It does not touch the pack, the arts, or the road.</p>
+              <div className="flex flex-wrap gap-2">
+                {(["lantern", "festival", "river", "ridge"] as WandererAppearance[]).map((dye) => (
+                  <MenuButton key={dye} tone={save.appearance === dye ? "solid" : "ghost"} onClick={() => commit(setAppearance(save, dye))}>
+                    {dye[0]!.toUpperCase() + dye.slice(1)}
+                  </MenuButton>
+                ))}
+              </div>
               <p className="text-sm text-parchment/80">
                 Four walk into a fight. {(save.formation ?? "line") === "wide" ? "The line is loose, and hits land softer." : "The line is close, and true hits land harder."} A bench does not copy a pack.
               </p>
@@ -1832,7 +1839,7 @@ function Explore({
                 <circle cx="48" cy="78" r="5" fill="#e8b15a" />
                 <circle cx="272" cy="78" r="5" fill="#e8b15a" />
                 <path d="M132 70 L168 70 L160 86 L140 86 Z" fill="#8a8070" />
-                <path d="M148 70 L156 48 L164 70" fill="#c8bba8" />
+                <image href={artUrl("skiff.png")} x="118" y="36" width="92" height="52" />
                 <text x="28" y="28" fill="#f3e6c8" fontSize="13">Vale roof</text>
                 <text x="228" y="28" fill="#f3e6c8" fontSize="13">Berth</text>
               </svg>
@@ -1846,10 +1853,18 @@ function Explore({
                       push(flown.reason);
                       return;
                     }
-                    commit(flown.save);
-                    setPanel("none");
-                    startMusic(musicFor(dock.mapId));
-                    push(flown.text);
+                    const finish = () => {
+                      commit(flown.save);
+                      setLifting(null);
+                      setPanel("none");
+                      startMusic(musicFor(dock.mapId));
+                      push(flown.text);
+                    };
+                    if (save.settings.reducedMotion) finish();
+                    else {
+                      setLifting(dock.name);
+                      window.setTimeout(finish, 680);
+                    }
                   }}
                 >
                   Cast off for {dock.name}
@@ -2175,6 +2190,8 @@ function MapCanvas({
   hotspots,
   reduced,
   sight = false,
+  appearance = "lantern",
+  sightSteps = 0,
 }: {
   mapId: string;
   width: number;
@@ -2185,10 +2202,19 @@ function MapCanvas({
   hotspots: MapHotspot[];
   reduced: boolean;
   sight?: boolean;
+  appearance?: string;
+  sightSteps?: number;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [tick, setTick] = useState(0);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
+  const prev = useRef(pos);
+  const walkUntil = useRef(0);
+  if (prev.current.x !== pos.x || prev.current.y !== pos.y) {
+    prev.current = pos;
+    walkUntil.current = tick + 4;
+  }
+  const moving = tick <= walkUntil.current && walkUntil.current > 0;
   useEffect(() => {
     if (reduced) return;
     const id = window.setInterval(() => setTick((n) => (n + 1) % 240), 90);
@@ -2220,8 +2246,11 @@ function MapCanvas({
       hotspots,
       hover,
       blocked: (x, y) => blocked(mapId, x, y),
+      appearance,
+      moving,
+      sightSteps: sight ? sightSteps : 0,
     });
-  }, [mapId, width, height, pos, facing, party, hotspots, reduced, sight, tick, hover]);
+  }, [mapId, width, height, pos, facing, party, hotspots, reduced, sight, tick, hover, appearance, moving, sightSteps]);
   return (
     <canvas
       ref={ref}
@@ -2271,7 +2300,7 @@ function PartyStrip({ save, verbose = false }: { save: SaveGame; verbose?: boole
         return (
           <li key={id} className="rounded-md bg-ink/60 p-2">
             <div className="flex items-center gap-2">
-              <Portrait hue={def?.portraitHue ?? 30} name={c.name} />
+              <Portrait hue={def?.portraitHue ?? 30} name={c.name} appearance={id === "wanderer" ? save.appearance : undefined} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="font-semibold">{c.name}</span>
@@ -2297,25 +2326,24 @@ function PartyStrip({ save, verbose = false }: { save: SaveGame; verbose?: boole
   );
 }
 
-function Portrait({ hue, name }: { hue: number; name: string }) {
-  const key = name.toLowerCase();
-  const mark = key.includes("mira") ? "book" : key.includes("kael") ? "blade" : key.includes("nessa") ? "leaf" : key.includes("sera") ? "goggles" : "lantern";
+function Portrait({ name, appearance, hue = 30 }: { name: string; appearance?: string; hue?: number }) {
+  const spec = portraitSpec(name, appearance);
+  const x = spec.cols <= 1 ? "0%" : `${(spec.col / (spec.cols - 1)) * 100}%`;
+  const y = spec.rows <= 1 ? "0%" : `${(spec.row / (spec.rows - 1)) * 100}%`;
   return (
     <span
-      className="portrait inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-amber/50"
-      style={{ background: `radial-gradient(circle at 35% 30%, hsl(${hue} 55% 42%), hsl(${hue} 30% 14%) 72%)` }}
+      className="portrait inline-block h-11 w-11 shrink-0 rounded-md border border-amber/50 bg-ink"
+      style={{
+        backgroundColor: `hsl(${hue} 30% 14%)`,
+        backgroundImage: `url(${artUrl(spec.file)})`,
+        backgroundSize: `${spec.cols * 100}% ${spec.rows * 100}%`,
+        backgroundPosition: `${x} ${y}`,
+        backgroundRepeat: "no-repeat",
+        imageRendering: "pixelated",
+        filter: spec.filter === "none" ? undefined : spec.filter,
+      }}
       aria-hidden
-    >
-      <svg viewBox="0 0 32 32" className="h-8 w-8">
-        <path d="M8 26 L8 16 Q16 8 24 16 L24 26 Z" fill="#1a120e" />
-        <circle cx="16" cy="13" r="4" fill="#e6c2a0" />
-        {mark === "book" && <rect x="20" y="16" width="6" height="7" fill="#f3e6c8" />}
-        {mark === "blade" && <rect x="22" y="8" width="2" height="12" fill="#d7c4a3" />}
-        {mark === "leaf" && <ellipse cx="23" cy="16" rx="4" ry="2.5" fill="#7d9a62" />}
-        {mark === "goggles" && <rect x="12" y="11" width="8" height="3" fill="none" stroke="#e8b15a" />}
-        {mark === "lantern" && <rect x="21" y="16" width="4" height="5" fill="#e8b15a" />}
-      </svg>
-    </span>
+    />
   );
 }
 
@@ -2340,17 +2368,19 @@ function DialogueBox({
   choices,
   onNext,
   onChoice,
+  appearance,
 }: {
   speaker: string;
   text: string;
   choices?: { label: string; next: string; flag?: string }[];
   onNext: () => void;
   onChoice: (c: { label: string; next: string; flag?: string }) => void;
+  appearance?: string;
 }) {
   return (
     <div className="dialogue-plate fixed inset-x-0 bottom-0 z-40 border-t border-amber/40 bg-ink-2/95 p-4" role="dialog" aria-label={speaker}>
       <div className="mx-auto flex max-w-3xl gap-3">
-        <Portrait hue={SPEAKER_HUE[speaker] ?? 36} name={speaker} />
+        <Portrait hue={SPEAKER_HUE[speaker] ?? 36} name={speaker} appearance={appearance} />
         <div className="min-w-0 flex-1">
           <p className="text-xs tracking-widest text-amber uppercase">{speaker}</p>
           <p className="mt-1 text-lg">{text}</p>
@@ -2595,7 +2625,7 @@ function Battle({
         asc.current.z = clamp(asc.current.z + (z / len) * 3.2 * dt, -0.2, 3.4);
         setAscPos({ x: asc.current.x, z: asc.current.z });
       }
-      drawArena(c, enc, asc.current, save.settings.reducedMotion, now);
+      drawArena(c, enc, asc.current, save.settings.reducedMotion, now, save.appearance);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -3007,8 +3037,9 @@ function drawArena(
   hero: { x: number; z: number },
   reduced: boolean,
   now = 0,
+  appearance = "lantern",
 ) {
-  paintArena(canvas, enc, hero, reduced, now);
+  paintArena(canvas, enc, hero, reduced, now, appearance);
 }
 
 function Ending({ save, onTitle, onAgain }: { save: SaveGame; onTitle: () => void; onAgain: () => void }) {

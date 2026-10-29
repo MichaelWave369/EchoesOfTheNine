@@ -68,8 +68,19 @@
   --color-amber: #ffd27a;
 }
 
+.skiff-rise {
+  animation: skiff-rise 0.68s ease-in forwards;
+}
+
+@keyframes skiff-rise {
+  from { transform: translateY(24px); opacity: 1; }
+  to { transform: translateY(-72px); opacity: 0.15; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .motion-ok { animation: none !important; transition: none !important; }
+  .lantern-flicker { animation: none !important; }
+  .skiff-rise { animation: none !important; }
 }
 
 @keyframes lantern-glow {
