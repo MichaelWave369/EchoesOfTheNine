@@ -27,3 +27,4 @@ jobs:
           npm run build:pages
           test -s dist-pages/index.html
           test -d dist-pages/assets
+          node scripts/check-pages-style.mjs
