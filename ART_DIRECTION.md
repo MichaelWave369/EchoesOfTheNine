@@ -41,6 +41,12 @@ Characters and tiles are original frames in `public/game/art`. See [ASSETS.md](A
 
 Walk sheets are four rows: toward you, west, east, away. Columns are stand, left foot, stand, right foot. Battle poses reuse those columns: attack, hurt, cast, and a small victory bob. They read the last combat event. They do not roll damage.
 
+A fight is a painted plate, not a diagram. Vale, woods, shrine, mist, ridge, and the ascent each have their own backdrop. Legacy stages the party on the left and the foes on the right so sprites do not stack. Ascension still projects the real ring. Floating numbers and tints come from the last combat event. They are not a second damage roll. A spared or finished fight can say the light holds. A fall says you wake. Reduced motion skips the streaks, the bob, and the camera glide.
+
+On the road, an optional close view follows the wanderer. Whole map puts the frame back. The follow is not saved. Collision and the tile you stand on do not move. Neighboring ground tiles pick a material from a stable jitter so the road is not a checker. Lanterns, water, mist, and a ring when you can speak are presentation. Reduced motion holds them still.
+
+Dialogue portraits are large, and a few words in the line already spoken can warm or dim the face. That is a filter. It is not new story.
+
 The wanderer's cloak can be lantern, festival, river, or ridge. That is a dye. It is not a job. Old chronicles without the field become lantern. Schema stays 4.
 
 Labels on the map appear when you stand next to a thing, point at it, or it is a way out. Do not put a permanent caption on every tile.
