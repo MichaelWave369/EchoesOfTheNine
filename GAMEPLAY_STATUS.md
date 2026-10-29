@@ -1,6 +1,6 @@
 # Gameplay status
 
-Honest labels. Updated for the Skyweave Ascent, after Mistwater Crossing.
+Honest labels. Updated for the visual ascension. Skyweave's rules are unchanged.
 
 ## Working
 
@@ -22,7 +22,8 @@ Honest labels. Updated for the Skyweave Ascent, after Mistwater Crossing.
 - Skyweave Ridge, after the high gate: Ada at the mill, Sera at the rig, a half-span, a salt cave, and the Early Glass. Gustlings, then a lens that wants the chart from the walk and the sky from inside the step. Sight shows an eclipse ahead of the sun and does not press the lens. Orrin will not press it either. The inner arch opens after both readings and the gusts are quiet. The Galekeeper boards early. Under a little less than half you may ask which noon, if you read both views, saw the glass, or chose the safer stay. Otherwise you can still end it. Either way the berth opens. The second phase hits everyone.
 - The First Stay is one hull and two pads: the Skyweave berth and the Vale roof. You pick a destination and cast off. It is a route, not a skybox. After one flight you may note a second shadow that leaves before the hull. It is recorded. It is not explained.
 - Atlas of walked places, including the ridge, the glass, the cave, and the berth. Travel only to places already walked. The dashed road into open sky is still not a boat.
-- Temporal Sight is an overlay for eight steps, including the ridge's early span, the glass, the cave, and the berth. A button spends a charge. The journal keeps the clue.
+- Temporal Sight is an overlay for eight steps, including the ridge's early span, the glass, the cave, and the berth. A button spends a charge. The journal keeps the clue. The picture of that hour is a teal wash and a small clock. It still does not press the puzzle.
+- The presentation layer (`src/game/ui/art.ts`, `ART_DIRECTION.md`) draws region colors, landmarks, party figures, the title, the First Stay, and the battle stage. It does not decide damage, doors, jobs, or rewards.
 
 ## Partial
 

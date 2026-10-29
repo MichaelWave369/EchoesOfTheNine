@@ -2,7 +2,7 @@
 
 A browser science-fantasy JRPG from Φ369 Labs. Playable now: **The Crystal Awakening**, **Hollowwood Reach**, the optional **Vale expanses**, **Mistwater Crossing**, and the **Skyweave Ascent**. The late chronicle is not on the title screen, and it should stay that way.
 
-Public pitch: an old-school fantasy RPG you can step inside. Command a classic battle, or move inside the same fight.
+Public pitch: an old-school fantasy RPG you can step inside. Command a classic battle, or move inside the same fight. The picture is lanternlight, twilight, and readable figures — see [ART_DIRECTION.md](ART_DIRECTION.md).
 
 ## Play
 
