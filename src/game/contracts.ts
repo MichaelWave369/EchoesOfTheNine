@@ -4,7 +4,7 @@
  * Spoiler-gated payloads live behind `gate` and are never rendered in public UI.
  */
 
-export const SCHEMA_VERSION = 3 as const;
+export const SCHEMA_VERSION = 4 as const;
 
 export interface ChoiceRecord {
   id: string;
@@ -246,6 +246,10 @@ export interface SaveGame {
   mode: CombatMode;
   ascensionUnlocked: boolean;
   party: string[];
+  /** Companions not in the four. They keep kit, bond, level, and gear. */
+  reserve: string[];
+  /** Starting spacing for a fight. Close hits harder. Loose hits softer. */
+  formation: "line" | "wide";
   roster: Record<string, CombatantState>;
   inventory: InventorySlot[];
   gold: number;

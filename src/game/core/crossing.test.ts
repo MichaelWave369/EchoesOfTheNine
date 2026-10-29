@@ -374,7 +374,7 @@ describe("Mistwater crossing", () => {
     delete raw.sightSteps;
     raw.quests = (raw.quests as { id: string }[]).filter((q) => q.id !== "quest.crossing");
     const back = deserialize(JSON.stringify(raw));
-    assert.equal(back.schema, 3);
+    assert.equal(back.schema, 4);
     assert.equal(back.wardenOutcome, "defeated");
     assert.ok(back.earnedSpells.includes("spell.solar"));
     assert.equal(back.sightScene, null);

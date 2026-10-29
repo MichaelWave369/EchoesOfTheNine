@@ -1,6 +1,7 @@
 import type { CombatantState, EquipLoadout, SaveGame } from "../contracts.ts";
 import { CHARACTERS } from "./characters.ts";
 import { beginSight, spellsForJob } from "./crossing.ts";
+import { beginSkySight } from "./skyweave.ts";
 
 export interface GearDef {
   id: string;
@@ -123,6 +124,39 @@ export const GEAR: Record<string, GearDef> = {
     defense: 1,
     price: 0,
   },
+  "accessory.risk_splice": {
+    id: "accessory.risk_splice",
+    name: "Hot Splice",
+    blurb: "A bit of Sera's risky line. It makes a step quicker. It does not make the noon kinder.",
+    slot: "accessory",
+    speed: 2,
+    price: 0,
+  },
+  "accessory.stay_pin": {
+    id: "accessory.stay_pin",
+    name: "Stay Pin",
+    blurb: "From the safer lash. It keeps a rib a little quieter. It does not pick a noon.",
+    slot: "accessory",
+    defense: 2,
+    price: 0,
+  },
+  "weapon.gale_hook": {
+    id: "weapon.gale_hook",
+    name: "Gale Hook",
+    blurb: "A skywright's hook that decided to be a weapon. It likes Sera's hand.",
+    slot: "weapon",
+    attack: 7,
+    price: 0,
+  },
+  "accessory.early_thread": {
+    id: "accessory.early_thread",
+    name: "Early Thread",
+    blurb: "A cord from a gale that sat down. It keeps two noons without choosing one.",
+    slot: "accessory",
+    speed: 2,
+    defense: 1,
+    price: 0,
+  },
 };
 
 export const SHOP_IDS = ["weapon.glass_needle", "weapon.oath_blade", "armor.lantern_coat", "armor.pine_mail", "item.lantern_salve", "item.dew_vial"] as const;
@@ -132,6 +166,7 @@ export const GROWTH: Record<string, { hp: number; mp: number; attack: number; de
   mira: { hp: 5, mp: 5, attack: 1, defense: 1 },
   kael: { hp: 10, mp: 2, attack: 2, defense: 2 },
   nessa: { hp: 7, mp: 4, attack: 2, defense: 1 },
+  sera: { hp: 6, mp: 4, attack: 2, defense: 1 },
 };
 
 export function levelForXp(xp: number): number {
@@ -140,7 +175,7 @@ export function levelForXp(xp: number): number {
 
 export function syncLevels(save: SaveGame): SaveGame {
   const target = levelForXp(save.xp);
-  for (const id of save.party) {
+  for (const id of [...save.party, ...(save.reserve ?? [])]) {
     const c = save.roster[id];
     const g = GROWTH[id];
     if (!c || !g) continue;
@@ -181,6 +216,7 @@ export function applySynergy(save: SaveGame, id: string, attack: number, speed: 
   if (id === "wanderer" && jobId === "job.riverward" && load?.weapon === "weapon.river_hook") a += 3;
   if (id === "kael" && load?.weapon === "weapon.oath_blade") a += 2;
   if (id === "nessa" && load?.accessory === "accessory.reed_loop") s += 1;
+  if (id === "sera" && load?.weapon === "weapon.gale_hook") a += 3;
   return { attack: a, speed: s, maxMp, mp: Math.min(mp, maxMp) };
 }
 
@@ -263,7 +299,7 @@ export function useSight(save: SaveGame): { ok: true; save: SaveGame; text: stri
   if (save.sightCharges <= 0) return { ok: false, reason: "The sight is tired. Sleep at the Ninth Wick." };
   const next = structuredClone(save);
   next.sightCharges -= 1;
-  const scene = beginSight(next);
+  const scene = beginSight(next) ?? beginSkySight(next);
   if (scene) return { ok: true, save: scene.save, text: scene.text };
   let text = "For a breath the room is half a step ahead of itself. Nothing hidden keeps.";
   const note = (id: string, line: string) => {

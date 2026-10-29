@@ -1,52 +1,56 @@
 # Gameplay status
 
-Honest labels. Updated for Mistwater Crossing, after the Vale expanses.
+Honest labels. Updated for the Skyweave Ascent, after Mistwater Crossing.
 
 ## Working
 
-- Everything in the Crystal Awakening, the living Vale / Hollowwood Reach, and the Vale expanses still plays, including schema 1, 2, and 3 saves.
+- Everything in the Crystal Awakening, the living Vale / Hollowwood Reach, the Vale expanses, and Mistwater Crossing still plays, including schema 1, 2, 3, and 4 saves.
 - Companion choices, each once, stored on the chronicle:
   - Mira, at the parish shelf: write the tenth strike, or leave the page blank. The clasp is the written path.
   - Pell, on the Glasspine path with Kael: turn them back, or let them finish the walk.
   - Nessa, at her mother's stone: teach the old spring rhyme, or let the new verse stand.
-- Those choices are heard again at Mistwater. Hale and Tamsin do not agree which hour the ferry left. Neither answer locks the hold: both of Kael's paths can name the older cut. A spared Warden can ask the ferryman to sit. A fallen Warden can open the scorched seal. Killing the ferryman still opens the high road.
-- Solar Flare (Ember's offensive evolution) after Ember has been cast three times, then either the scorched vein (only if the Warden fell) or the Lowbell kiln (open either way). It stays earned across a job change. Wayfinder and Elementalist can cast it. Riverward does not. Switching back does not make you learn it again.
-- Memory Tide (Tide Whisper's keeping evolution) if the Warden sleeps, the strike was written, and Tide has been spoken once. If the Warden fell, the split bell can teach it instead, once Tide has been spoken. Neither ending closes every path.
-- Double Wake, a third evolution: Echo Lash cast twice, and the crossing finished, by mercy or by ending the boarding. The gate wind at the high road, or Wren, can teach it. It does not explain the two departures.
-- All three spells resolve in the shared combat core and appear in Legacy and Ascension.
-- Jobs you can actually change, at the Wick, Bram's stall, the Mistwater station, or the high gate, and only while no fight is open: Wayfinder, Elementalist (after the conduits), Riverward (after the hold's plate). Changing a trade does not restore HP or MP, does not touch gold or the pack, and does not clear a cooldown. Dragoon, Healer, Chronomancer, and Skywright stay shut. Companion kits are not the wanderer's job switch.
-- Gear still matters in the fight it starts: glass needle on an Elementalist, river hook on a Riverward, oath blade for Kael, reed loop for Nessa, margin clasp for breath.
-- Lowbell Landing, past the Reach, after Nessa joins. Ivo Bellwright. River kiln. Empty rope. Split bell. After the bell, the far dock opens.
-- Mistwater Crossing: Hale Reed, Tamsin Coil's kettle, Nedda's station bed, a trade board, a timetable, and an old pier. Twice-Kept Hold: mistlings, a plate, a vault of lanterns and a mistling, then the Late Ferryman. He boards twice. Under two fifths of his health you may ask which departure, if you spared the Warden or recorded both hours. Otherwise you can still end it. Either way the high road gate opens. Open water stays shut.
-- Atlas of walked places. Travel only to places already walked. First visits are on foot. The dashed road past the ferry is not a boat.
-- Temporal Sight is an overlay for eight steps: Lowbell's empty rope, the ferry's two stamps and the crate, the hold's older cut, the stair's early shadow. A button spends a charge. Another button puts the hour away. The journal keeps the clue. The plate does not turn itself. The pier crate is only there after you have seen it.
-- Warden, Cantor, and Ferryman windups name the art and the answer. A second boarding warns that both hours hit everyone. Driftlanterns say when fire slides off and tide bites. The log says the same. Boss turns wait a beat longer. Sidestep is still the previous action, not a reaction minigame. A companion can suggest a brace, a mend, or a weak spot. You still confirm the action. The core still decides the hit.
+  - Sera, at the ridge rig: finish the hot splice, or lash the safer stay. Either answer lets her join. A full line of four puts her on the rig, not out of the story.
+- Those earlier choices are heard again. Hale and Tamsin do not agree which hour the ferry left. Neither answer locks the hold: both of Kael's paths can name the older cut. A spared Warden can ask the ferryman to sit. A fallen Warden can open the scorched seal. Killing the ferryman still opens the high road. After the ridge, Hale, Ivo, Lira, Wren, Mira, Kael, and Nessa can mention the flight or the two noons. They do not explain them.
+- Solar Flare, Memory Tide, and Double Wake still resolve in the shared combat core and stay earned across a job change. Riverward does not cast Solar Flare.
+- Skywright is Sera's kit, not a wanderer trade. Gust is hers when she joins. Stayline is taught by Ada after the gale is settled, by asking or by ending it. Crosswind is Gust practiced twice, after the ridge, from Sera or the berth sign. Neither art is locked to mercy or to the splice.
+- Jobs you can actually change, at the Wick, Bram's stall, the Mistwater station, the high gate, the ridge, or the berth, and only while no fight is open: Wayfinder, Elementalist (after the conduits), Riverward (after the hold's plate). Dragoon, Healer, and Chronomancer stay shut. You cannot switch into Skywright.
+- The active line holds four. Quiet maps (Vale, Wick, Bram's, station, high gate, ridge, berth) can send a companion to the rig and call them back. The wanderer stays. A fight, a loud map, or a fifth active member is refused. Equipment, spells, levels, bonds, HP, and MP stay on the person. The pack is not copied.
+- Formations, also only while no fight is open: a close line, or a loose line. Distance still comes from the shared formula. The formation does not heal anyone.
+- A companion can suggest a brace, a mend, or a weak spot. You still confirm the action.
+- Gear still matters in the fight it starts, including a gale hook on Sera.
+- Lowbell, the split bell, Mistwater, and the Late Ferryman are unchanged. Open sky stays shut.
+- Skyweave Ridge, after the high gate: Ada at the mill, Sera at the rig, a half-span, a salt cave, and the Early Glass. Gustlings, then a lens that wants the chart from the walk and the sky from inside the step. Sight shows an eclipse ahead of the sun and does not press the lens. Orrin will not press it either. The inner arch opens after both readings and the gusts are quiet. The Galekeeper boards early. Under a little less than half you may ask which noon, if you read both views, saw the glass, or chose the safer stay. Otherwise you can still end it. Either way the berth opens. The second phase hits everyone.
+- The First Stay is one hull and two pads: the Skyweave berth and the Vale roof. You pick a destination and cast off. It is a route, not a skybox. After one flight you may note a second shadow that leaves before the hull. It is recorded. It is not explained.
+- Atlas of walked places, including the ridge, the glass, the cave, and the berth. Travel only to places already walked. The dashed road into open sky is still not a boat.
+- Temporal Sight is an overlay for eight steps, including the ridge's early span, the glass, the cave, and the berth. A button spends a charge. The journal keeps the clue.
 
 ## Partial
 
 - Ascension is still a presentation of the turn clock. Companions do not path on their own, and they do not take a turn without you.
 - Bonds are scenes, one consequential choice each, and a later line. Not a relationship sim.
-- Spell ranks still add a little power. Ember, Tide Whisper, and Echo Lash have one evolution each.
-- Job kits you can switch are three. There is no full tree, and no day-night schedule of who is at the stall.
+- Spell ranks still add a little power. Ember, Tide Whisper, Echo Lash, and Gust have one evolution each.
+- Job kits you can switch are three. Sera's Skywright is hers. There is no full tree, and no day-night schedule of who is at the stall.
 - Map art is still painted in the page, not a sprite sheet. The other hour is a tint and a few ghost shapes, not a second rendered level.
-- The high road is a gate and a person, not a new region.
+- The airship is a route between two earned pads. It is not an open sky.
 - WebXR detects a headset and can open a reference session. It does not render the battle. It was not tested on Quest 3.
 
 ## Scaffolded
 
-- Sera, Iri, Dragoon, Healer, Chronomancer, Skywright, nine Echo records, four endings, return anchors, hub aspects. Not playable.
+- Iri, Dragoon, Healer, Chronomancer, nine Echo records, four endings, return anchors, hub aspects. Not playable.
 - `echoMemory` and `gnosis` stay stored and unlabeled.
-- Open water is an atlas mark only.
+- Open sky is an atlas mark only.
 
 ## Not built
 
-- An airship, an open skybox, the remaining regions, a full job tree, more evolutions than the three above.
+- An open skybox, the remaining regions, a full job tree, more destinations than the two pads.
 - White room, Custodian, Door, Pleroma, Great Return, New Game Plus.
 - Hand tracking, haptics, a headset battle.
 - Accounts, cloud saves, multiplayer.
 
 ## Tests that ran
 
-`node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts`
+`node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts`
 
-New coverage: the dock stays shut until the bell; Sight spends a charge, keeps a clue, and does not open the plate or write both departures by itself; the older cut works for either Warden ending and the seal only if the prism fell; job changes preserve breath, purse, pack, and cooldown, and refuse a fight, a loud map, and a locked trade; Stillwater, Echo Lash, and Double Wake go through `proposeAction`; tide bites a lantern harder than flame; ferryman mercy from a spared Warden or from both hours, defeat pays a different unique item, and a second payout is refused; phase two adds reflections without ending the fight; a companion instinct does not deal damage; a schema 2 chronicle gains the new fields and keeps a fallen Warden. Public copy still fails the late-chronicle ban list.
+Skyweave coverage: the berth stays shut until the gale; open sky stays locked; Sight on the glass spends a charge and does not write either noon; the chart is Legacy and the sky is Ascension; both readings give one lens shard; Orrin does not set the flags; the dome wants the split and a quiet west room; Sera joins once, a full line puts her in reserve, and the bench keeps breath, gold, pack, gear, bonds, and spells; formations do not heal; Stayline and Crosswind go through `proposeAction`; stone bites a gustling harder than wind; gale mercy needs a noon you kept, defeat pays a different unique item, and a second mercy payout is refused; phase two adds ahead-gusts without ending the fight; Early Gale hits the party; a companion instinct does not deal damage; the First Stay flies both ways without minting gold; the hull shadow waits for a flight and does not explain itself; a schema 3 chronicle gains reserve and formation and keeps a spared Warden. Public copy still fails the late-chronicle ban list.
+
+`scripts/game-launch-smoke.mjs` starts a journey and reaches the Vale. It is not on the GitHub Actions job, which does not install a browser.

@@ -16,7 +16,7 @@ export const JOB_SPELLS: Record<string, { base: string[]; earned: string[] }> = 
   "job.riverward": { base: ["spell.stillwater", "spell.echo_lash"], earned: ["spell.double_wake"] },
 };
 
-export const SAFE_JOB_MAPS = ["map.inn", "map.smith", "map.ferry", "map.highroad"] as const;
+export const SAFE_JOB_MAPS = ["map.inn", "map.smith", "map.ferry", "map.highroad", "map.ridge", "map.berth"] as const;
 
 export const MIST_SHOP = ["armor.mist_cloak", "item.lantern_salve", "item.dew_vial"] as const;
 

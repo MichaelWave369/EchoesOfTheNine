@@ -28,6 +28,8 @@ export function freshSave(playerName: string): SaveGame {
     mode: "legacy",
     ascensionUnlocked: false,
     party: ["wanderer"],
+    reserve: [],
+    formation: "line",
     roster: { wanderer: hero },
     inventory: [
       { itemId: "item.lantern_salve", qty: 2 },
@@ -139,6 +141,26 @@ function journalLine(id: string): string {
     "flag.ferryman_spared": "The ferryman sat down. He was asked which departure he was keeping.",
     "flag.ferryman_defeated": "The ferryman's reflection was ended.",
     "flag.spoke_wren": "Wren keeps the high gate and will not name the weather.",
+    "flag.spoke_ada": "Ada Vane keeps the mill and does not correct the glass.",
+    "flag.spoke_orrin": "Orrin Glass records a noon the sky has not started.",
+    "flag.sera_joined": "Sera Vane joined. She builds things that should stay in the air.",
+    "flag.sera_splice": "Sera finished the hot splice.",
+    "flag.sera_stay": "Sera lashed the safer stay.",
+    "flag.sky_chart": "From the walk, the chart says the eclipse already stood at noon.",
+    "flag.sky_ahead": "From the other view, the eclipse is drawn ahead of the sun.",
+    "flag.sky_split": "Two noons are kept. The chart and the sky do not agree, and neither explains the other.",
+    "flag.sight_ridge": "Sight: a bridge span finishes before the boots.",
+    "flag.sight_glass": "Sight: an eclipse sits ahead of the sun. The lens does not turn.",
+    "flag.sight_cave": "Sight: a pocket in the rock arrives late, or early.",
+    "flag.sight_berth": "Sight: a second shadow leaves the hull before the craft.",
+    "flag.got_cloud_salt": "Cloud salt from a pocket that was not there until it was.",
+    "flag.cleared.enc.gust": "The west gust on the ridge is only wind.",
+    "flag.gale_spared": "The Galekeeper was asked which noon it was keeping.",
+    "flag.gale_defeated": "The Galekeeper's wind was ended.",
+    "flag.ridge_complete": "Skyweave's gale is settled. The berth is a place.",
+    "flag.skiff_ready": "The First Stay can take the route between two pads.",
+    "flag.flown": "The First Stay flew a route. It did not open the sky.",
+    "flag.hull_shadow": "A second shadow left the hull before the craft. It is not explained.",
     "flag.cleared.enc.thicket": "The briars remember losing.",
     "flag.mira_record": "Mira wrote the tenth strike in the margin.",
     "flag.mira_blank": "Mira left the parish page blank, and will remember it anyway.",
@@ -175,6 +197,9 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.crossing") return flag(save, "flag.ferry_complete");
     if (q.id === "quest.timetable") return flag(save, "flag.twice_departed");
     if (q.id === "quest.hold") return flag(save, "flag.hold_open");
+    if (q.id === "quest.ridge") return flag(save, "flag.sera_joined");
+    if (q.id === "quest.glass") return flag(save, "flag.sky_split");
+    if (q.id === "quest.skiff") return flag(save, "flag.flown");
     return false;
   };
   const visible = (q: QuestNode) => {
@@ -192,6 +217,9 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.crossing") return flag(save, "flag.bell_solved");
     if (q.id === "quest.timetable") return flag(save, "flag.spoke_hale") || flag(save, "flag.sight_ferry");
     if (q.id === "quest.hold") return flag(save, "flag.spoke_hale") || flag(save, "flag.sight_hold");
+    if (q.id === "quest.ridge") return flag(save, "flag.ferry_complete");
+    if (q.id === "quest.glass") return flag(save, "flag.sera_joined");
+    if (q.id === "quest.skiff") return flag(save, "flag.ridge_complete");
     return false;
   };
   for (const q of save.quests) {
@@ -247,6 +275,8 @@ export function applyReward(
   }
   if (reward.flags.includes("flag.cantor_spared")) rememberChoice(next, "cantor", "spared");
   if (reward.flags.includes("flag.cantor_defeated")) rememberChoice(next, "cantor", "defeated");
+  if (reward.flags.includes("flag.gale_spared")) rememberChoice(next, "gale", "spared");
+  if (reward.flags.includes("flag.gale_defeated")) rememberChoice(next, "gale", "defeated");
   if (reward.flags.includes("flag.cleared.enc.thicket")) next = setFlag(next, "flag.thicket_cleared");
   syncLevels(next);
   return next;
@@ -300,6 +330,15 @@ export function migrateSave(parsed: SaveGame): SaveGame {
   }
   next.inventory = next.inventory ?? [];
   next.party = next.party?.length ? next.party : ["wanderer"];
+  next.reserve = Array.isArray(next.reserve) ? next.reserve.filter((id) => id && id !== "wanderer") : [];
+  if (!next.party.includes("wanderer")) next.party.unshift("wanderer");
+  next.party = [...new Set(next.party)];
+  while (next.party.length > 4) {
+    const overflow = next.party.pop();
+    if (overflow && overflow !== "wanderer" && !next.reserve.includes(overflow)) next.reserve.push(overflow);
+  }
+  next.reserve = next.reserve.filter((id) => !next.party.includes(id));
+  next.formation = next.formation === "wide" ? "wide" : "line";
   next.wardenOutcome = next.wardenOutcome ?? "none";
   if (next.flags["flag.warden_spared"]) next.wardenOutcome = "spared";
   if (next.flags["flag.warden_defeated"]) next.wardenOutcome = "defeated";
@@ -317,7 +356,7 @@ export function migrateSave(parsed: SaveGame): SaveGame {
 export function deserialize(raw: string): SaveGame {
   const parsed = JSON.parse(raw) as SaveGame;
   const schema = (parsed as { schema?: number }).schema;
-  if (!parsed || parsed.version !== 1 || (schema !== 1 && schema !== 2 && schema !== 3)) {
+  if (!parsed || parsed.version !== 1 || (schema !== 1 && schema !== 2 && schema !== 3 && schema !== 4)) {
     throw new Error("This chronicle is from another telling and cannot be opened yet.");
   }
   if (!parsed.playerName || !parsed.mapId || !parsed.roster) throw new Error("Chronicle is missing its bones.");
