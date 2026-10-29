@@ -93,6 +93,16 @@ function checkOutcome(state: EncounterState) {
 }
 
 function rewardFor(state: EncounterState, mercy: boolean): RewardGrant {
+  if (state.encounterId === "enc.cantor") {
+    return {
+      id: mercy ? "reward.cantor.mercy" : "reward.cantor.defeat",
+      gold: mercy ? 45 : 70,
+      xp: mercy ? 64 : 84,
+      items: mercy ? [{ itemId: "accessory.reed_loop", qty: 1 }] : [{ itemId: "weapon.glass_needle", qty: 1 }],
+      flags: mercy ? ["flag.cantor_spared"] : ["flag.cantor_defeated"],
+      unique: true,
+    };
+  }
   if (state.encounterId === "enc.warden") {
     return {
       id: mercy ? "reward.warden.mercy" : "reward.warden.defeat",
@@ -140,7 +150,7 @@ function grantReward(state: EncounterState, mercy: boolean) {
   push(state, {
     kind: "reward",
     text: mercy
-      ? `The Warden stills. Pact recorded. ${reward.xp} XP, ${reward.gold} gold.`
+      ? `A gentler ending is kept. ${reward.xp} XP, ${reward.gold} gold.`
       : `Victory. ${reward.xp} XP, ${reward.gold} gold.`,
   });
 }
@@ -228,6 +238,17 @@ function chooseEnemyIntent(state: EncounterState, actor: CombatantState): Intent
   if (actor.jobId === "enemy.glowmoth") {
     abilityId = (actor.cooldowns["enemy.mote_flare"] ?? 0) > 0 ? "enemy.shard_bite" : "enemy.mote_flare";
     telegraph = abilityId === "enemy.mote_flare" ? "Wings brighten — flame incoming." : "A darting bite.";
+  } else if (actor.jobId === "enemy.briarling") {
+    abilityId = "enemy.briar_lash";
+    telegraph = "The briar draws back. A lash is coming — sidestep or brace.";
+  } else if (actor.jobId === "enemy.cantor") {
+    if ((actor.cooldowns["enemy.cantor_dirge"] ?? 0) === 0 && state.turnIndex % 3 === 0) {
+      abilityId = "enemy.cantor_dirge";
+      telegraph = "Hollow Dirge — the note will reach everyone. Defend, or be elsewhere.";
+    } else {
+      abilityId = "enemy.briar_lash";
+      telegraph = "A thorned hand. The windup is honest.";
+    }
   } else if (actor.jobId === "enemy.warden") {
     const phase = actor.phase ?? 1;
     if (phase >= 2 && hasStatus(actor, "exposed")) {
@@ -301,13 +322,30 @@ function applyEffects(
         if (!target.alive) continue;
         const rolled = rollCrit(state.rngState, 0.08);
         state.rngState = rolled.next;
+        const rank = actor.spellRanks?.[ab.id] ?? 0;
         let dmg = computeDamage({
-          power: effect.power ?? 10,
+          power: (effect.power ?? 10) + rank,
           actor,
           target,
           element: effect.element ?? "neutral",
           crit: rolled.crit,
         });
+        const dist = Math.hypot(actor.position.x - target.position.x, actor.position.z - target.position.z);
+        if (dist < 1.35) dmg = Math.floor(dmg * 1.15);
+        else if (dist > 3.4) dmg = Math.floor(dmg * 0.85);
+        dmg = Math.max(1, dmg);
+        if (hasStatus(target, "evading")) {
+          target.statuses = target.statuses.filter((s) => s.id !== "evading");
+          push(state, {
+            kind: "miss",
+            actorId: actor.id,
+            targetId: target.id,
+            amount: 0,
+            abilityId: ab.id,
+            text: `${target.name} is off the line. ${ab.name} finds air.`,
+          });
+          continue;
+        }
         if (state.encounterId === "enc.warden" && target.jobId === "enemy.warden" && wardenShielded(state, target)) {
           dmg = Math.max(1, Math.floor(dmg * 0.35));
           push(state, {
@@ -498,8 +536,29 @@ export function resolveEnemyTurn(state: EncounterState): ActionResult {
 }
 
 export function tryMercy(state: EncounterState): ActionResult {
-  if (state.encounterId !== "enc.warden") return { ok: false, reason: "Nothing here can be spared.", state };
   const warden = state.combatants.find((c) => c.jobId === "enemy.warden" && c.alive);
+  const cantor = state.combatants.find((c) => c.jobId === "enemy.cantor" && c.alive);
+  if (state.encounterId === "enc.cantor") {
+    if (!cantor) return { ok: false, reason: "The song has already ended.", state };
+    if (cantor.hp > cantor.maxHp * 0.5) {
+      return { ok: false, reason: "The dirge is still too loud. Bring it under half, or finish it.", state };
+    }
+    const next = clone(state);
+    const foe = next.combatants.find((c) => c.id === cantor.id)!;
+    foe.alive = false;
+    foe.hp = 0;
+    next.outcome = "mercy";
+    next.phase = "mercy";
+    next.activeActorId = null;
+    push(next, {
+      kind: "mercy",
+      targetId: foe.id,
+      text: "You do not cut the last note. The Cantor lets the vine go, and the Reach exhales.",
+    });
+    grantReward(next, true);
+    return { ok: true, state: next };
+  }
+  if (state.encounterId !== "enc.warden") return { ok: false, reason: "Nothing here can be spared.", state };
   if (!warden) return { ok: false, reason: "The Warden is already gone.", state };
   if (!warden.mercyEligible && !hasStatus(warden, "exposed")) {
     return { ok: false, reason: "The core is still sealed. Stoneguard, then Tide.", state };

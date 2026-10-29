@@ -4,7 +4,18 @@
  * Spoiler-gated payloads live behind `gate` and are never rendered in public UI.
  */
 
-export const SCHEMA_VERSION = 1 as const;
+export const SCHEMA_VERSION = 2 as const;
+
+export interface ChoiceRecord {
+  id: string;
+  value: string;
+}
+
+export interface EquipLoadout {
+  weapon?: string;
+  armor?: string;
+  accessory?: string;
+}
 
 export type SpoilerGate =
   | "public"
@@ -66,7 +77,7 @@ export interface CombatAction {
   aimEvidence?: { x: number; y: number; confidence: number };
 }
 
-export type StatusId = "guard" | "exposed" | "stoneguard" | "tideveil" | "stun";
+export type StatusId = "guard" | "exposed" | "stoneguard" | "tideveil" | "stun" | "evading";
 
 export interface StatusInstance {
   id: StatusId;
@@ -96,6 +107,8 @@ export interface CombatantState {
   position: { x: number; z: number };
   phase?: number;
   mercyEligible?: boolean;
+  /** Ranks copied in at encounter start. The core may read these. UI may not invent them mid-hit. */
+  spellRanks?: Record<string, number>;
 }
 
 export interface Intent {
@@ -240,6 +253,18 @@ export interface SaveGame {
   wardenOutcome: "none" | "defeated" | "spared";
   runeOrder: string[];
   conduitsAligned: boolean;
+  equipment: Record<string, EquipLoadout>;
+  bonds: Record<string, number>;
+  spellMastery: Record<string, number>;
+  sightCharges: number;
+  knownSpells: Record<string, string[]>;
+  jobsUnlocked: string[];
+  discoveries: string[];
+  choiceLog: ChoiceRecord[];
+  /** Future-only. Never render this list or its name in chapter UI. */
+  echoMemory: string[];
+  /** Future-only counter. Never label it in public UI. */
+  gnosis: number;
 }
 
 export interface AccessibilitySettings {

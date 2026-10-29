@@ -10,9 +10,13 @@ Action schema v1, save version 1, deterministic combat tests, one chronicle bran
 
 Village, route, shrine, two companions, two regular foes, Warden, Legacy, bounded Ascension, one puzzle, save/load, desktop input. Headset entry is an adapter only.
 
+## Rung 1b — Living Vale and Hollowwood (playable, this branch)
+
+Inn, blacksmith, equipment, levels, one job unlock, spell ranks, usable Temporal Sight, Nessa, moss hymn, Cantor's Barrow, second boss with a mercy that remembers the Warden. Not a nine-region saga.
+
 ## Rung 2 — switching and comfort
 
-Next: switch at finer sync points, readable boss windups with a real dodge window that changes hit outcome, trigger-cast once an XR frame loop exists. Do not reset cooldowns. Add the stress test before calling it done.
+Next: switch at finer sync points, readable boss windups with a longer dodge window, trigger-cast once an XR frame loop exists. Do not reset cooldowns. Add the stress test before calling it done. The current Sidestep already changes the hit. It is one attack, not a timing minigame.
 
 ## Rung 3 — chronology
 

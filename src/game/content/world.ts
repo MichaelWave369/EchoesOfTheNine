@@ -7,7 +7,7 @@ export interface MapHotspot {
   w: number;
   h: number;
   label: string;
-  kind: "npc" | "exit" | "sign" | "item" | "puzzle" | "battle" | "save";
+  kind: "npc" | "exit" | "sign" | "item" | "puzzle" | "battle" | "save" | "shop" | "rest";
 }
 
 export interface MapDef {
@@ -31,7 +31,8 @@ export const MAPS: Record<string, MapDef> = {
     spawns: {
       square: { x: 10, y: 8, facing: "n" },
       from_woods: { x: 18, y: 6, facing: "w" },
-      inn: { x: 4, y: 10, facing: "e" },
+      inn: { x: 4, y: 10, facing: "n" },
+      from_smith: { x: 16, y: 9, facing: "n" },
     },
     hotspots: [
       { id: "npc.lira", x: 6, y: 6, w: 1, h: 1, label: "Lira", kind: "npc" },
@@ -42,8 +43,15 @@ export const MAPS: Record<string, MapDef> = {
       { id: "item.salve", x: 7, y: 10, w: 1, h: 1, label: "Festival crate", kind: "item" },
       { id: "exit.woods", x: 19, y: 6, w: 1, h: 1, label: "East woods", kind: "exit" },
       { id: "sign.well", x: 8, y: 8, w: 1, h: 1, label: "Festival well", kind: "sign" },
+      { id: "npc.voss", x: 9, y: 5, w: 1, h: 1, label: "Elder Voss", kind: "npc" },
+      { id: "exit.inn", x: 4, y: 6, w: 1, h: 1, label: "The Ninth Wick", kind: "exit" },
+      { id: "exit.smith", x: 16, y: 10, w: 1, h: 1, label: "Bram's stall", kind: "exit" },
     ],
-    exits: [{ id: "exit.woods", to: "map.woods", spawn: "vale_gate" }],
+    exits: [
+      { id: "exit.woods", to: "map.woods", spawn: "vale_gate" },
+      { id: "exit.inn", to: "map.inn", spawn: "door" },
+      { id: "exit.smith", to: "map.smith", spawn: "door" },
+    ],
   },
   "map.woods": {
     id: "map.woods",
@@ -85,8 +93,76 @@ export const MAPS: Record<string, MapDef> = {
       { id: "sign.inscription", x: 8, y: 8, w: 2, h: 1, label: "Floor inscription", kind: "sign" },
       { id: "exit.woods", x: 8, y: 13, w: 1, h: 1, label: "Leave the shrine", kind: "exit" },
       { id: "save.prism", x: 2, y: 11, w: 1, h: 1, label: "Prayer niche", kind: "save" },
+      { id: "exit.reach", x: 8, y: 2, w: 1, h: 1, label: "Trail to the Reach", kind: "exit" },
     ],
-    exits: [{ id: "exit.woods", to: "map.woods", spawn: "shrine_gate" }],
+    exits: [
+      { id: "exit.woods", to: "map.woods", spawn: "shrine_gate" },
+      { id: "exit.reach", to: "map.reach", spawn: "shrine_side", requires: "flag.chapter_complete" },
+    ],
+  },
+  "map.inn": {
+    id: "map.inn",
+    name: "The Ninth Wick",
+    blurb: "Lira's inn. The lamps are too many and the beds are honest.",
+    width: 10,
+    height: 8,
+    spawns: { door: { x: 5, y: 6, facing: "n" } },
+    hotspots: [
+      { id: "npc.salla", x: 5, y: 3, w: 1, h: 1, label: "Salla", kind: "rest" },
+      { id: "exit.square", x: 5, y: 7, w: 1, h: 1, label: "Back to the square", kind: "exit" },
+    ],
+    exits: [{ id: "exit.square", to: "map.vale", spawn: "inn" }],
+  },
+  "map.smith": {
+    id: "map.smith",
+    name: "Bram's Stall",
+    blurb: "Tools, coats, and a man who prices things as if the festival might end.",
+    width: 8,
+    height: 7,
+    spawns: { door: { x: 4, y: 5, facing: "n" } },
+    hotspots: [
+      { id: "npc.bram", x: 4, y: 2, w: 1, h: 1, label: "Bram", kind: "shop" },
+      { id: "exit.square", x: 4, y: 6, w: 1, h: 1, label: "Back outside", kind: "exit" },
+    ],
+    exits: [{ id: "exit.square", to: "map.vale", spawn: "from_smith" }],
+  },
+  "map.reach": {
+    id: "map.reach",
+    name: "The Hollowwood Reach",
+    blurb: "A wood that keeps a second season in its pockets. Moss writes, if you let it.",
+    width: 18,
+    height: 12,
+    spawns: {
+      shrine_side: { x: 1, y: 6, facing: "e" },
+      barrow_mouth: { x: 16, y: 6, facing: "w" },
+    },
+    hotspots: [
+      { id: "npc.nessa", x: 4, y: 6, w: 1, h: 1, label: "Nessa", kind: "npc" },
+      { id: "battle.thicket", x: 8, y: 6, w: 1, h: 1, label: "Briar thicket", kind: "battle" },
+      { id: "puzzle.moss", x: 11, y: 4, w: 2, h: 2, label: "Moss hymn", kind: "puzzle" },
+      { id: "item.cache", x: 6, y: 3, w: 1, h: 1, label: "Lying moss", kind: "item" },
+      { id: "exit.shrine", x: 0, y: 6, w: 1, h: 1, label: "Back to the shrine", kind: "exit" },
+      { id: "exit.barrow", x: 17, y: 6, w: 1, h: 1, label: "Barrow mouth", kind: "exit" },
+    ],
+    exits: [
+      { id: "exit.shrine", to: "map.shrine", spawn: "arena" },
+      { id: "exit.barrow", to: "map.barrow", spawn: "mouth", requires: "flag.moss_hymn" },
+    ],
+  },
+  "map.barrow": {
+    id: "map.barrow",
+    name: "Cantor's Barrow",
+    blurb: "Roots, a low song, and a chest that only exists if you looked twice.",
+    width: 14,
+    height: 10,
+    spawns: { mouth: { x: 7, y: 8, facing: "n" } },
+    hotspots: [
+      { id: "battle.cantor", x: 7, y: 3, w: 2, h: 2, label: "Thorn Cantor", kind: "battle" },
+      { id: "item.root", x: 2, y: 3, w: 1, h: 1, label: "Left root", kind: "item" },
+      { id: "sign.verse", x: 10, y: 5, w: 1, h: 1, label: "Second verse", kind: "sign" },
+      { id: "exit.reach", x: 7, y: 9, w: 1, h: 1, label: "Leave the barrow", kind: "exit" },
+    ],
+    exits: [{ id: "exit.reach", to: "map.reach", spawn: "barrow_mouth" }],
   },
 };
 
@@ -213,6 +289,99 @@ export const DIALOGUE: Record<string, DialogueNode[]> = {
       grant: "flag.read_inscription",
     },
   ],
+  "npc.voss": [
+    {
+      id: "voss.1",
+      speaker: "Elder Voss",
+      text: "The square is for people who came back. Lira counted the lanterns twice. I counted the people once. Both numbers were nine, which is either luck or a habit.",
+      next: "voss.2",
+    },
+    {
+      id: "voss.2",
+      speaker: "Elder Voss",
+      text: "If the clock tells a joke, do not laugh where Nim can hear. Children collect things. Doors, especially.",
+      grant: "flag.spoke_voss",
+    },
+  ],
+  "npc.voss.spared": [
+    {
+      id: "voss.s1",
+      speaker: "Elder Voss",
+      text: "You left the guardian standing. The Vale will argue about that over buns. I will not call it a mistake. The path is still a path, and the children still have a clock to disobey.",
+    },
+  ],
+  "npc.voss.defeated": [
+    {
+      id: "voss.d1",
+      speaker: "Elder Voss",
+      text: "The prism is quiet and the square is louder. Some will thank you. I am only glad no one asked the children to cheer. Do not ask me which ending was kinder. I was not in the shrine.",
+    },
+  ],
+  "npc.salla": [
+    {
+      id: "salla.1",
+      speaker: "Salla",
+      text: "The Ninth Wick keeps eight gold for a bed, a lamp, and your breath. The benches outside are free, and they have opinions about that.",
+      next: "salla.2",
+    },
+    {
+      id: "salla.2",
+      speaker: "Salla",
+      text: "Lira counts lanterns. Voss counts people. I count who comes back before the buns are gone. You came back. That is the whole innkeeping philosophy.",
+      grant: "flag.spoke_salla",
+    },
+  ],
+  "npc.bram": [
+    {
+      id: "bram.1",
+      speaker: "Bram",
+      text: "If it cuts or covers, I priced it. If it glows, Pim priced it, and I am not arguing with an oven.",
+      next: "bram.2",
+    },
+    {
+      id: "bram.2",
+      speaker: "Bram",
+      text: "The festival knife you already carry has done one heroic thing. That is the correct number of heroic things for a bread knife, until it does another.",
+      grant: "flag.spoke_bram",
+    },
+  ],
+  "npc.nessa": [
+    {
+      id: "nessa.1",
+      speaker: "Nessa",
+      text: "You came down the shrine trail with your names still attached. The Reach does not usually get that courtesy.",
+      next: "nessa.2",
+    },
+    {
+      id: "nessa.2",
+      speaker: "Nessa",
+      text: "The moss writes a hymn if you give it wind, then flame, then stone. The barrow sings back. I would rather not hear it alone.",
+      choices: [
+        { label: "Then we hear it together.", next: "nessa.join" },
+        { label: "What if the hymn is wrong?", next: "nessa.ask" },
+      ],
+    },
+    {
+      id: "nessa.ask",
+      speaker: "Nessa",
+      text: "The barrow stays shut, and the thicket gets ideas. I have pulled worse ideas out of people. Briars are simpler.",
+      next: "nessa.join",
+    },
+    {
+      id: "nessa.join",
+      speaker: "Nessa",
+      text: "Nessa Quill. I stop songs that grow teeth. Lead — and don't trust moss that looks too neat unless you have looked twice.",
+      grant: "flag.nessa_joined",
+    },
+  ],
+  "sign.verse": [
+    {
+      id: "verse.1",
+      speaker: "Second verse",
+      text: "Cut into the root, a second verse: the song is older than the season, and younger than the person hearing it. It does not say who taught the moss. It only asks you not to finish every song with a blade.",
+      grant: "flag.read_verse",
+    },
+  ],
 };
 
 export const INITIAL_QUESTS: QuestNode[] = [
@@ -260,6 +429,28 @@ export const INITIAL_QUESTS: QuestNode[] = [
     discoveryId: "disc.warden",
     status: "hidden",
   },
+  {
+    id: "quest.hearth",
+    title: "A bed and a blade",
+    gate: "public",
+    summary: "The Ninth Wick will rent you a night. Bram will sell you something that is not a bun. Neither is required to face the shrine.",
+    factsRequired: ["flag.clock_anomaly"],
+    alternatives: ["Sleep at the inn", "Buy from Bram"],
+    worldEffects: ["flag.rested"],
+    discoveryId: "disc.hearth",
+    status: "hidden",
+  },
+  {
+    id: "quest.reach",
+    title: "The hymn in the Reach",
+    gate: "public",
+    summary: "Past the prism, Hollowwood keeps a second season. Nessa knows the moss. The barrow sings if the hymn is right.",
+    factsRequired: ["flag.chapter_complete"],
+    alternatives: ["Spare the Cantor if you once spared the Warden", "End the song"],
+    worldEffects: ["flag.nessa_joined", "flag.moss_hymn"],
+    discoveryId: "disc.reach",
+    status: "hidden",
+  },
 ];
 
 /** Future systems. Present in data, never offered on the public critical path. */
@@ -294,6 +485,7 @@ export const FUTURE_CONTENT: {
 ];
 
 export const RUNE_ANSWER = ["flame", "stone", "tide"] as const;
+export const MOSS_ANSWER = ["wind", "flame", "stone"] as const;
 
 export const ITEMS: Record<string, { id: string; name: string; blurb: string; useAbility?: string }> = {
   "item.lantern_salve": {
@@ -317,6 +509,11 @@ export const ITEMS: Record<string, { id: string; name: string; blurb: string; us
     id: "item.warden_core",
     name: "Dim Core",
     blurb: "The Warden's heart, quiet now. The shrine feels smaller.",
+  },
+  "item.hollow_resin": {
+    id: "item.hollow_resin",
+    name: "Hollow Resin",
+    blurb: "Sap from a root that used to be a latch. Sweet, and slightly out of season.",
   },
 };
 

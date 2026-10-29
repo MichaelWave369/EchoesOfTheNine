@@ -3,7 +3,8 @@ import { describe, it } from "node:test";
 import { createEncounter, fingerprint, proposeAction, resolveEnemyTurn, tryMercy } from "./combat.ts";
 import { makeCombatant, ENEMY_TEMPLATES } from "../content/characters.ts";
 import { applyReward, deserialize, freshSave, serialize, setFlag } from "../chronicle/save.ts";
-import { DIALOGUE, MAPS, PUBLIC_STRING_BAN } from "../content/world.ts";
+import { DIALOGUE, MAPS, MOSS_ANSWER, PUBLIC_STRING_BAN } from "../content/world.ts";
+import { learnElementalist, prepareForBattle, useSight } from "../content/gear.ts";
 import type { CombatAction, CombatantState } from "../contracts.ts";
 import { assertPlayable, scriptedCrystalAwakening } from "./playthrough.ts";
 
@@ -249,5 +250,120 @@ describe("chapter playthrough", () => {
     assertPlayable(result);
     assert.equal(result.save.wardenOutcome === "spared" || result.save.wardenOutcome === "defeated", true);
     assert.ok(result.save.gold > 15);
+  });
+});
+
+describe("living world", () => {
+  it("evading negates the next hit and is consumed", () => {
+    let s = createEncounter({
+      encounterId: "enc.woods",
+      seed: 4,
+      party: partyTrio(),
+      enemies: [foe("shardling", "s", { x: 0, z: -1 })],
+    });
+    const hero = s.combatants.find((c) => c.id === "wanderer")!;
+    hero.hp = 10;
+    hero.statuses = [{ id: "evading", remaining: 1, potency: 1 }];
+    s.phase = "enemy";
+    s.activeActorId = "s";
+    s.intents = [{ actorId: "s", abilityId: "enemy.shard_bite", targetIds: ["wanderer"], telegraph: "lunge", committed: true }];
+    const res = resolveEnemyTurn(s);
+    assert.equal(res.ok, true);
+    const after = res.state.combatants.find((c) => c.id === "wanderer")!;
+    assert.equal(after.hp, 10);
+    assert.equal(after.statuses.some((st) => st.id === "evading"), false);
+  });
+
+  it("close range hits harder than far range with the same seed", () => {
+    const strike = (z: number) => {
+      const s = createEncounter({
+        encounterId: "enc.festival",
+        seed: 99,
+        party: [makeCombatant("wanderer", { name: "Ash", position: { x: 0, z } })],
+        enemies: [foe("shardling", "s", { x: 0, z: -1 })],
+      });
+      s.activeActorId = "wanderer";
+      s.phase = "player";
+      const res = proposeAction(s, act({ actorId: "wanderer", abilityId: "atk.strike", kind: "attack", targetIds: ["s"] }));
+      assert.equal(res.ok, true);
+      return res.state.events.find((e) => e.kind === "damage")?.amount ?? 0;
+    };
+    assert.ok(strike(-0.2) > strike(3.2));
+  });
+
+  it("equipped festival knife raises attack and levels grow from shared xp", () => {
+    const bare = makeCombatant("wanderer", { name: "Ash" });
+    let save = freshSave("Ash");
+    const geared = prepareForBattle(save, "wanderer");
+    assert.ok(geared.attack > bare.attack);
+    const before = save.roster.wanderer!.maxHp;
+    save = applyReward(save, { id: "reward.test.xp", gold: 0, xp: 45, items: [], flags: [] });
+    assert.ok(save.roster.wanderer!.level >= 4);
+    assert.ok(save.roster.wanderer!.maxHp > before);
+  });
+
+  it("cantor mercy pays once and only under half health", () => {
+    let s = createEncounter({
+      encounterId: "enc.cantor",
+      seed: 12,
+      party: partyTrio(),
+      enemies: [foe("cantor", "cantor", { x: 0, z: -2 })],
+    });
+    assert.equal(tryMercy(s).ok, false);
+    s.combatants.find((c) => c.id === "cantor")!.hp = 80;
+    const spared = tryMercy(s);
+    assert.equal(spared.ok, true);
+    assert.equal(spared.state.pendingReward?.id, "reward.cantor.mercy");
+    let save = applyReward(freshSave("Ash"), spared.state.pendingReward!);
+    const qty = save.inventory.find((i) => i.itemId === "accessory.reed_loop")?.qty ?? 0;
+    save = applyReward(save, spared.state.pendingReward!);
+    assert.equal(save.inventory.find((i) => i.itemId === "accessory.reed_loop")?.qty, qty);
+    assert.equal(save.choiceLog.some((c) => c.id === "cantor" && c.value === "spared"), true);
+  });
+
+  it("temporal sight writes a durable clue and spends a charge", () => {
+    let save = freshSave("Ash");
+    save = setFlag(save, "flag.temporal_sight");
+    save.sightCharges = 2;
+    save.mapId = "map.reach";
+    const seen = useSight(save);
+    assert.equal(seen.ok, true);
+    if (!seen.ok) return;
+    assert.equal(seen.save.flags["flag.sight_cache"], true);
+    assert.equal(seen.save.sightCharges, 1);
+    const back = deserialize(serialize(seen.save));
+    assert.equal(back.flags["flag.sight_cache"], true);
+    assert.equal(back.sightCharges, 1);
+  });
+
+  it("schema 1 chronicles migrate without dropping the warden choice", () => {
+    const modern = freshSave("Ash");
+    modern.wardenOutcome = "spared";
+    modern.flags["flag.warden_spared"] = true;
+    modern.chapterComplete = true;
+    const old = JSON.parse(serialize(modern)) as Record<string, unknown>;
+    old.schema = 1;
+    for (const key of ["equipment", "bonds", "spellMastery", "sightCharges", "knownSpells", "jobsUnlocked", "discoveries", "choiceLog", "echoMemory", "gnosis"]) {
+      delete old[key];
+    }
+    const back = deserialize(JSON.stringify(old));
+    assert.equal(back.schema, 2);
+    assert.equal(back.wardenOutcome, "spared");
+    assert.equal(back.flags["flag.warden_spared"], true);
+    assert.equal(back.chapterComplete, true);
+    assert.equal(back.equipment.wanderer?.weapon, "weapon.festival_knife");
+    assert.deepEqual(back.echoMemory, []);
+    assert.equal(back.gnosis, 0);
+    assert.ok(back.quests.some((q) => q.id === "quest.reach"));
+  });
+
+  it("elementalist and the reach gates stay behind their discoveries", () => {
+    const learned = learnElementalist(freshSave("Ash"));
+    assert.ok(learned.jobsUnlocked.includes("job.elementalist"));
+    assert.ok(learned.knownSpells.wanderer?.includes("spell.flare"));
+    assert.equal(learned.roster.wanderer?.jobId, "job.elementalist");
+    assert.deepEqual([...MOSS_ANSWER], ["wind", "flame", "stone"]);
+    assert.equal(MAPS["map.shrine"]?.exits.find((e) => e.to === "map.reach")?.requires, "flag.chapter_complete");
+    assert.equal(MAPS["map.reach"]?.exits.find((e) => e.to === "map.barrow")?.requires, "flag.moss_hymn");
   });
 });

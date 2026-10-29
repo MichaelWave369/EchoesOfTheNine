@@ -16,10 +16,11 @@ proposeAction → validate → resolveDeterministically → emitEvents → rende
 | `src/game/core/rng.ts` | Mulberry32 step function. State is a number on the encounter, not a closure. |
 | `src/game/core/playthrough.ts` | Scripted button-only chapter used by tests. |
 | `src/game/content/` | Abilities, companions, enemies, maps, dialogue, future-gated content that is not playable. |
-| `src/game/chronicle/save.ts` | Save schema v1, flags, quest refresh, import/export, idempotent rewards. `localStorage` only. |
-| `src/game/ui/GameApp.tsx` | Title, exploration, Legacy menu, Ascension arena, ending, settings. |
+| `src/game/chronicle/save.ts` | Save version 1, schema 2, migration from schema 1, flags, quest refresh, bonds, import/export, idempotent rewards, level sync. `localStorage` only. |
+| `src/game/content/gear.ts` | Equipment, shop buy, rest, level curve, spell ranks copied in at battle start, Temporal Sight charges, Elementalist unlock. |
+| `src/game/ui/GameApp.tsx` | Title, exploration, shops, inn, Legacy menu, Ascension arena, Sight, ending, settings. |
 | `src/game/audio.ts` | Procedural Web Audio. Unlocks on the first gesture. |
-| `src/game/xr/adapter.ts` | Capability detection and a reference session request. Not a headset-tested renderer. |
+| `src/game/xr/adapter.ts` | Capability detection, reference session, and an empty `XR_PRESENTATION` hook. Not a headset-tested renderer. |
 
 ## What is deliberately not in the canonical state
 
@@ -35,4 +36,4 @@ Accepted on the acting ally's turn. Costs that turn (`switch` kind). Copies no n
 
 ## Action identity
 
-Legacy "Attack" and Ascension "Cast" both build a `CombatAction` `{ version: 1, actorId, abilityId, kind, targetIds, modeOrigin, timeOrTurn }`. The core does not branch on `modeOrigin` for numbers.
+Legacy "Attack" and Ascension "Cast" both build a `CombatAction` `{ version: 1, actorId, abilityId, kind, targetIds, modeOrigin, timeOrTurn }`. The core does not branch on `modeOrigin` for numbers. Distance is read from both combatants' positions in both modes: under 1.35 tiles the hit is 15% stronger, past 3.4 it is 15% weaker, then clamped to at least 1. Evading is a status. The next damaging effect deals 0 and removes it. Spell rank is `spellRanks` copied onto the combatant by `prepareForBattle` before the encounter exists. The UI must not invent rank mid-hit.
