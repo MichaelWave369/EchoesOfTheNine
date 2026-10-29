@@ -12,7 +12,7 @@ const outDir = "dist-pages";
 const html = readFileSync(join(outDir, "index.html"), "utf8");
 const cssNames = readdirSync(join(outDir, "assets")).filter((name) => name.endsWith(".css"));
 if (cssNames.length === 0) throw new Error("Pages build contains no CSS asset");
-if (!html.match(/<link[^>]*href=["'][^"']+\\.css["']/i)) {
+if (!html.match(/<link[^>]*href=["'][^"']+\.css["']/i)) {
   throw new Error("Pages HTML is not linking a compiled CSS asset");
 }
 const css = cssNames.map((name) => readFileSync(join(outDir, "assets", name), "utf8")).join("\n");
