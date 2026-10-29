@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #140e18;
+  --color-ink-2: #241828;
+  --color-panel: #2c2030;
+  --color-panel-2: #3a2a3c;
+  --color-line: #5c4638;
+  --color-amber: #e8b15a;
+  --color-amber-2: #f3d7a1;
+  --color-teal: #4ec8c0;
+  --color-teal-dim: #1d6e6a;
+  --color-violet: #8b6bb8;
+  --color-parchment: #f3e6c8;
+  --color-danger: #e06a5c;
+  --color-moss: #7d9a62;
+  --font-display: "Fraunces", "Iowan Old Style", Palatino, serif;
+  --font-sans: "Source Sans 3", "Segoe UI", sans-serif;
+  --radius: 0.5rem;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-ink);
+    color: var(--color-parchment);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.45;
+  }
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 2px;
+  }
+}
+
+.text-scale-sm { font-size: 15px; }
+.text-scale-md { font-size: 17px; }
+.text-scale-lg { font-size: 19px; }
+
+.contrast-boost {
+  --color-parchment: #fff6e4;
+  --color-ink: #0c0810;
+  --color-amber: #ffd27a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-ok { animation: none !important; transition: none !important; }
+}
