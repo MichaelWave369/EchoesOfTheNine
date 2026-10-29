@@ -1,6 +1,6 @@
 # Echoes of the Nine
 
-A browser science-fantasy JRPG from Φ369 Labs. Playable now: **The Crystal Awakening**, **Hollowwood Reach**, and the optional **Vale expanses** (companion choices, two spell evolutions, Lowbell Landing). The late chronicle is not on the title screen, and it should stay that way.
+A browser science-fantasy JRPG from Φ369 Labs. Playable now: **The Crystal Awakening**, **Hollowwood Reach**, the optional **Vale expanses**, and **Mistwater Crossing**. The late chronicle is not on the title screen, and it should stay that way.
 
 Public pitch: an old-school fantasy RPG you can step inside. Command a classic battle, or move inside the same fight.
 
@@ -22,8 +22,12 @@ Keyboard and buttons complete every mandatory beat. A headset is optional and is
    - Nessa's mother's stone: teach the old spring rhyme, or let the new verse stand.
    - Cast Ember three times. The river kiln at Lowbell (flame, stone, flame) or a scorched vein after a fallen Warden teaches Solar Flare. Neither Warden ending closes every road.
    - After Nessa joins, the river stair leads to Lowbell. The split bell wants nine-and-nine from the walk and a tenth strike from inside the step. A button folds the view. The reward is a clapper shard, and Memory Tide if Tide has been spoken.
-   - Temporal Sight at Lowbell records an unfinished hour. It does not explain it. The atlas travels only to places you have already walked. The far ferry and the high road stay shut.
-   - Jobs and arts, from the sidebar, lists the kits that exist, with costs. You do not change jobs except the Elementalist unlock.
+   - Temporal Sight spends a charge and, for eight steps, shows another hour of the room you are in: a second bell, two stamps, an older cut, a shadow that arrives first. Dismiss puts the picture away. The journal keeps the clue. It does not press the puzzle.
+   - After the bell, the far dock opens onto Mistwater Crossing. Hale says the ferry left at nine. Tamsin says ten. Hear them both, or look twice and then record the window. The contradiction is not explained.
+   - Under the station, the Twice-Kept Hold wants flame, then tide, then stone. If the Warden fell, stone, stone, flame also opens it. Sight and the chalk show the cut. They do not turn the plate. Past the plate: lanterns, then the Late Ferryman. Ask which departure if you spared the Warden or recorded both hours, once he is under two fifths. Or end the boarding. The high road opens either way. The water beyond it does not.
+   - Change a trade at the Wick, Bram's stall, the station, or the high gate, when no fight is open. Wayfinder, Elementalist (after the conduits), Riverward (after the plate). Your breath, gold, and pack stay put. Double Wake wants Echo Lash twice and the crossing finished.
+   - The atlas travels only to places you have already walked. Open water stays a dashed road.
+   - Jobs and arts, from the sidebar, lists the kits that exist, with costs. Later jobs cannot be taken.
 10. Settings holds mute, text size, captions, reduced motion, contrast, export, import, and reset.
 
 **Move:** WASD or arrows, or the on-screen pad. A gamepad d-pad steps; the south button acts. **Act:** E, Enter, or Act. **Battle:** Attack, Magic, Defend, Sidestep, Item. **Ascension** (after the conduits): WASD inside the ring, F or Cast, Q to dodge. Standing close hits harder. **Switch** spends the turn and keeps HP, intent, and the dice. Tab switches on your turn. **Sight:** the sidebar button, after the conduits.
@@ -36,11 +40,11 @@ Saves from the first chapter still open. They gain the new fields without losing
 npm ci
 npm run dev        # http://127.0.0.1:8080 when run locally
 npm run typecheck
-node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts
+node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts
 npm run build      # skips the database step when DATABASE_URL is unset
 ```
 
-`npm test` also runs the app platform checks. The game contract is the two test files above.
+`npm test` also runs the app platform checks. The game contract is the three test files above.
 
 GitHub Actions (`.github/workflows/ci.yml`) installs, typechecks, runs those tests, and builds. No database URL is required.
 

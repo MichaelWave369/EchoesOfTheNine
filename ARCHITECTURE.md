@@ -16,7 +16,8 @@ proposeAction → validate → resolveDeterministically → emitEvents → rende
 | `src/game/core/rng.ts` | Mulberry32 step function. State is a number on the encounter, not a closure. |
 | `src/game/core/playthrough.ts` | Scripted button-only chapter used by tests. |
 | `src/game/content/expanses.ts` | Companion choices, Solar Flare, Memory Tide, Lowbell atlas, split bell. Optional. |
-| `src/game/chronicle/save.ts` | Save version 1, schema 2, migration from schema 1, flags, quest refresh, bonds, import/export, idempotent rewards, level sync. `localStorage` only. |
+| `src/game/content/crossing.ts` | Mistwater rules: job change, Sight overlay, hold plate, Double Wake, companion instinct. Instincts are not actions. |
+| `src/game/chronicle/save.ts` | Save version 1, schema 3, migration from schema 1 and 2, flags, quest refresh, bonds, import/export, idempotent rewards, level sync. `localStorage` only. |
 | `src/game/content/gear.ts` | Equipment, shop buy, rest, level curve, spell ranks copied in at battle start, Temporal Sight charges, Elementalist unlock. |
 | `src/game/ui/GameApp.tsx` | Title, exploration, shops, inn, Legacy menu, Ascension arena, Sight, ending, settings. |
 | `src/game/audio.ts` | Procedural Web Audio. Unlocks on the first gesture. |
@@ -32,11 +33,11 @@ Accepted only from the living ally whose turn it is, and only while the phase is
 
 ## Mercy and items
 
-`tryMercy` is the rule, not the button. Warden mercy still needs the exposed seam. Cantor mercy also requires `wardenSpared` from the chronicle; omitting it fails closed. A boss pays mercy or defeat, never both. Item abilities read `encounter.pack`, decrement it, and do nothing if the count is missing or zero. The battle UI copies the local pack in and writes the returned counts back. It does not keep a second consumption path.
+`tryMercy` is the rule, not the button. Warden mercy still needs the exposed seam. Cantor mercy also requires `wardenSpared` from the chronicle; omitting it fails closed. Ferryman mercy needs him under two fifths, and either `wardenSpared` or `doubleDeparture`. A boss pays mercy or defeat, never both. The ferryman's second phase adds two reflections in the same resolution; it does not mint a second reward. Item abilities read `encounter.pack`, decrement it, and do nothing if the count is missing or zero. The battle UI copies the local pack in and writes the returned counts back. It does not keep a second consumption path. Damage text may append a resist note. The number still comes from `formulas.ts`.
 
 ## Sovereign boundary
 
-The playable game does not import accounts, the database client, multiplayer, or any API secret. Chronicles stay in `localStorage` plus JSON export. Schema 1 saves migrate to schema 2 and keep `wardenOutcome`, including into the Reach quest and companion lines.
+The playable game does not import accounts, the database client, multiplayer, or any API secret. Chronicles stay in `localStorage` plus JSON export. Schema 1 and schema 2 saves migrate to schema 3 and keep `wardenOutcome`, including into the Reach and the ferry.
 
 Grok Build preview files (`src/lib/auth`, `src/lib/db`, `src/lib/multiplayer`, `server/`, `public/__grok/`, the PWA scripts) stay in the tree because the live preview and the TanStack Start shell need them. Nothing in `src/game` calls them. `npm run build` still runs `scripts/migrate.mjs`, which exits without touching a database when `DATABASE_URL` is absent. That is the CI path.
 

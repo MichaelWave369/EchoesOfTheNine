@@ -16,23 +16,30 @@ Inn, blacksmith, equipment, levels, one job unlock, spell ranks, usable Temporal
 
 PR #1 repair: lockfile matches `npm ci` on Node 22 / npm 10.9, combat validation is authoritative, and the Warden's fate survives schema migration into chapter 2 lines.
 
-## Rung 1c — Vale expanses (playable, this branch)
+## Rung 1c — Vale expanses (playable)
 
 Companion choices for Mira, Kael, and Nessa. Solar Flare and Memory Tide, earned, with neither Warden ending closing every door. A jobs screen for the kits that exist. Lowbell Landing, an atlas, and the split bell. Boss windups you can read. An early Sight mystery that does not name the late chronicle.
 
-Branch: `feature/vale-expanses`. Not merged from this workspace.
+Merged from `feature/vale-expanses`.
+
+## Rung 1d — Mistwater Crossing (playable, this branch)
+
+The far dock, a riverside station, the Twice-Kept Hold, and the Late Ferryman. Sight as an eight-step overlay. Wayfinder, Elementalist, and one earned job, Riverward, switched only where it is quiet. Double Wake after the crossing. The high road gate opens. Open water does not.
+
+Branch: `feature/beyond-lowbell`. Not merged from this workspace.
 
 ## Still after this
 
-A third lived-in region, more evolutions, a real job change, companion scenes past one choice, and any headset battle. Do not start those inside this PR.
+An airship route, the remaining regions, a fuller job tree, companion scenes past a later line, and any headset battle. Do not start those inside this PR.
 
 ## Rung 2 — switching and comfort
 
-Next: switch at finer sync points, readable boss windups with a longer dodge window, trigger-cast once an XR frame loop exists. Do not reset cooldowns. Add the stress test before calling it done. The current Sidestep already changes the hit. It is one attack, not a timing minigame.
+Next: switch at finer sync points, readable boss windups with a longer dodge window, trigger-cast once an XR frame loop exists. Do not reset cooldowns. Add the stress test before calling it done. The current Sidestep already changes the hit. It is one attack, not a timing minigame. Companion suggestions stay suggestions.
 
 ## Rung 3 — chronology
 
-Three regions, companion scenes, a real Temporal Sight preview with a time limit, an airship *route* not an open skybox. Keep public UI free of later gates.
+Three regions were the sketch. Two are lived-in (Hollowwood, Mistwater) and the high road is only a gate. An airship *route*, not an open skybox, is still later. Keep public UI free of later gates.
+
 
 ## Rung 4 — white room
 

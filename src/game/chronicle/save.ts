@@ -53,6 +53,9 @@ export function freshSave(playerName: string): SaveGame {
     jobsUnlocked: ["job.wanderer"],
     discoveries: [],
     choiceLog: [],
+    earnedSpells: [],
+    sightScene: null,
+    sightSteps: 0,
     echoMemory: [],
     gnosis: 0,
   };
@@ -121,6 +124,21 @@ function journalLine(id: string): string {
     "flag.sight_barrow": "Sight: the left root was not always a root.",
     "flag.sight_shrine": "Sight: the floor date will not finish forming.",
     "flag.sight_lowbell": "Sight: a second bell hangs on an empty rope. The hour feels rehearsed, and unfinished.",
+    "flag.sight_ferry": "Sight: two stamps in one window, and a crate on an empty pier.",
+    "flag.sight_hold": "Sight: the lock's older cut reads flame, tide, stone. It does not turn itself.",
+    "flag.sight_stair": "Sight: a shadow climbs the high stair before the boots.",
+    "flag.spoke_hale": "Hale Reed says the ferry left at nine.",
+    "flag.heard_nine": "One witness keeps nine.",
+    "flag.spoke_tamsin": "Tamsin Coil says the ferry left at ten.",
+    "flag.heard_ten": "One witness keeps ten.",
+    "flag.twice_departed": "The ferry left at nine and at ten. Both stamps are warm. Neither explains the other.",
+    "flag.got_river_glass": "River glass from a crate the dock swore was empty.",
+    "flag.hold_open": "The Twice-Kept Hold took an order and opened.",
+    "flag.hold_seal": "A scorched seal opened the hold. The prism had already fallen.",
+    "flag.ferry_complete": "Mistwater's ferryman is settled. The high road gate is a place, not a rumor.",
+    "flag.ferryman_spared": "The ferryman sat down. He was asked which departure he was keeping.",
+    "flag.ferryman_defeated": "The ferryman's reflection was ended.",
+    "flag.spoke_wren": "Wren keeps the high gate and will not name the weather.",
     "flag.cleared.enc.thicket": "The briars remember losing.",
     "flag.mira_record": "Mira wrote the tenth strike in the margin.",
     "flag.mira_blank": "Mira left the parish page blank, and will remember it anyway.",
@@ -154,6 +172,9 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.nessa") return flag(save, "flag.nessa_spring") || flag(save, "flag.nessa_verse");
     if (q.id === "quest.lowbell") return flag(save, "flag.bell_solved");
     if (q.id === "quest.evolutions") return (save.knownSpells.wanderer?.includes("spell.solar") ?? false) && (save.knownSpells.mira?.includes("spell.memory_tide") ?? false);
+    if (q.id === "quest.crossing") return flag(save, "flag.ferry_complete");
+    if (q.id === "quest.timetable") return flag(save, "flag.twice_departed");
+    if (q.id === "quest.hold") return flag(save, "flag.hold_open");
     return false;
   };
   const visible = (q: QuestNode) => {
@@ -168,6 +189,9 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.nessa") return flag(save, "flag.nessa_joined");
     if (q.id === "quest.lowbell") return flag(save, "flag.nessa_joined");
     if (q.id === "quest.evolutions") return flag(save, "flag.conduits_aligned") || flag(save, "flag.chapter_complete");
+    if (q.id === "quest.crossing") return flag(save, "flag.bell_solved");
+    if (q.id === "quest.timetable") return flag(save, "flag.spoke_hale") || flag(save, "flag.sight_ferry");
+    if (q.id === "quest.hold") return flag(save, "flag.spoke_hale") || flag(save, "flag.sight_hold");
     return false;
   };
   for (const q of save.quests) {
@@ -254,9 +278,15 @@ export function migrateSave(parsed: SaveGame): SaveGame {
   next.spellMastery = next.spellMastery ?? {};
   next.sightCharges = typeof next.sightCharges === "number" ? next.sightCharges : 0;
   next.knownSpells = next.knownSpells ?? { wanderer: ["spell.ember"] };
+  next.earnedSpells = Array.isArray(next.earnedSpells) ? next.earnedSpells : [];
+  for (const id of next.knownSpells.wanderer ?? []) {
+    if ((id === "spell.solar" || id === "spell.double_wake") && !next.earnedSpells.includes(id)) next.earnedSpells.push(id);
+  }
   next.jobsUnlocked = next.jobsUnlocked ?? ["job.wanderer"];
   next.discoveries = next.discoveries ?? [];
   next.choiceLog = next.choiceLog ?? [];
+  next.sightScene = typeof next.sightScene === "string" ? next.sightScene : null;
+  next.sightSteps = typeof next.sightSteps === "number" ? next.sightSteps : 0;
   next.echoMemory = Array.isArray(next.echoMemory) ? next.echoMemory : [];
   next.gnosis = typeof next.gnosis === "number" ? next.gnosis : 0;
   next.runeOrder = next.runeOrder ?? [];
@@ -287,7 +317,7 @@ export function migrateSave(parsed: SaveGame): SaveGame {
 export function deserialize(raw: string): SaveGame {
   const parsed = JSON.parse(raw) as SaveGame;
   const schema = (parsed as { schema?: number }).schema;
-  if (!parsed || parsed.version !== 1 || (schema !== 1 && schema !== 2)) {
+  if (!parsed || parsed.version !== 1 || (schema !== 1 && schema !== 2 && schema !== 3)) {
     throw new Error("This chronicle is from another telling and cannot be opened yet.");
   }
   if (!parsed.playerName || !parsed.mapId || !parsed.roster) throw new Error("Chronicle is missing its bones.");

@@ -9,7 +9,8 @@ import type {
   StatusInstance,
 } from "../contracts.ts";
 import { ability } from "../content/abilities.ts";
-import { CHARACTERS } from "../content/characters.ts";
+import { CHARACTERS, ENEMY_TEMPLATES } from "../content/characters.ts";
+import { elementNote } from "../content/crossing.ts";
 import { computeDamage, computeHeal } from "./formulas.ts";
 import { rollCrit } from "./rng.ts";
 
@@ -101,6 +102,18 @@ function rewardFor(state: EncounterState, mercy: boolean): RewardGrant {
       xp: mercy ? 64 : 84,
       items: mercy ? [{ itemId: "accessory.reed_loop", qty: 1 }] : [{ itemId: "weapon.glass_needle", qty: 1 }],
       flags: mercy ? ["flag.cantor_spared"] : ["flag.cantor_defeated"],
+      unique: true,
+    };
+  }
+  if (state.encounterId === "enc.ferryman") {
+    return {
+      id: mercy ? "reward.ferryman.mercy" : "reward.ferryman.defeat",
+      gold: mercy ? 48 : 66,
+      xp: mercy ? 72 : 84,
+      items: mercy ? [{ itemId: "accessory.departure_thread", qty: 1 }] : [{ itemId: "weapon.river_hook", qty: 1 }],
+      flags: mercy
+        ? ["flag.ferryman_spared", "flag.ferry_complete"]
+        : ["flag.ferryman_defeated", "flag.ferry_complete"],
       unique: true,
     };
   }
@@ -232,6 +245,29 @@ function openTurn(state: EncounterState) {
   }
 }
 
+function raiseReflections(state: EncounterState) {
+  if (state.combatants.some((c) => c.id === "reflection-1")) return;
+  const spots = [
+    ["reflection-1", -1.15],
+    ["reflection-2", 1.15],
+  ] as const;
+  for (const [id, x] of spots) {
+    const mist = structuredClone(ENEMY_TEMPLATES.mistling);
+    state.combatants.push({
+      ...mist,
+      id,
+      name: "Reflection",
+      hp: 36,
+      maxHp: 36,
+      position: { x, z: -1.15 },
+    });
+  }
+  push(state, {
+    kind: "status",
+    text: "Two reflections step off a boat that has not arrived. The second boarding has started.",
+  });
+}
+
 function wardenShielded(state: EncounterState, warden: CombatantState): boolean {
   return state.encounterId === "enc.warden" && (warden.phase ?? 1) < 2 && !hasStatus(warden, "exposed");
 }
@@ -255,6 +291,23 @@ function chooseEnemyIntent(state: EncounterState, actor: CombatantState): Intent
       abilityId = "enemy.briar_lash";
       telegraph = "A thorned hand. The windup is honest.";
     }
+  } else if (actor.jobId === "enemy.ferryman") {
+    if ((actor.phase ?? 1) >= 2 && (actor.cooldowns["enemy.double_departure"] ?? 0) === 0) {
+      abilityId = "enemy.double_departure";
+      telegraph = "Double Departure — both hours hit everyone. Defend. Sidestep will not cover the party.";
+    } else {
+      abilityId = "enemy.gangplank";
+      telegraph = "Gangplank — one line, honest. Sidestep the one it chose.";
+    }
+  } else if (actor.jobId === "enemy.mistling") {
+    abilityId = "enemy.mist_lash";
+    telegraph = "Mist Lash — tide, with a wrist. Sidestep or brace.";
+  } else if (actor.jobId === "enemy.driftlantern") {
+    abilityId = (actor.cooldowns["enemy.lantern_wisp"] ?? 0) > 0 ? "enemy.spark_tap" : "enemy.lantern_wisp";
+    telegraph =
+      abilityId === "enemy.lantern_wisp"
+        ? "Lantern Wisp — flame. Tide bites this one. Fire slides off."
+        : "A smaller spark. Still flame.";
   } else if (actor.jobId === "enemy.warden") {
     const phase = actor.phase ?? 1;
     if (phase >= 2 && hasStatus(actor, "exposed")) {
@@ -373,17 +426,19 @@ function applyEffects(
         const rolled = rollCrit(state.rngState, 0.08);
         state.rngState = rolled.next;
         const rank = actor.spellRanks?.[ab.id] ?? 0;
+        const elem = effect.element ?? "neutral";
         let dmg = computeDamage({
           power: (effect.power ?? 10) + rank,
           actor,
           target,
-          element: effect.element ?? "neutral",
+          element: elem,
           crit: rolled.crit,
         });
         const dist = Math.hypot(actor.position.x - target.position.x, actor.position.z - target.position.z);
         if (dist < 1.35) dmg = Math.floor(dmg * 1.15);
         else if (dist > 3.4) dmg = Math.floor(dmg * 0.85);
         dmg = Math.max(1, dmg);
+        const bite = elementNote(target.resistances[elem] ?? 0);
         if (hasStatus(target, "evading")) {
           target.statuses = target.statuses.filter((s) => s.id !== "evading");
           push(state, {
@@ -413,10 +468,14 @@ function applyEffects(
             targetId: target.id,
             amount: dmg,
             abilityId: ab.id,
-            text: `${actor.name} uses ${ab.name} on ${target.name} for ${dmg}${rolled.crit ? " (critical)" : ""}.`,
+            text: `${actor.name} uses ${ab.name} on ${target.name} for ${dmg}${rolled.crit ? " (critical)" : ""}.${bite}`,
           });
         }
         target.hp = Math.max(0, target.hp - dmg);
+        if (target.hp > 0 && target.jobId === "enemy.ferryman" && target.hp <= target.maxHp * 0.5 && (target.phase ?? 1) < 2) {
+          target.phase = 2;
+          raiseReflections(state);
+        }
         if (target.hp === 0) {
           target.alive = false;
           push(state, { kind: "down", actorId: target.id, text: `${target.name} falls.` });
@@ -604,6 +663,8 @@ export function resolveEnemyTurn(state: EncounterState): ActionResult {
 export interface MercyRules {
   /** Cantor mercy is legal only after the Warden was spared. Hiding a button is not the rule. */
   wardenSpared?: boolean;
+  /** Ferryman mercy also opens if both departures were recorded. */
+  doubleDeparture?: boolean;
 }
 
 export function tryMercy(state: EncounterState, rules?: MercyRules): ActionResult {
@@ -633,6 +694,37 @@ export function tryMercy(state: EncounterState, rules?: MercyRules): ActionResul
       kind: "mercy",
       targetId: foe.id,
       text: "You do not cut the last note. The Cantor lets the vine go, and the Reach exhales.",
+    });
+    grantReward(next, true);
+    return { ok: true, state: next };
+  }
+  if (state.encounterId === "enc.ferryman") {
+    const ferryman = state.combatants.find((c) => c.jobId === "enemy.ferryman" && c.alive);
+    if (!ferryman) return { ok: false, reason: "The boat is already empty.", state };
+    if (ferryman.hp > ferryman.maxHp * 0.4) {
+      return { ok: false, reason: "He is still boarding. Bring him under two fifths, or finish it.", state };
+    }
+    if (!rules?.wardenSpared && !rules?.doubleDeparture) {
+      return {
+        ok: false,
+        reason: "He will not sit for a stranger who has not heard both departures, and who did not already learn how to ask. You can still end it.",
+        state,
+      };
+    }
+    const next = clone(state);
+    for (const foe of next.combatants) {
+      if (foe.side === "enemy" && foe.alive) {
+        foe.alive = false;
+        foe.hp = 0;
+      }
+    }
+    next.outcome = "mercy";
+    next.phase = "mercy";
+    next.activeActorId = null;
+    push(next, {
+      kind: "mercy",
+      targetId: ferryman.id,
+      text: "You ask which departure he is keeping. He sits on the gunwale. The second boarding does not finish.",
     });
     grantReward(next, true);
     return { ok: true, state: next };
