@@ -9,7 +9,12 @@ export function wardenMemory(save: Pick<SaveGame, "wardenOutcome" | "flags">): W
 }
 
 /** Companion lines keep the Warden's fate even after the bond deepens. */
-export function companionAside(id: "mira" | "kael" | "nessa", bond: number, outcome: WardenMemory): string {
+export function companionAside(
+  id: "mira" | "kael" | "nessa",
+  bond: number,
+  outcome: WardenMemory,
+  flags: Record<string, boolean | string | number> = {},
+): string {
   const close = bond >= 2;
   if (id === "mira") {
     if (outcome === "spared") {
@@ -54,6 +59,19 @@ export function companionAside(id: "mira" | "kael" | "nessa", bond: number, outc
   return close
     ? "My mother said the moss used to rhyme with spring. It doesn't. I want the new verse, not a sermon about why the wood feels early."
     : "The thicket bites if you walk through it like a tourist. Wind cuts it cleaner than pride.";
+}
+
+export function choiceCoda(id: "mira" | "kael" | "nessa", flags: Record<string, boolean | string | number>): string {
+  const bits: string[] = [];
+  if (id === "mira" && flags["flag.mira_record"]) bits.push("The tenth strike is in the book. I will not sand it out.");
+  if (id === "mira" && flags["flag.mira_blank"]) bits.push("The page is blank on purpose. That was a kindness, not a story I am proud of telling halfway.");
+  if (id === "kael" && flags["flag.kael_law"]) bits.push("Pell walks toward the square. The gate held. I hope the children still have light.");
+  if (id === "kael" && flags["flag.kael_people"]) bits.push("Pell finished the walk. The oath bent. I can live with the bend.");
+  if (id === "nessa" && flags["flag.nessa_spring"]) bits.push("I taught the moss my mother's spring. It did not thank me. I still wanted her rhyme somewhere in the world.");
+  if (id === "nessa" && flags["flag.nessa_verse"]) bits.push("The new verse stands. My mother can keep spring. The Reach is allowed to be early.");
+  if (id === "nessa" && flags["flag.cantor_spared"]) bits.push("The Cantor is still in the vine, not on a shelf.");
+  if (id === "nessa" && flags["flag.cantor_defeated"]) bits.push("The Cantor is quiet. I keep checking that the quiet is not a breath.");
+  return bits.length ? ` ${bits.join(" ")}` : "";
 }
 
 export function reachClose(playerName: string, outcome: WardenMemory, cantorSpared: boolean): string {

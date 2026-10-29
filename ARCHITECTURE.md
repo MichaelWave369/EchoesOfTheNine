@@ -15,7 +15,7 @@ proposeAction → validate → resolveDeterministically → emitEvents → rende
 | `src/game/core/formulas.ts` | The shared damage formula. Deterministic floor. |
 | `src/game/core/rng.ts` | Mulberry32 step function. State is a number on the encounter, not a closure. |
 | `src/game/core/playthrough.ts` | Scripted button-only chapter used by tests. |
-| `src/game/content/` | Abilities, companions, enemies, maps, dialogue, future-gated content that is not playable. |
+| `src/game/content/expanses.ts` | Companion choices, Solar Flare, Memory Tide, Lowbell atlas, split bell. Optional. |
 | `src/game/chronicle/save.ts` | Save version 1, schema 2, migration from schema 1, flags, quest refresh, bonds, import/export, idempotent rewards, level sync. `localStorage` only. |
 | `src/game/content/gear.ts` | Equipment, shop buy, rest, level curve, spell ranks copied in at battle start, Temporal Sight charges, Elementalist unlock. |
 | `src/game/ui/GameApp.tsx` | Title, exploration, shops, inn, Legacy menu, Ascension arena, Sight, ending, settings. |

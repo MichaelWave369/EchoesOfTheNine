@@ -59,7 +59,7 @@ function tone(freq: number, dur: number, type: OscillatorType, gain: number, whe
   osc.stop(t0 + dur + 0.02);
 }
 
-export function playSfx(name: "ui" | "hit" | "heal" | "spell" | "hurt" | "victory" | "clock" | "step") {
+export function playSfx(name: "ui" | "hit" | "heal" | "spell" | "hurt" | "victory" | "clock" | "step" | "warn") {
   unlockAudio();
   if (muted || reduced) return;
   if (name === "ui") tone(520, 0.08, "triangle", 0.08);
@@ -85,6 +85,10 @@ export function playSfx(name: "ui" | "hit" | "heal" | "spell" | "hurt" | "victor
   if (name === "victory") {
     [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.25, "triangle", 0.06, i * 0.12));
   }
+  if (name === "warn") {
+    tone(98, 0.32, "sawtooth", 0.05);
+    tone(146, 0.26, "triangle", 0.04, 0.08);
+  }
 }
 
 const MODES: Record<string, number[]> = {
@@ -95,6 +99,7 @@ const MODES: Record<string, number[]> = {
   reach: [196, 220, 174, 196, 233, 196, 174, 165],
   barrow: [146, 165, 174, 146, 130, 146, 174, 196],
   inn: [294, 330, 294, 262, 247, 262, 294, 330],
+  lowbell: [220, 262, 294, 262, 196, 220, 247, 196],
   battle: [146, 174, 196, 174, 146, 130, 146, 196],
 };
 

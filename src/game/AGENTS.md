@@ -15,8 +15,8 @@ Read the repo root `GAMEPLAY_STATUS.md` before claiming a feature works. The mas
 
 ## Where to extend
 
-- New spell: `src/game/content/abilities.ts`, then list it on a character. Add a test if it can change a boss phase.
-- New map: `MAPS` in `content/world.ts`. Exits exits use `requires` flags, not mode checks.
+- New spell: `src/game/content/abilities.ts`, then teach it through `knownSpells` in `content/expanses.ts` if it is earned. Add a combat test.
+- New map: `MAPS` in `content/world.ts`, and a row on `ATLAS` if the player should see it. Exits use `requires` flags. Locked atlas rows stay `locked: true`.
 - New chapter flag: add the journal line in `chronicle/save.ts` and the objective sentence in `currentObjective`.
 
 ## Checks

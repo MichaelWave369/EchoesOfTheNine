@@ -1,77 +1,50 @@
 # Gameplay status
 
-Honest labels. Updated after the living Vale and Hollowwood Reach.
+Honest labels. Updated for the Vale expanses (Lowbell, companion choices, two spell evolutions).
 
 ## Working
 
-- Title: New Journey, Continue (returns you to the map, not a locked ending), Settings, Enter VR (reports capability; does not pretend a headset battle).
-- Name entry, Lantern Vale, Ninth Wick inn (8 gold, full heal, three Sight charges), Bram's stall (buy), bag equip for weapon, armor, and accessory.
-- Named townspeople: Lira, Nim, Oven-Aunt Pim, Elder Voss, Salla, Bram, Mira, Kael. Voss speaks differently if the Warden was spared or defeated. Neither line calls the other path wrong.
-- Clock anomaly at 9:09 / strike ten, Nim's sketch, festival crate.
-- Party: Wanderer, Mira, Kael, and — after the first chapter — Nessa Quill. Distinct HP/MP, jobs, voices, actions.
-- Levels from shared XP (circle 3 through 8), stat growth, festival knife already equipped. Gear bonuses apply when a fight starts, not permanently baked into the roster.
-- Elementalist unlocks when the shrine conduits align. Adds Flare. Not available at the title.
-- Spell mastery: each successful cast increments a counter. Every three casts of a spell raises its rank inside the next battle only.
-- Bonds: talking to a companion again deepens a short personal line. Not a full relationship sim.
-- Inventory, journal, quests (festival, party, hearth, prism, warden, reach), gold, XP, local auto-save, manual niche save, export/import JSON, reset.
-- Schema 2 saves. Schema 1 chronicles from the first chapter migrate and keep the Warden outcome.
-- Encounters: festival shardling, Glasspine shardling + glowmoth, Crystal Warden, Hollowwood briarlings, Thorn Cantor.
-- Legacy combat: turn queue, Attack / Magic / Defend / Sidestep / Item, targeting, MP costs, telegraphs, boss introduction card, victory and defeat, rewards.
-- Sidestep applies Evading. The next damaging hit misses and consumes it. Same rule in both modes.
-- Ascension: same encounter, WASD inside a bounded ring, button cast, button dodge, on-screen pad. Standing close adds damage; standing far reduces it. The bonus is computed in the core from positions, in both modes.
-- Mode switch on your turn. Preserves HP, phase, cooldowns, RNG, rewards. Costs the turn.
-- Cross-mode 1: rune order on the wall, conduit ring by buttons. Shared flags. Unlocks Ascension, Temporal Sight (3 charges), and Elementalist.
-- Temporal Sight: a button. Costs one charge. Inn refills to three. Reveals the clock pebble, lying moss, the barrow root, or a shrine flicker. No headset required.
-- Cross-mode 2: moss hymn (wind, flame, stone) opens the barrow. Sight reveals the cache the hymn does not.
-- Two Warden outcomes and two Cantor outcomes. Cantor mercy is refused by `tryMercy` unless the Warden was spared, even if a caller shows the button. Defeat remains available either way. Mercy and defeat payouts cannot both be collected. Companion lines and the Reach close keep the Warden's fate after the bond deepens.
-- Mode switch only on the active ally's player turn. Wrong targets, unknown arts, and missing items are rejected by the core. Items decrement `encounter.pack`.
-- Schema 2 saves. Schema 1 chronicles migrate, keep the Warden outcome, and reopen the Reach quest when the chapter was already complete.
-- Settings: text size, captions, mute, volume, reduced motion, contrast, camera comfort label.
-- Button-only path for every mandatory beat, including both puzzles. Scripted chapter-1 playthrough still passes.
-- Procedural music for Vale, woods, shrine, inn, Reach, barrow, and battle. Mute works.
-- Gamepad: map d-pad moves, A confirms once, B closes a talk or bag. Battle A strikes, B braces, X sidesteps, Y changes view when Ascension is awake. D-pad moves inside the Ascension ring.
+- Everything in the Crystal Awakening and the living Vale / Hollowwood Reach still plays, including schema 1 and schema 2 saves.
+- Companion choices, each once, stored on the chronicle:
+  - Mira, at the parish shelf: write the tenth strike, or leave the page blank. The clasp is the written path.
+  - Pell, on the Glasspine path with Kael: turn them back, or let them finish the walk.
+  - Nessa, at her mother's stone: teach the old spring rhyme, or let the new verse stand.
+- Later lines still remember the Warden and, for Nessa, the Cantor. A second choice is refused.
+- Solar Flare (Ember's offensive evolution) after Ember has been cast three times, then either the scorched vein (only if the Warden fell) or the Lowbell kiln (open either way).
+- Memory Tide (Tide Whisper's keeping evolution) if the Warden sleeps, the strike was written, and Tide has been spoken once. If the Warden fell, the split bell can teach it instead, once Tide has been spoken. Neither ending closes every path.
+- Both spells resolve in the shared combat core and appear in Legacy and Ascension.
+- Jobs screen: Wayfinder, Elementalist, Archivist, Oathkeeper, Spellblade, each with the real art name, cost, wait, and blurb. Dragoon, Healer, and Chronomancer are listed as not open. No job tree. Solar Flare and Memory Tide show as not earned until the chronicle has them.
+- Glass needle hits a little harder on an Elementalist. The oath blade hits a little harder for Kael. A spared Cantor's reed loop is a step quicker on Nessa. The margin clasp deepens breath. Bonuses apply when the fight starts.
+- Lowbell Landing, past the Reach, after Nessa joins. Ivo Bellwright. River kiln. Empty rope. Split bell.
+- Atlas of walked places, open roads, and two locked names (far ferry, high road) drawn as dashed future roads, not as the next stop. Travel only to places already walked. First visits are on foot.
+- Third cross-mode secret: the split bell. The walk reads nine and nine. The inside of the step reads the tenth strike still in the air. A button folds the view. No headset. Reward: a clapper shard, and Memory Tide when Tide has been spoken.
+- Temporal Sight at Lowbell records an unfinished hour: a second bell on an empty rope, a shadow that strikes before the bronze. Ivo will say he saw it too, and he will not invent the hour. The chronicle keeps the discovery. It does not explain it.
+- Warden and Cantor windups name the art and the answer (Sidestep, Stoneguard then Tide, a dirge that hits everyone). Boss turns wait a beat longer so the card can be read. Sidestep is still the previous action, not a reaction minigame. Party members stand in a readable arc. The core still decides the hit.
 
 ## Partial
 
-- Ascension is still a real-time presentation of the same turn clock. You move freely; strikes resolve on the active actor's turn. Companions do not path on their own.
-- Positioning changes damage. It is not a separate action timer, windup bar, or iframe system.
-- Jobs that exist in play: Wayfinder, then Elementalist for the lead; Archivist, Oathkeeper, Spellblade for companions. No job-change menu, no Dragoon, Healer, or Chronomancer.
-- Spell ranks add power. Spells do not yet evolve into different spells from story choices.
-- Map art is original canvas scenery, portraits are painted glyphs, not a sprite sheet.
-- Bonds stop at a handful of lines. There is no affinity meter screen.
-- WebXR: detection plus an optional reference session that opens and closes. `XR_PRESENTATION` is an empty hook for a later adapter. No in-headset battle renderer. Not tested on Quest 3.
-- Switch during an enemy telegraph keeps the committed intent. Resolution itself is instant.
+- Ascension is still a presentation of the turn clock. Companions do not path on their own.
+- Bonds are scenes and one consequential choice each, not a relationship sim with a meter.
+- Spell ranks still add a little power. Only Ember and Tide Whisper have an evolution, and only those two.
+- Job kits are readable. You do not change jobs except the existing Elementalist unlock.
+- Map art is still painted in the page, not a sprite sheet.
+- WebXR detects a headset and can open a reference session. It does not render the battle. It was not tested on Quest 3.
 
 ## Scaffolded
 
-- Sera, Iri, nine Echo records, four endings, return anchors, hub aspects. Data only. `playable: false`.
-- Chronicle branch object, `choiceLog`, `discoveries`, `echoMemory`, `gnosis`. The last two are stored and never labeled in the chapter UI.
-- Future XR mount, haptic, and spatial hooks. Empty. Desktop does not call them.
+- Sera, Iri, Dragoon, Healer, Chronomancer, nine Echo records, four endings, return anchors, hub aspects. Not playable.
+- `echoMemory` and `gnosis` stay stored and unlabeled.
+- Far ferry and high road are atlas marks only.
 
 ## Not built
 
-- Regions beyond Vale, Glasspine, the shrine, and Hollowwood Reach.
-- Airship, a full job tree, spell evolution paths, shops that buy back, day-night NPC schedules.
-- White room, Custodian, Door sequence, Pleroma hub, Great Return, New Game Plus loop.
-- Hand-tracked casting, haptics, spatial audio, snap-turn comfort locomotion in a headset.
-- Multiplayer, accounts, cloud saves, telemetry.
+- A third region beyond Lowbell, an airship, a full job tree, more than two evolutions, day-night schedules.
+- White room, Custodian, Door, Pleroma, Great Return, New Game Plus.
+- Hand tracking, haptics, a headset battle.
+- Accounts, cloud saves, multiplayer.
 
 ## Tests that ran
 
-`node --experimental-strip-types --test src/game/core/combat.test.ts` — 22 passed, 0 failed.
+`node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts` — 30 passed, 0 failed.
 
-- Seeded Ember from Legacy and Ascension: identical HP, MP, cooldown, RNG.
-- Insufficient MP: no damage.
-- Mode switch: enemy HP, phase, cooldown, RNG, reward ids held.
-- Unique reward not paid twice. Reward apply is idempotent.
-- Mercy refused before the seam; mercy flag differs from defeat.
-- Save round-trip keeps rune order and conduit flag.
-- Public dialogue/map JSON does not contain the late-game ban list.
-- Scripted chapter reaches `chapterComplete` with three party members.
-- Evading consumes and deals 0.
-- Close range damage exceeds far range on the same seed.
-- Festival knife raises attack. 45 XP grows max HP.
-- Cantor mercy refused above half HP, pays the reed loop once, writes a choice.
-- Temporal Sight persists a Reach clue and spends a charge across save/load.
-- A schema 1 chronicle migrates to schema 2 without dropping a spared Warden.
-- Elementalist learns Flare. Reach and barrow exits stay flag-gated.
+New coverage: Solar Flare practice gate and kiln path when the Warden sleeps; Memory Tide from mercy or from both bell views; Mira, Kael, and Nessa choices through a reload, with a second answer refused; Lowbell and atlas gates, including a future road that cannot be walked; the unfinished hour across save and load; both new spells through `proposeAction`; Elementalist needle synergy; every open job names a real art. The scripted chapter still completes. Public copy still fails the late-chronicle ban list.
