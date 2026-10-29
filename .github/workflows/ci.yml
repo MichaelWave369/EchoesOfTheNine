@@ -22,3 +22,8 @@ jobs:
         env:
           # Absent on purpose. scripts/migrate.mjs exits 0 without a database.
           DATABASE_URL: ""
+      - name: Standalone GitHub Pages React build
+        run: |
+          npm run build:pages
+          test -s dist-pages/index.html
+          test -d dist-pages/assets
