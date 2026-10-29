@@ -31,8 +31,12 @@ export const ATLAS: AtlasPlace[] = [
   { id: "map.lowbell", name: "Lowbell Landing", blurb: "A river market whose bell does not agree with itself.", x: 400, y: 160, requires: "flag.nessa_joined", spawn: "reach_stair" },
   { id: "map.ferry", name: "Mistwater Crossing", blurb: "Fog, an abandoned station, and a ferry that left twice.", x: 520, y: 200, requires: "flag.bell_solved", spawn: "lowbell_dock" },
   { id: "map.hold", name: "Twice-Kept Hold", blurb: "The station's flooded stair, and a plate that remembers an older cut.", x: 590, y: 150, requires: "flag.spoke_hale", spawn: "door" },
-  { id: "map.highroad", name: "High road gate", blurb: "The stair above the mist. The country beyond is still weather.", x: 500, y: 36, requires: "flag.ferry_complete", spawn: "stair" },
-  { id: "map.sky", name: "Open water", blurb: "Past the mist the river does not offer a boat. Not this chapter.", x: 640, y: 220, locked: true, spawn: "" },
+  { id: "map.highroad", name: "High road gate", blurb: "The stair above the mist. Skyweave begins past the last step.", x: 500, y: 36, requires: "flag.ferry_complete", spawn: "stair" },
+  { id: "map.ridge", name: "Skyweave Ridge", blurb: "Mills, a half-span, and a rig that wants to be a ship.", x: 560, y: 28, requires: "flag.ferry_complete", spawn: "gate" },
+  { id: "map.glass", name: "Early Glass", blurb: "An observatory that finishes noon before the sun does.", x: 640, y: 18, requires: "flag.sera_joined", spawn: "door" },
+  { id: "map.cave", name: "Wind Pocket", blurb: "A cave that keeps a shine until you have looked twice.", x: 600, y: 78, requires: "flag.ferry_complete", spawn: "mouth" },
+  { id: "map.berth", name: "Skyweave berth", blurb: "A pad, a hull, and a route that is not an open sky.", x: 720, y: 48, requires: "flag.ridge_complete", spawn: "pad" },
+  { id: "map.sky", name: "Open sky", blurb: "Past the route the air does not offer a country. Not this chapter.", x: 800, y: 200, locked: true, spawn: "" },
 ];
 
 export const ATLAS_ROADS: { from: string; to: string; future?: boolean }[] = [
@@ -44,14 +48,19 @@ export const ATLAS_ROADS: { from: string; to: string; future?: boolean }[] = [
   { from: "map.lowbell", to: "map.ferry" },
   { from: "map.ferry", to: "map.hold" },
   { from: "map.ferry", to: "map.highroad" },
+  { from: "map.highroad", to: "map.ridge" },
+  { from: "map.ridge", to: "map.glass" },
+  { from: "map.ridge", to: "map.cave" },
+  { from: "map.ridge", to: "map.berth" },
   { from: "map.ferry", to: "map.sky", future: true },
+  { from: "map.berth", to: "map.sky", future: true },
 ];
 
 export const JOB_KITS: {
   id: string;
   name: string;
   who: string;
-  bearer: "wanderer" | "mira" | "kael" | "nessa" | null;
+  bearer: "wanderer" | "mira" | "kael" | "nessa" | "sera" | null;
   requires: string;
   arts: string[];
   kit: string[];
@@ -122,6 +131,17 @@ export const JOB_KITS: {
     arts: ["atk.strike", "spell.stillwater", "spell.echo_lash", "spell.double_wake"],
     kit: ["Strike", "Stillwater", "Echo Lash", "Double Wake, once earned"],
     synergy: "A river hook in a Riverward's hand hits harder. It does not refresh a breath.",
+    playable: true,
+  },
+  {
+    id: "job.skywright",
+    name: "Skywright",
+    who: "Sera",
+    bearer: "sera",
+    requires: "She joins on the ridge, after a splice or a stay. Gust is hers from the first step. Stayline and Crosswind are earned.",
+    arts: ["atk.strike", "spell.gust", "atk.stayline", "spell.crosswind"],
+    kit: ["Strike", "Gust", "Stayline, once earned", "Crosswind, once earned"],
+    synergy: "A gale hook in Sera's hand hits harder. It does not refresh a breath.",
     playable: true,
   },
   {
@@ -354,5 +374,7 @@ export function windupAdvice(abilityId: string): string {
   if (abilityId === "enemy.gangplank") return "Gangplank chooses one of you. Sidestep that one, or brace.";
   if (abilityId === "enemy.mist_lash") return "Tide, with a wrist. Sidestep or brace.";
   if (abilityId === "enemy.lantern_wisp" || abilityId === "enemy.spark_tap") return "Flame. Tide bites a lantern. Fire slides off.";
+  if (abilityId === "enemy.early_gale") return "Early Gale hits everyone. Defend. Sidestep will not cover the party. Stone bites this wind.";
+  if (abilityId === "enemy.gust_lash") return "Wind, with a wrist. Sidestep or brace. Stone bites it.";
   return "A short windup. Sidestep, brace, or answer.";
 }

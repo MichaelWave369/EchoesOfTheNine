@@ -350,7 +350,9 @@ describe("living world", () => {
       delete old[key];
     }
     const back = deserialize(JSON.stringify(old));
-    assert.equal(back.schema, 3);
+    assert.equal(back.schema, 4);
+    assert.deepEqual(back.reserve, []);
+    assert.equal(back.formation, "line");
     assert.deepEqual(back.earnedSpells, []);
     assert.equal(back.sightScene, null);
     assert.equal(back.sightSteps, 0);

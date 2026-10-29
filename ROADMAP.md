@@ -22,15 +22,21 @@ Companion choices for Mira, Kael, and Nessa. Solar Flare and Memory Tide, earned
 
 Merged from `feature/vale-expanses`.
 
-## Rung 1d — Mistwater Crossing (playable, this branch)
+## Rung 1d — Mistwater Crossing (playable)
 
 The far dock, a riverside station, the Twice-Kept Hold, and the Late Ferryman. Sight as an eight-step overlay. Wayfinder, Elementalist, and one earned job, Riverward, switched only where it is quiet. Double Wake after the crossing. The high road gate opens. Open water does not.
 
-Branch: `feature/beyond-lowbell`. Not merged from this workspace.
+Merged from `feature/beyond-lowbell`.
+
+## Rung 1e — Skyweave Ascent (playable, this branch)
+
+The high road becomes a ridge: mill, half-span, salt cave, Early Glass, and a Galekeeper. Sera joins on a splice or a stay, with a four-person line and a rig for the rest. Stayline and Crosswind. The First Stay flies between the berth and the Vale roof. Open sky does not.
+
+Branch: `feature/skyweave-ascent`. Not merged from this workspace.
 
 ## Still after this
 
-An airship route, the remaining regions, a fuller job tree, companion scenes past a later line, and any headset battle. Do not start those inside this PR.
+More airship destinations, an open skybox, the remaining regions, a fuller job tree, Iri, companion scenes past a later line, and any headset battle. Do not start those inside this PR.
 
 ## Rung 2 — switching and comfort
 
@@ -38,7 +44,7 @@ Next: switch at finer sync points, readable boss windups with a longer dodge win
 
 ## Rung 3 — chronology
 
-Three regions were the sketch. Two are lived-in (Hollowwood, Mistwater) and the high road is only a gate. An airship *route*, not an open skybox, is still later. Keep public UI free of later gates.
+Three regions were the sketch. Hollowwood and Mistwater are lived-in, and Skyweave is a ridge with one route between two pads. An open skybox is still later. Keep public UI free of later gates.
 
 
 ## Rung 4 — white room

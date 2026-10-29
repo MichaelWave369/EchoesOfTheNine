@@ -117,6 +117,18 @@ function rewardFor(state: EncounterState, mercy: boolean): RewardGrant {
       unique: true,
     };
   }
+  if (state.encounterId === "enc.galekeeper") {
+    return {
+      id: mercy ? "reward.gale.mercy" : "reward.gale.defeat",
+      gold: mercy ? 52 : 74,
+      xp: mercy ? 80 : 96,
+      items: mercy ? [{ itemId: "accessory.early_thread", qty: 1 }] : [{ itemId: "weapon.gale_hook", qty: 1 }],
+      flags: mercy
+        ? ["flag.gale_spared", "flag.ridge_complete", "flag.skiff_ready"]
+        : ["flag.gale_defeated", "flag.ridge_complete", "flag.skiff_ready"],
+      unique: true,
+    };
+  }
   if (state.encounterId === "enc.warden") {
     return {
       id: mercy ? "reward.warden.mercy" : "reward.warden.defeat",
@@ -268,6 +280,29 @@ function raiseReflections(state: EncounterState) {
   });
 }
 
+function raiseAheadGusts(state: EncounterState) {
+  if (state.combatants.some((c) => c.id === "ahead-1")) return;
+  const spots = [
+    ["ahead-1", -1.2],
+    ["ahead-2", 1.2],
+  ] as const;
+  for (const [id, x] of spots) {
+    const gust = structuredClone(ENEMY_TEMPLATES.gustling);
+    state.combatants.push({
+      ...gust,
+      id,
+      name: "Ahead-gust",
+      hp: 36,
+      maxHp: 36,
+      position: { x, z: -1.2 },
+    });
+  }
+  push(state, {
+    kind: "status",
+    text: "Two gusts step in from a noon that has not happened. The early gale has started.",
+  });
+}
+
 function wardenShielded(state: EncounterState, warden: CombatantState): boolean {
   return state.encounterId === "enc.warden" && (warden.phase ?? 1) < 2 && !hasStatus(warden, "exposed");
 }
@@ -291,6 +326,17 @@ function chooseEnemyIntent(state: EncounterState, actor: CombatantState): Intent
       abilityId = "enemy.briar_lash";
       telegraph = "A thorned hand. The windup is honest.";
     }
+  } else if (actor.jobId === "enemy.galekeeper") {
+    if ((actor.phase ?? 1) >= 2 && (actor.cooldowns["enemy.early_gale"] ?? 0) === 0) {
+      abilityId = "enemy.early_gale";
+      telegraph = "Early Gale — the noon hits everyone. Defend. Sidestep will not cover the party.";
+    } else {
+      abilityId = "enemy.gust_lash";
+      telegraph = "Gust Lash — one line of wind. Sidestep the one it chose. Stone bites this.";
+    }
+  } else if (actor.jobId === "enemy.gustling") {
+    abilityId = "enemy.gust_lash";
+    telegraph = "Gust Lash — wind, with a wrist. Sidestep or brace.";
   } else if (actor.jobId === "enemy.ferryman") {
     if ((actor.phase ?? 1) >= 2 && (actor.cooldowns["enemy.double_departure"] ?? 0) === 0) {
       abilityId = "enemy.double_departure";
@@ -475,6 +521,10 @@ function applyEffects(
         if (target.hp > 0 && target.jobId === "enemy.ferryman" && target.hp <= target.maxHp * 0.5 && (target.phase ?? 1) < 2) {
           target.phase = 2;
           raiseReflections(state);
+        }
+        if (target.hp > 0 && target.jobId === "enemy.galekeeper" && target.hp <= target.maxHp * 0.5 && (target.phase ?? 1) < 2) {
+          target.phase = 2;
+          raiseAheadGusts(state);
         }
         if (target.hp === 0) {
           target.alive = false;
@@ -665,6 +715,8 @@ export interface MercyRules {
   wardenSpared?: boolean;
   /** Ferryman mercy also opens if both departures were recorded. */
   doubleDeparture?: boolean;
+  /** Galekeeper mercy opens if the two noons were read, the glass was seen, or Sera lashed the safer stay. */
+  skyAsked?: boolean;
 }
 
 export function tryMercy(state: EncounterState, rules?: MercyRules): ActionResult {
@@ -725,6 +777,37 @@ export function tryMercy(state: EncounterState, rules?: MercyRules): ActionResul
       kind: "mercy",
       targetId: ferryman.id,
       text: "You ask which departure he is keeping. He sits on the gunwale. The second boarding does not finish.",
+    });
+    grantReward(next, true);
+    return { ok: true, state: next };
+  }
+  if (state.encounterId === "enc.galekeeper") {
+    const gale = state.combatants.find((c) => c.jobId === "enemy.galekeeper" && c.alive);
+    if (!gale) return { ok: false, reason: "The wind is already quiet.", state };
+    if (gale.hp > gale.maxHp * 0.45) {
+      return { ok: false, reason: "The gale is still early. Bring it under half and a little more, or finish it.", state };
+    }
+    if (!rules?.skyAsked) {
+      return {
+        ok: false,
+        reason: "It will not sit for a stranger who has not seen the early noon, and who did not already choose the safer stay. You can still end it.",
+        state,
+      };
+    }
+    const next = clone(state);
+    for (const foe of next.combatants) {
+      if (foe.side === "enemy" && foe.alive) {
+        foe.alive = false;
+        foe.hp = 0;
+      }
+    }
+    next.outcome = "mercy";
+    next.phase = "mercy";
+    next.activeActorId = null;
+    push(next, {
+      kind: "mercy",
+      targetId: gale.id,
+      text: "You ask which noon it is keeping. The gale sits on the half-span. The early wind does not finish.",
     });
     grantReward(next, true);
     return { ok: true, state: next };
