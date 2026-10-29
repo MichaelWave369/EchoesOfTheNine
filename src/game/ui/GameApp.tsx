@@ -73,6 +73,7 @@ import {
 } from "../chronicle/save.ts";
 import { createEncounter, proposeAction, resolveEnemyTurn, tryMercy } from "../core/combat.ts";
 import { configureAudio, resumeAudio, playSfx, startMusic, unlockAudio } from "../audio.ts";
+import { paintArena, paintExploration } from "./art.ts";
 import { detectXr, requestReferenceSession, XR_BINDINGS, type XrCapability } from "../xr/adapter.ts";
 
 type Screen = "title" | "name" | "explore" | "battle" | "ending";
@@ -328,14 +329,22 @@ export function GameApp() {
 function CrystalMark({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 120 120" className={className} aria-hidden>
-      <circle cx="60" cy="60" r="8" fill="#e8b15a" />
+      <defs>
+        <radialGradient id="crystal-core" cx="40%" cy="35%">
+          <stop offset="0%" stopColor="#f3e6c8" />
+          <stop offset="55%" stopColor="#e8b15a" />
+          <stop offset="100%" stopColor="#8b6bb8" />
+        </radialGradient>
+      </defs>
+      <circle cx="60" cy="60" r="28" fill="url(#crystal-core)" />
+      <path d="M60 18 L78 60 L60 102 L42 60 Z" fill="#f3e6c8" opacity="0.35" />
       {Array.from({ length: 9 }).map((_, i) => {
         const a = (Math.PI * 2 * i) / 9 - Math.PI / 2;
-        const x = 60 + Math.cos(a) * 40;
-        const y = 60 + Math.sin(a) * 40;
-        return <circle key={i} cx={x} cy={y} r={i === 0 ? 5 : 3.2} fill={i % 2 ? "#4ec8c0" : "#f3e6c8"} opacity={0.9} />;
+        const x = 60 + Math.cos(a) * 46;
+        const y = 60 + Math.sin(a) * 46;
+        return <circle key={i} cx={x} cy={y} r={i === 0 ? 4.2 : 2.4} fill={i % 2 ? "#4ec8c0" : "#f3e6c8"} className={i % 2 ? "lantern-flicker" : undefined} />;
       })}
-      <circle cx="60" cy="60" r="46" fill="none" stroke="#e8b15a" strokeOpacity="0.45" />
+      <circle cx="60" cy="60" r="50" fill="none" stroke="#e8b15a" strokeOpacity="0.55" />
     </svg>
   );
 }
@@ -365,6 +374,7 @@ function TitleScreen({
         <h1 className="font-display mt-2 text-5xl text-parchment sm:text-7xl">Echoes of the Nine</h1>
         <p className="mt-3 max-w-md text-amber-2">A lantern festival. A clock that strikes the wrong hour. A shrine that knows your name.</p>
         <p className="mt-1 text-sm text-parchment/70">Chapter I — The Crystal Awakening</p>
+        <p className="mt-1 text-xs tracking-[0.22em] text-teal/80 uppercase">A world worth walking before it is explained</p>
         <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
           <MenuButton onClick={onNew}>New Journey</MenuButton>
           {hasSave && <MenuButton onClick={onContinue}>Continue</MenuButton>}
@@ -394,28 +404,41 @@ function VillageBackdrop() {
   return (
     <div className="absolute inset-0" aria-hidden>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#3a2a4a_0%,#140e18_55%,#0c0810_100%)]" />
-      <svg className="absolute inset-0 h-full w-full opacity-80" viewBox="0 0 800 480" preserveAspectRatio="xMidYMax slice">
-        <g fill="#1a120c">
-          <polygon points="0,480 0,300 90,240 160,300 160,480" />
-          <polygon points="150,480 150,280 250,200 340,280 340,480" />
-          <polygon points="500,480 500,260 620,180 740,270 740,480" />
-          <polygon points="700,480 700,310 800,250 800,480" />
-        </g>
-        <g fill="#e8b15a">
-          <rect x="210" y="250" width="10" height="14" />
-          <rect x="270" y="246" width="10" height="14" />
-          <rect x="575" y="230" width="12" height="16" />
-          <rect x="650" y="236" width="10" height="14" />
-        </g>
-        <g fill="#4ec8c0">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <circle key={i} cx={80 + i * 80} cy={48 + (i % 3) * 10} r={i === 4 ? 2.4 : 1.4} />
+      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 800 480" preserveAspectRatio="xMidYMax slice">
+        <g fill="#f3e6c8">
+          {Array.from({ length: 28 }).map((_, i) => (
+            <circle key={i} cx={(i * 67) % 800} cy={18 + (i % 5) * 14} r={i % 7 === 0 ? 1.6 : 0.8} className="lantern-flicker" />
           ))}
         </g>
-        <rect x="360" y="150" width="70" height="200" fill="#24160f" />
-        <circle cx="395" cy="188" r="28" fill="none" stroke="#e8b15a" strokeWidth="3" />
-        <line x1="395" y1="188" x2="395" y2="168" stroke="#f3e6c8" strokeWidth="2" />
-        <line x1="395" y1="188" x2="410" y2="196" stroke="#f3e6c8" strokeWidth="2" />
+        <g fill="#1a120c">
+          <polygon points="0,480 0,280 120,210 210,290 210,480" />
+          <polygon points="160,480 170,250 290,170 400,260 400,480" />
+          <polygon points="470,480 480,230 620,150 760,250 760,480" />
+          <polygon points="700,480 710,290 800,230 800,480" />
+        </g>
+        <g fill="#2a1c16">
+          <polygon points="40,480 70,340 150,360 170,480" />
+          <polygon points="560,480 600,320 700,350 730,480" />
+        </g>
+        <g>
+          <polygon points="70,360 110,300 150,360" fill="#6a4030" />
+          <rect x="82" y="360" width="56" height="70" fill="#3a2418" />
+          <rect x="92" y="378" width="12" height="16" fill="#e8b15a" className="lantern-flicker" />
+          <rect x="118" y="378" width="12" height="16" fill="#f3d7a1" className="lantern-flicker" />
+          <polygon points="600,350 650,290 710,350" fill="#4a3428" />
+          <rect x="616" y="350" width="70" height="80" fill="#3a2418" />
+          <rect x="630" y="368" width="14" height="18" fill="#e8b15a" className="lantern-flicker" />
+          <rect x="658" y="368" width="14" height="18" fill="#4ec8c0" />
+        </g>
+        <rect x="360" y="150" width="70" height="210" fill="#24160f" />
+        <rect x="388" y="128" width="14" height="24" fill="#e8b15a" />
+        <circle cx="395" cy="196" r="28" fill="#1a120e" stroke="#e8b15a" strokeWidth="3" />
+        <line x1="395" y1="196" x2="395" y2="176" stroke="#f3e6c8" strokeWidth="2" />
+        <line x1="395" y1="196" x2="410" y2="204" stroke="#f3e6c8" strokeWidth="2" />
+        <g stroke="#e8b15a" fill="none">
+          <path d="M80 430 Q200 400 320 430" />
+          <path d="M460 430 Q580 400 720 430" />
+        </g>
       </svg>
     </div>
   );
@@ -434,10 +457,10 @@ function MenuButton({
 }) {
   const cls =
     tone === "solid"
-      ? "bg-amber text-ink hover:bg-amber-2"
+      ? "bg-amber text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:bg-amber-2"
       : tone === "danger"
         ? "bg-danger text-ink hover:opacity-90"
-        : "border border-line bg-ink-2/80 text-parchment hover:border-amber";
+        : "border border-line bg-ink-2/80 text-parchment hover:border-amber hover:bg-panel";
   return (
     <button
       type="button"
@@ -462,7 +485,9 @@ function NameScreen({
   onBack: () => void;
 }) {
   return (
-    <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-6 px-5">
+    <div className="relative min-h-screen overflow-hidden">
+      <VillageBackdrop />
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-6 px-5">
       <p className="text-xs tracking-[0.28em] text-teal uppercase">Before the festival</p>
       <h2 className="font-display text-4xl">What do they call you in the Vale?</h2>
       <p className="text-parchment/80">Any name. The clock will mispronounce it anyway. Sixteen letters is plenty.</p>
@@ -492,6 +517,7 @@ function NameScreen({
           </MenuButton>
         </div>
       </form>
+      </div>
     </div>
   );
 }
@@ -1359,13 +1385,14 @@ function Explore({
         </div>
       </header>
       <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
-        <div className="relative overflow-hidden rounded-md border border-line bg-ink-2">
+        <div className={`map-frame relative overflow-hidden rounded-md border border-line bg-ink-2 ${save.sightScene && save.sightSteps > 0 ? "sight-live" : ""}`}>
           <MapCanvas
             mapId={map.id}
             width={map.width}
             height={map.height}
             pos={pos}
             facing={facing}
+            party={save.party}
             hotspots={map.hotspots}
             reduced={save.settings.reducedMotion}
             sight={Boolean(save.sightScene) && save.sightSteps > 0 && (save.sightScene === `sight.${map.id.replace("map.", "")}` || (map.id === "map.lowbell" && save.sightScene === "sight.lowbell") || (map.id === "map.ferry" && save.sightScene === "sight.ferry") || (map.id === "map.hold" && save.sightScene === "sight.hold") || (map.id === "map.highroad" && save.sightScene === "sight.stair"))}
@@ -1374,15 +1401,15 @@ function Explore({
             <Pad onMove={tryStep} onAct={interact} />
           </div>
         </div>
-        <aside className="flex flex-col gap-3 rounded-md border border-line bg-panel p-3">
+        <aside className="region-card flex flex-col gap-3 rounded-md border border-line bg-panel p-3">
           <p className="text-sm text-parchment/80">{map.blurb}</p>
           <PartyStrip save={save} />
           <p className="text-xs text-parchment/60">Move WASD or arrows. E, Enter, or the lantern button speaks, opens, and fights. J journal, I bag, P party.</p>
-          <p className="text-xs text-amber">{save.gold} gold · {save.xp} xp · circle {levelForXp(save.xp)}</p>
+          <p className="gold-chip text-xs text-amber">{save.gold} gold · {save.xp} xp · circle {levelForXp(save.xp)}</p>
           {save.ascensionUnlocked && <p className="text-xs text-teal">Ascension is awake. Battles can be stepped into.</p>}
           {flag(save, "flag.temporal_sight") && (
             <MenuButton tone="ghost" onClick={lookTwice}>
-              Temporal Sight ({save.sightCharges})
+              <span className="sight-mark" aria-hidden /> Temporal Sight ({save.sightCharges})
             </MenuButton>
           )}
           {save.sightScene && save.sightSteps > 0 && (
@@ -1792,13 +1819,22 @@ function Explore({
           {panel === "skiff" && (
             <div className="flex flex-col gap-3 text-sm">
               <p>{SKY_COPY.skiffFly} Two pads. No open sky.</p>
-              <svg viewBox="0 0 320 90" className="w-full rounded-md bg-ink" role="img" aria-label="A route between the Vale roof and the Skyweave berth.">
-                <line x1="36" y1="48" x2="284" y2="48" stroke="#4ec8c0" strokeDasharray="5 4" />
-                <circle cx="36" cy="48" r="6" fill="#e8b15a" />
-                <circle cx="284" cy="48" r="6" fill="#e8b15a" />
-                <text x="16" y="24" fill="#f3e6c8" fontSize="12">Vale</text>
-                <text x="250" y="24" fill="#f3e6c8" fontSize="12">Berth</text>
-                <polygon points="150,40 168,48 150,56 156,48" fill="#f3e6c8" />
+              <svg viewBox="0 0 320 120" className="w-full rounded-md bg-ink" role="img" aria-label="A route between the Vale roof and the Skyweave berth.">
+                <defs>
+                  <linearGradient id="skiff-sky" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3a4a62" />
+                    <stop offset="100%" stopColor="#1a1420" />
+                  </linearGradient>
+                </defs>
+                <rect width="320" height="120" fill="url(#skiff-sky)" />
+                <path d="M0 78 Q80 70 160 78 T320 74" fill="none" stroke="#c8bba8" strokeOpacity="0.45" />
+                <line x1="48" y1="78" x2="272" y2="78" stroke="#4ec8c0" strokeDasharray="6 5" />
+                <circle cx="48" cy="78" r="5" fill="#e8b15a" />
+                <circle cx="272" cy="78" r="5" fill="#e8b15a" />
+                <path d="M132 70 L168 70 L160 86 L140 86 Z" fill="#8a8070" />
+                <path d="M148 70 L156 48 L164 70" fill="#c8bba8" />
+                <text x="28" y="28" fill="#f3e6c8" fontSize="13">Vale roof</text>
+                <text x="228" y="28" fill="#f3e6c8" fontSize="13">Berth</text>
               </svg>
               {SKIFF_DOCKS.map((dock) => (
                 <MenuButton
@@ -2135,6 +2171,7 @@ function MapCanvas({
   height,
   pos,
   facing,
+  party,
   hotspots,
   reduced,
   sight = false,
@@ -2144,11 +2181,19 @@ function MapCanvas({
   height: number;
   pos: { x: number; y: number };
   facing: string;
+  party: string[];
   hotspots: MapHotspot[];
   reduced: boolean;
   sight?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const [tick, setTick] = useState(0);
+  const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (reduced) return;
+    const id = window.setInterval(() => setTick((n) => (n + 1) % 240), 90);
+    return () => window.clearInterval(id);
+  }, [reduced]);
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
@@ -2162,373 +2207,37 @@ function MapCanvas({
     c.style.width = "100%";
     c.style.height = "auto";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    drawMap(ctx, mapId, width, height, sight);
-    for (const h of hotspots) {
-      ctx.fillStyle = h.kind === "battle" ? "#e06a5c" : h.kind === "puzzle" ? "#8b6bb8" : h.kind === "exit" ? "#4ec8c0" : "#e8b15a";
-      ctx.globalAlpha = 0.9;
-      ctx.fillRect(h.x * TILE + 16, h.y * TILE + 8, 16, 22);
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = "#140e18";
-      ctx.font = "10px Source Sans 3, sans-serif";
-      ctx.fillText(h.label.slice(0, 14), h.x * TILE + 2, h.y * TILE + 44);
-    }
-    const px = pos.x * TILE + 24;
-    const py = pos.y * TILE + 28;
-    ctx.fillStyle = "#f3e6c8";
-    ctx.beginPath();
-    ctx.arc(px, py, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#e8b15a";
-    const tip = facing === "n" ? [0, -16] : facing === "s" ? [0, 16] : facing === "w" ? [-16, 0] : [16, 0];
-    ctx.beginPath();
-    ctx.moveTo(px + tip[0], py + tip[1]);
-    ctx.lineTo(px + tip[1] * 0.4, py - tip[0] * 0.4);
-    ctx.lineTo(px - tip[1] * 0.4, py + tip[0] * 0.4);
-    ctx.fill();
-    if (!reduced) {
-      ctx.strokeStyle = "rgba(232,177,90,0.25)";
-      ctx.strokeRect(8, 8, cssW - 16, cssH - 16);
-    }
-  }, [mapId, width, height, pos, facing, hotspots, reduced, sight]);
-  return <canvas ref={ref} className="block w-full" role="img" aria-label={`${MAPS[mapId]?.name ?? "Map"}. You stand on a tile.`} />;
-}
-
-function drawMap(ctx: CanvasRenderingContext2D, mapId: string, w: number, h: number, sight = false) {
-  const sky = ctx.createLinearGradient(0, 0, 0, h * TILE);
-  if (mapId === "map.shrine") {
-    sky.addColorStop(0, "#241830");
-    sky.addColorStop(1, "#120e16");
-  } else if (mapId === "map.woods" || mapId === "map.reach") {
-    sky.addColorStop(0, mapId === "map.reach" ? "#1a2414" : "#142018");
-    sky.addColorStop(1, "#0c140e");
-  } else if (mapId === "map.barrow") {
-    sky.addColorStop(0, "#1a140e");
-    sky.addColorStop(1, "#0c0a08");
-  } else if (mapId === "map.inn" || mapId === "map.smith") {
-    sky.addColorStop(0, "#2a1a16");
-    sky.addColorStop(1, "#140e0c");
-  } else {
-    sky.addColorStop(0, "#2a1c28");
-    sky.addColorStop(1, "#1a1214");
-  }
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, w * TILE, h * TILE);
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (blocked(mapId, x, y)) {
-        drawWall(ctx, mapId, x, y);
-      } else {
-        drawFloor(ctx, mapId, x, y);
-      }
-    }
-  }
-  if (mapId === "map.vale") {
-    drawHouse(ctx, 3, 3, 3, 2, "#6a4030");
-    drawHouse(ctx, 14, 3, 3, 2, "#4a3428");
-    drawClock(ctx, 10, 2);
-    // lanterns
-    for (const [lx, ly] of [[6, 8], [14, 8], [8, 11], [12, 11]] as const) {
-      ctx.fillStyle = "#e8b15a";
-      ctx.beginPath();
-      ctx.arc(lx * TILE + 8, ly * TILE + 10, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  if (mapId === "map.woods") {
-    for (const [tx, ty] of [[4, 3], [6, 8], [15, 3], [17, 8], [10, 2]] as const) {
-      ctx.fillStyle = "#1a2a18";
-      ctx.beginPath();
-      ctx.moveTo(tx * TILE + 24, ty * TILE + 4);
-      ctx.lineTo(tx * TILE + 44, ty * TILE + 40);
-      ctx.lineTo(tx * TILE + 4, ty * TILE + 40);
-      ctx.fill();
-    }
-  }
-  if (mapId === "map.shrine") {
-    ctx.strokeStyle = "#4ec8c0";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(6 * TILE + 6, 2 * TILE + 6, 4 * TILE - 12, 3 * TILE - 12);
-    ctx.lineWidth = 1;
-    ctx.fillStyle = "#8b6bb8";
-    ctx.globalAlpha = 0.35;
-    ctx.beginPath();
-    ctx.arc(8 * TILE + 24, 3 * TILE + 20, 22, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  if (mapId === "map.reach") {
-    for (const [tx, ty] of [[3, 3], [7, 2], [12, 8], [15, 3], [5, 9]] as const) {
-      ctx.fillStyle = "#243018";
-      ctx.beginPath();
-      ctx.moveTo(tx * TILE + 24, ty * TILE);
-      ctx.lineTo(tx * TILE + 46, ty * TILE + 42);
-      ctx.lineTo(tx * TILE + 2, ty * TILE + 42);
-      ctx.fill();
-      ctx.fillStyle = "#6a8f4a";
-      ctx.fillRect(tx * TILE + 20, ty * TILE + 36, 8, 10);
-    }
-  }
-  if (mapId === "map.barrow") {
-    ctx.fillStyle = "#3a2a18";
-    ctx.beginPath();
-    ctx.moveTo(2 * TILE, 4 * TILE);
-    ctx.quadraticCurveTo(4 * TILE, 1 * TILE, 6 * TILE, 4 * TILE);
-    ctx.fill();
-    ctx.fillStyle = "#2a2016";
-    ctx.fillRect(6 * TILE, 2 * TILE, 3 * TILE, 2 * TILE);
-  }
-  if (mapId === "map.inn") {
-    ctx.fillStyle = "#e8b15a";
-    for (const [lx, ly] of [[2, 2], [7, 2], [3, 4]] as const) {
-      ctx.beginPath();
-      ctx.arc(lx * TILE + 16, ly * TILE + 12, 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.fillStyle = "#5a3028";
-    ctx.fillRect(1 * TILE + 8, 2 * TILE + 16, 28, 16);
-  }
-  if (mapId === "map.smith") {
-    ctx.fillStyle = "#6a4030";
-    ctx.fillRect(2 * TILE, 2 * TILE, TILE * 2, 20);
-    ctx.fillStyle = "#e06a5c";
-    ctx.fillRect(3 * TILE, 2 * TILE + 6, 10, 8);
-  }
-  if (mapId === "map.lowbell") {
-    ctx.fillStyle = "#16343c";
-    ctx.fillRect(0, 8 * TILE, w * TILE, 3 * TILE);
-    ctx.strokeStyle = "#8fb8b0";
-    ctx.globalAlpha = 0.45;
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, 8 * TILE + 18 + i * 10);
-      ctx.bezierCurveTo(w * TILE * 0.3, 8 * TILE + 8 + i * 10, w * TILE * 0.6, 8 * TILE + 28 + i * 8, w * TILE, 8 * TILE + 12 + i * 10);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = "#c9a36a";
-    ctx.fillRect(8 * TILE + 18, TILE + 8, 8, 70);
-    ctx.strokeStyle = "#e8b15a";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(8 * TILE + 22, TILE + 22, 14, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgba(243,230,200,0.35)";
-    ctx.beginPath();
-    ctx.arc(5 * TILE + 22, 6 * TILE + 10, 10, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(5 * TILE + 22, 6 * TILE + 20);
-    ctx.lineTo(5 * TILE + 22, 8 * TILE + 8);
-    ctx.stroke();
-    ctx.fillStyle = "#4a3024";
-    ctx.fillRect(3 * TILE, 4 * TILE, 46, 22);
-    ctx.fillStyle = "#e8b15a";
-    ctx.fillRect(3 * TILE + 8, 4 * TILE + 8, 10, 8);
-    ctx.fillStyle = "#6a3030";
-    ctx.fillRect(12 * TILE, 6 * TILE, 46, 28);
-    ctx.fillStyle = "#e06a5c";
-    ctx.beginPath();
-    ctx.arc(12 * TILE + 16, 6 * TILE + 4, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#2a2018";
-    for (const px of [2, 6, 10, 14]) {
-      ctx.fillRect(px * TILE + 8, 8 * TILE - 16, 6, 22);
-    }
-    if (sight) {
-      ctx.strokeStyle = "rgba(78,200,192,0.9)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(5 * TILE + 22, 5 * TILE + 8, 12, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    }
-  }
-  if (mapId === "map.ferry") {
-    ctx.fillStyle = "rgba(16, 40, 48, 0.92)";
-    ctx.fillRect(0, 9 * TILE, w * TILE, 3 * TILE);
-    ctx.fillStyle = "rgba(190, 198, 204, 0.16)";
-    ctx.fillRect(0, TILE, w * TILE, 4 * TILE);
-    ctx.fillStyle = "#3e3428";
-    ctx.fillRect(2 * TILE, 2 * TILE, 3 * TILE, 2 * TILE);
-    ctx.fillStyle = "#6a5840";
-    ctx.fillRect(2 * TILE - 4, 2 * TILE - 10, 3 * TILE + 8, 12);
-    ctx.fillStyle = "#d7c4a3";
-    ctx.fillRect(6 * TILE + 6, 7 * TILE, 30, 24);
-    ctx.fillStyle = "#1a3038";
-    ctx.fillRect(8 * TILE + 18, 9 * TILE, 10, 2 * TILE);
-    ctx.fillStyle = "#2a2018";
-    ctx.fillRect(4 * TILE, 5 * TILE, 18, 28);
-    ctx.fillRect(7 * TILE, 5 * TILE, 18, 28);
-    if (sight) {
-      ctx.strokeStyle = "rgba(78,200,192,0.85)";
-      ctx.strokeRect(8 * TILE + 8, 8 * TILE, 26, 18);
-      ctx.beginPath();
-      ctx.arc(4 * TILE + 28, 7 * TILE, 8, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "#e8b15a";
-      ctx.font = "12px IBM Plex Mono, monospace";
-      ctx.fillText("9  10", 6 * TILE + 8, 7 * TILE + 16);
-    }
-  }
-  if (mapId === "map.hold") {
-    ctx.fillStyle = "rgba(12, 28, 36, 0.85)";
-    ctx.fillRect(TILE, 6 * TILE, 5 * TILE, 3 * TILE);
-    ctx.fillStyle = "#2c261c";
-    ctx.fillRect(5 * TILE + 4, 4 * TILE, 36, 46);
-    ctx.fillStyle = "#3a2418";
-    ctx.fillRect(14 * TILE, 3 * TILE, 2 * TILE, 3 * TILE);
-    ctx.fillStyle = "#102028";
-    for (let i = 0; i < 4; i++) ctx.fillRect(8 * TILE + i * 18, 3 * TILE, 8, 10);
-    if (sight) {
-      ctx.fillStyle = "rgba(78,200,192,0.95)";
-      ctx.font = "12px IBM Plex Mono, monospace";
-      ctx.fillText("flame", 3 * TILE, 3 * TILE + 12);
-      ctx.fillText("tide", 3 * TILE, 3 * TILE + 26);
-      ctx.fillText("stone", 3 * TILE, 3 * TILE + 40);
-    }
-  }
-  if (mapId === "map.highroad") {
-    ctx.strokeStyle = "#8a8070";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(TILE, 4 * TILE + 8);
-    ctx.lineTo(8 * TILE, 2 * TILE + 6);
-    ctx.lineTo(12 * TILE, 3 * TILE);
-    ctx.stroke();
-    ctx.lineWidth = 1;
-    ctx.fillStyle = "#4a4034";
-    ctx.fillRect(10 * TILE, 2 * TILE, 18, 42);
-    if (sight) {
-      ctx.strokeStyle = "rgba(232,177,90,0.85)";
-      ctx.beginPath();
-      ctx.arc(7 * TILE, 2 * TILE + 4, 9, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-  }
-  if (mapId === "map.ridge") {
-    ctx.strokeStyle = "#8a8070";
-    ctx.beginPath();
-    ctx.moveTo(2 * TILE, 8 * TILE);
-    ctx.lineTo(8 * TILE, 5 * TILE);
-    ctx.lineTo(14 * TILE, 6 * TILE);
-    ctx.stroke();
-    ctx.fillStyle = "#6a5a48";
-    ctx.beginPath();
-    ctx.moveTo(3 * TILE, 4 * TILE);
-    ctx.lineTo(4 * TILE + 10, 2 * TILE);
-    ctx.lineTo(5 * TILE + 16, 4 * TILE);
-    ctx.fill();
-    ctx.strokeStyle = "#c8bba8";
-    ctx.beginPath();
-    ctx.arc(4 * TILE + 8, 3 * TILE, 14, 0, Math.PI * 2);
-    ctx.stroke();
-    if (sight) {
-      ctx.strokeStyle = "rgba(78,200,192,0.8)";
-      ctx.beginPath();
-      ctx.moveTo(10 * TILE, 6 * TILE);
-      ctx.lineTo(13 * TILE, 5 * TILE);
-      ctx.stroke();
-    }
-  }
-  if (mapId === "map.glass") {
-    ctx.strokeStyle = "#8b6bb8";
-    ctx.beginPath();
-    ctx.arc(9 * TILE, 2 * TILE, 28, Math.PI, 0);
-    ctx.stroke();
-    ctx.fillStyle = "#2a241c";
-    ctx.fillRect(4 * TILE, 5 * TILE, 28, 36);
-    if (sight) {
-      ctx.fillStyle = "rgba(232,177,90,0.9)";
-      ctx.beginPath();
-      ctx.arc(8 * TILE, 2 * TILE + 8, 10, 0.2, Math.PI - 0.2);
-      ctx.fill();
-      ctx.fillStyle = "#f3e6c8";
-      ctx.beginPath();
-      ctx.arc(10 * TILE, 2 * TILE + 10, 6, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  if (mapId === "map.cave") {
-    ctx.fillStyle = "#14110e";
-    ctx.fillRect(3 * TILE, 2 * TILE, 6 * TILE, 4 * TILE);
-    if (sight) {
-      ctx.fillStyle = "#e8b15a";
-      ctx.fillRect(8 * TILE + 16, 4 * TILE + 12, 8, 8);
-    }
-  }
-  if (mapId === "map.berth") {
-    ctx.strokeStyle = "#c8bba8";
-    ctx.strokeRect(5 * TILE, 3 * TILE, 4 * TILE, 2 * TILE);
-    ctx.fillStyle = "#8a8070";
-    ctx.beginPath();
-    ctx.moveTo(6 * TILE, 4 * TILE);
-    ctx.lineTo(8 * TILE, 3 * TILE);
-    ctx.lineTo(10 * TILE, 4 * TILE);
-    ctx.fill();
-    if (sight) {
-      ctx.strokeStyle = "rgba(232,177,90,0.75)";
-      ctx.beginPath();
-      ctx.moveTo(6 * TILE, 5 * TILE + 8);
-      ctx.lineTo(9 * TILE, 6 * TILE);
-      ctx.stroke();
-    }
-  }
-}
-
-function drawFloor(ctx: CanvasRenderingContext2D, mapId: string, x: number, y: number) {
-  const alt = (x + y) % 2 === 0;
-  const tone =
-    mapId === "map.shrine" ? (alt ? "#3a3044" : "#322838")
-    : mapId === "map.woods" || mapId === "map.reach" ? (alt ? "#243222" : "#1c2a1a")
-    : mapId === "map.barrow" ? (alt ? "#2a2218" : "#221c14")
-    : mapId === "map.inn" || mapId === "map.smith" ? (alt ? "#4a3024" : "#3a261c")
-    : mapId === "map.lowbell" ? (alt ? "#3e3830" : "#343830")
-    : mapId === "map.ferry" ? (alt ? "#3a4038" : "#2e3834")
-    : mapId === "map.hold" ? (alt ? "#1c2428" : "#141c20")
-    : mapId === "map.highroad" ? (alt ? "#4a463c" : "#3e3a32")
-    : mapId === "map.ridge" ? (alt ? "#5a5044" : "#463e34")
-    : mapId === "map.glass" ? (alt ? "#3a3450" : "#2c2840")
-    : mapId === "map.cave" ? (alt ? "#241e18" : "#16120e")
-    : mapId === "map.berth" ? (alt ? "#4a4844" : "#3a3834")
-    : alt ? "#4a3428" : "#3e2c22";
-  ctx.fillStyle = tone;
-  ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
-  ctx.strokeStyle = "rgba(0,0,0,0.18)";
-  ctx.strokeRect(x * TILE + 0.5, y * TILE + 0.5, TILE - 1, TILE - 1);
-}
-
-function drawWall(ctx: CanvasRenderingContext2D, mapId: string, x: number, y: number) {
-  ctx.fillStyle = mapId === "map.shrine" ? "#16121c" : mapId === "map.barrow" ? "#100e0c" : mapId === "map.woods" || mapId === "map.reach" ? "#101810" : "#1a120e";
-  ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
-  ctx.fillStyle = mapId === "map.shrine" ? "#3a3048" : "#2a2018";
-  ctx.fillRect(x * TILE + 6, y * TILE + 8, TILE - 12, TILE - 16);
-}
-
-function drawHouse(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, roof: string) {
-  ctx.fillStyle = "#3a2418";
-  ctx.fillRect(x * TILE, y * TILE + 10, w * TILE, h * TILE - 10);
-  ctx.fillStyle = roof;
-  ctx.beginPath();
-  ctx.moveTo(x * TILE - 6, y * TILE + 14);
-  ctx.lineTo(x * TILE + (w * TILE) / 2, y * TILE - 8);
-  ctx.lineTo((x + w) * TILE + 6, y * TILE + 14);
-  ctx.fill();
-  ctx.fillStyle = "#e8b15a";
-  ctx.fillRect(x * TILE + 16, y * TILE + 28, 12, 16);
-}
-
-function drawClock(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  ctx.fillStyle = "#2a1c16";
-  ctx.fillRect(x * TILE + 10, y * TILE, 28, 46);
-  ctx.strokeStyle = "#e8b15a";
-  ctx.beginPath();
-  ctx.arc(x * TILE + 24, y * TILE + 16, 10, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.fillStyle = "#f3e6c8";
-  ctx.fillRect(x * TILE + 23, y * TILE + 10, 2, 7);
-  ctx.fillRect(x * TILE + 23, y * TILE + 15, 6, 2);
+    paintExploration(ctx, {
+      mapId,
+      width,
+      height,
+      sight,
+      tick,
+      reduced,
+      pos,
+      facing,
+      party,
+      hotspots,
+      hover,
+      blocked: (x, y) => blocked(mapId, x, y),
+    });
+  }, [mapId, width, height, pos, facing, party, hotspots, reduced, sight, tick, hover]);
+  return (
+    <canvas
+      ref={ref}
+      className="block w-full"
+      role="img"
+      aria-label={`${MAPS[mapId]?.name ?? "Map"}. You stand on a tile. Nearby names appear when you stand close or point.`}
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        if (rect.width < 1 || rect.height < 1) return;
+        const x = Math.floor(((e.clientX - rect.left) / rect.width) * width);
+        const y = Math.floor(((e.clientY - rect.top) / rect.height) * height);
+        setHover((prev) => (prev?.x === x && prev?.y === y ? prev : { x, y }));
+      }}
+      onMouseLeave={() => setHover(null)}
+    />
+  );
 }
 
 function Pad({ onMove, onAct }: { onMove: (x: number, y: number) => void; onAct: () => void }) {
@@ -2589,13 +2298,23 @@ function PartyStrip({ save, verbose = false }: { save: SaveGame; verbose?: boole
 }
 
 function Portrait({ hue, name }: { hue: number; name: string }) {
+  const key = name.toLowerCase();
+  const mark = key.includes("mira") ? "book" : key.includes("kael") ? "blade" : key.includes("nessa") ? "leaf" : key.includes("sera") ? "goggles" : "lantern";
   return (
     <span
-      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-amber/40 font-display text-lg text-parchment"
-      style={{ background: `radial-gradient(circle at 35% 30%, hsl(${hue} 55% 48%), hsl(${hue} 30% 16%) 70%)` }}
+      className="portrait inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-amber/50"
+      style={{ background: `radial-gradient(circle at 35% 30%, hsl(${hue} 55% 42%), hsl(${hue} 30% 14%) 72%)` }}
       aria-hidden
     >
-      {name.slice(0, 1)}
+      <svg viewBox="0 0 32 32" className="h-8 w-8">
+        <path d="M8 26 L8 16 Q16 8 24 16 L24 26 Z" fill="#1a120e" />
+        <circle cx="16" cy="13" r="4" fill="#e6c2a0" />
+        {mark === "book" && <rect x="20" y="16" width="6" height="7" fill="#f3e6c8" />}
+        {mark === "blade" && <rect x="22" y="8" width="2" height="12" fill="#d7c4a3" />}
+        {mark === "leaf" && <ellipse cx="23" cy="16" rx="4" ry="2.5" fill="#7d9a62" />}
+        {mark === "goggles" && <rect x="12" y="11" width="8" height="3" fill="none" stroke="#e8b15a" />}
+        {mark === "lantern" && <rect x="21" y="16" width="4" height="5" fill="#e8b15a" />}
+      </svg>
     </span>
   );
 }
@@ -2629,7 +2348,7 @@ function DialogueBox({
   onChoice: (c: { label: string; next: string; flag?: string }) => void;
 }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink-2/95 p-4" role="dialog" aria-label={speaker}>
+    <div className="dialogue-plate fixed inset-x-0 bottom-0 z-40 border-t border-amber/40 bg-ink-2/95 p-4" role="dialog" aria-label={speaker}>
       <div className="mx-auto flex max-w-3xl gap-3">
         <Portrait hue={SPEAKER_HUE[speaker] ?? 36} name={speaker} />
         <div className="min-w-0 flex-1">
@@ -2876,7 +2595,7 @@ function Battle({
         asc.current.z = clamp(asc.current.z + (z / len) * 3.2 * dt, -0.2, 3.4);
         setAscPos({ x: asc.current.x, z: asc.current.z });
       }
-      drawArena(c, enc, asc.current, save.settings.reducedMotion);
+      drawArena(c, enc, asc.current, save.settings.reducedMotion, now);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -3053,7 +2772,7 @@ function Battle({
           </MenuButton>
         )}
       </header>
-      <div className="relative overflow-hidden rounded-md border border-line bg-ink">
+      <div className="battle-stage relative overflow-hidden rounded-md border border-line bg-ink">
         <canvas ref={arena} className="block h-[320px] w-full" />
         {intro && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/75 text-center">
@@ -3287,74 +3006,9 @@ function drawArena(
   enc: EncounterState,
   hero: { x: number; z: number },
   reduced: boolean,
+  now = 0,
 ) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const w = canvas.clientWidth || 640;
-  const h = canvas.clientHeight || 320;
-  if (canvas.width !== Math.floor(w * dpr)) {
-    canvas.width = Math.floor(w * dpr);
-    canvas.height = Math.floor(h * dpr);
-  }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = enc.mode === "ascension" ? "#120c18" : "#1a1214";
-  ctx.fillRect(0, 0, w, h);
-  const cx = w / 2;
-  const cy = h * 0.62;
-  ctx.strokeStyle = enc.mode === "ascension" ? "rgba(78,200,192,0.45)" : "rgba(232,177,90,0.35)";
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, w * 0.36, h * 0.22, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  if (!reduced && enc.mode === "ascension") {
-    ctx.strokeStyle = "rgba(78,200,192,0.15)";
-    for (let i = 1; i <= 3; i++) {
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, w * 0.12 * i, h * 0.07 * i, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-  }
-  const project = (x: number, z: number) => ({
-    px: cx + x * (w * 0.09),
-    py: cy + z * (h * 0.08),
-  });
-  for (const c of enc.combatants) {
-    if (!c.alive && c.side === "enemy") continue;
-    const pos = c.side === "party" && enc.mode === "ascension" && c.id === enc.activeActorId ? hero : c.position;
-    const p = project(pos.x, c.side === "party" && enc.mode !== "ascension" ? 1.6 : pos.z);
-    const allyColor: Record<string, string> = { wanderer: "#f3e6c8", mira: "#7ec8c0", kael: "#d7c4a3", nessa: "#b7d48a" };
-    ctx.fillStyle = c.side === "party" ? (allyColor[c.id] ?? "#f3e6c8") : c.jobId === "enemy.warden" ? "#8b6bb8" : c.jobId === "enemy.cantor" ? "#6a8f4a" : c.jobId === "enemy.briarling" ? "#3d6b32" : c.jobId === "enemy.glowmoth" ? "#e8b15a" : "#4ec8c0";
-    const rad = c.jobId === "enemy.warden" || c.jobId === "enemy.cantor" ? 28 : 16;
-    ctx.beginPath();
-    ctx.arc(p.px, p.py, rad, 0, Math.PI * 2);
-    ctx.fill();
-    const intent = enc.intents.find((i) => i.actorId === c.id);
-    if (intent) {
-      ctx.strokeStyle = intent.abilityId.includes("dirge") || intent.abilityId.includes("rupture") || intent.abilityId.includes("pulse") ? "#e06a5c" : "#e8b15a";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(p.px, p.py, rad + 8, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    }
-    if (c.jobId === "enemy.warden" || c.jobId === "enemy.cantor") {
-      const open = c.jobId === "enemy.cantor" ? c.hp <= c.maxHp * 0.5 : c.statuses.some((s) => s.id === "exposed");
-      ctx.strokeStyle = open ? "#e06a5c" : "#f3e6c8";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    }
-    ctx.fillStyle = "#140e18";
-    ctx.font = "12px Source Sans 3, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(c.name, p.px, p.py + rad + 14);
-    ctx.fillStyle = "#e06a5c";
-    ctx.fillRect(p.px - 20, p.py - rad - 10, 40 * (c.hp / c.maxHp), 4);
-    if (c.id === enc.activeActorId) {
-      ctx.strokeStyle = "#e8b15a";
-      ctx.strokeRect(p.px - rad - 4, p.py - rad - 4, (rad + 4) * 2, (rad + 4) * 2);
-    }
-  }
+  paintArena(canvas, enc, hero, reduced, now);
 }
 
 function Ending({ save, onTitle, onAgain }: { save: SaveGame; onTitle: () => void; onAgain: () => void }) {
