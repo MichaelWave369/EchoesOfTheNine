@@ -17,6 +17,7 @@ import {
   imageReady,
   type Pose,
 } from "./sprites.ts";
+import { festivalBreath } from "./breath.ts";
 
 export const TILE = 48;
 
@@ -227,6 +228,8 @@ export function paintExploration(
     appearance?: string;
     moving?: boolean;
     sightSteps?: number;
+    body?: { x: number; y: number };
+    life?: boolean;
   },
 ) {
   const { mapId, width: w, height: h, sight, tick, reduced, pos, facing, party, hotspots, hover, blocked } = opts;
@@ -264,6 +267,8 @@ export function paintExploration(
       blocked,
       width: w,
       height: h,
+      body: opts.body,
+      life: opts.life !== false,
     });
   } else {
     const trail = party.filter((id) => id !== "wanderer");
@@ -427,6 +432,8 @@ function paintLiving(
     blocked: (x: number, y: number) => boolean;
     width: number;
     height: number;
+    body?: { x: number; y: number };
+    life?: boolean;
   },
 ) {
   const layers: { y: number; draw: () => void }[] = [];
@@ -450,6 +457,16 @@ function paintLiving(
       draw: () => paintPerson(ctx, actor, spot.x * TILE + 24, foot, "s", opts.tick, opts.reduced, 1),
     });
   }
+  const body = opts.body ?? opts.pos;
+  if (opts.mapId === "map.vale") {
+    for (const extra of festivalBreath(opts.tick, opts.reduced || opts.life === false, opts.pos)) {
+      const foot = extra.y * TILE + 40;
+      layers.push({
+        y: foot,
+        draw: () => paintPerson(ctx, extra.who, extra.x * TILE + 24, foot, extra.facing, opts.tick, opts.reduced, 1, "lantern", "idle", extra.moving),
+      });
+    }
+  }
   const back = opts.facing === "n" ? [0, 1] : opts.facing === "s" ? [0, -1] : opts.facing === "e" ? [-1, 0] : [1, 0];
   opts.party
     .filter((id) => id !== "wanderer")
@@ -463,17 +480,17 @@ function paintLiving(
         draw: () => paintPerson(ctx, id, tx * TILE + 24, foot, opts.facing, opts.tick, opts.reduced, 1, "lantern", "idle", opts.moving),
       });
     });
-  const heroFoot = opts.pos.y * TILE + 40;
+  const heroFoot = body.y * TILE + 40;
   layers.push({
     y: heroFoot + 0.1,
     draw: () => {
       if (opts.sight) {
         ctx.save();
         ctx.globalAlpha = 0.38;
-        paintPerson(ctx, "wanderer", opts.pos.x * TILE + 36, heroFoot - 4, opts.facing, opts.tick, true, 1.05, opts.appearance, "idle", false);
+        paintPerson(ctx, "wanderer", body.x * TILE + 36, heroFoot - 4, opts.facing, opts.tick, true, 1.05, opts.appearance, "idle", false);
         ctx.restore();
       }
-      paintPerson(ctx, "wanderer", opts.pos.x * TILE + 24, heroFoot, opts.facing, opts.tick, opts.reduced, 1.05, opts.appearance, "idle", opts.moving);
+      paintPerson(ctx, "wanderer", body.x * TILE + 24, heroFoot, opts.facing, opts.tick, opts.reduced, 1.05, opts.appearance, "idle", opts.moving);
     },
   });
   layers.sort((a, b) => a.y - b.y);
@@ -562,6 +579,14 @@ function paintWater(ctx: CanvasRenderingContext2D, mapId: string, w: number, h: 
     if (mapId === "map.ferry" && !reduced) {
       ctx.fillStyle = "rgba(210,214,216,0.12)";
       ctx.fillRect(0, TILE, w * TILE, 2.4 * TILE);
+    }
+    if (!reduced) {
+      ctx.strokeStyle = "rgba(220,230,230,0.4)";
+      const drift = (tick % 28) - 14;
+      ctx.beginPath();
+      ctx.moveTo(0, band * TILE + 12);
+      ctx.bezierCurveTo(w * TILE * 0.35, band * TILE + drift, w * TILE * 0.7, band * TILE + 20, w * TILE, band * TILE + 8);
+      ctx.stroke();
     }
     return;
   }
@@ -819,6 +844,18 @@ function paintAmbience(ctx: CanvasRenderingContext2D, mapId: string, w: number, 
     }
   }
   if (mapId === "map.vale" && !reduced) {
+    const halos: [number, number][] = [[6.2, 7.6], [11, 3.5], [14.3, 7.3], [8.5, 8.1]];
+    for (let i = 0; i < halos.length; i++) {
+      const [lx, ly] = halos[i]!;
+      const pulse = 0.16 + 0.08 * Math.sin(tick / 5 + i);
+      const g = ctx.createRadialGradient(lx * TILE, ly * TILE, 2, lx * TILE, ly * TILE, 36);
+      g.addColorStop(0, `rgba(232,177,90,${pulse + 0.2})`);
+      g.addColorStop(1, "rgba(232,177,90,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(lx * TILE, ly * TILE, 36, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.fillStyle = "rgba(232,177,90,0.28)";
     for (let i = 0; i < 10; i++) {
       const x = (i * 90 + tick * 2) % (w * TILE);
@@ -837,6 +874,15 @@ function paintAmbience(ctx: CanvasRenderingContext2D, mapId: string, w: number, 
     }
   }
   if ((mapId === "map.ferry" || mapId === "map.hold" || mapId === "map.lowbell") && !reduced) {
+    ctx.strokeStyle = "rgba(200,214,216,0.28)";
+    for (let i = 0; i < 14; i++) {
+      const x = (i * 67 + tick * 7) % (w * TILE);
+      const y = (i * 41 + tick * 9) % (h * TILE);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - 3, y + 9);
+      ctx.stroke();
+    }
     ctx.fillStyle = "rgba(210,220,220,0.14)";
     for (let i = 0; i < 3; i++) {
       const x = ((tick * 1.4 + i * 90) % (w * TILE + 80)) - 40;
@@ -950,6 +996,11 @@ export function paintPerson(
     ctx.ellipse(cx, cy + 2, 10 * scale, 3.5, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+    if (moving && !reduced && pose !== "hurt") {
+      ctx.fillStyle = "rgba(70,52,36,0.45)";
+      ctx.fillRect(cx - 6, cy + 1, 3, 2);
+      ctx.fillRect(cx + 3, cy + 2, 2, 2);
+    }
     blit(ctx, frame.file, frame.col, frame.row, frame.cols, frame.rows, cx - w / 2, cy - h + bob, w, h, frame.filter);
     if (pose === "cast") {
       ctx.save();

@@ -5,9 +5,12 @@ let master: GainNode | null = null;
 let music: GainNode | null = null;
 let sfx: GainNode | null = null;
 let musicTimer: number | null = null;
+let bed: AudioBufferSourceNode | null = null;
 let muted = false;
 let volume = 0.7;
 let reduced = false;
+let quiet = false;
+let lastMode: string | null = null;
 
 function ensure() {
   if (ctx) return;
@@ -35,12 +38,15 @@ export function unlockAudio() {
   if (ctx && ctx.state === "suspended") void ctx.resume();
 }
 
-export function configureAudio(opts: { muted: boolean; volume: number; reducedMotion: boolean }) {
+export function configureAudio(opts: { muted: boolean; volume: number; reducedMotion: boolean; quiet?: boolean }) {
   muted = opts.muted;
   volume = opts.volume;
   reduced = opts.reducedMotion;
+  quiet = Boolean(opts.quiet);
   if (ctx) applyGains();
   if (muted || reduced) stopMusic();
+  else if (quiet) stopAmbience();
+  else if (lastMode && ctx) startAmbience(bedKind(lastMode));
 }
 
 function tone(freq: number, dur: number, type: OscillatorType, gain: number, when = 0, bus: "sfx" | "music" = "sfx") {
@@ -59,11 +65,15 @@ function tone(freq: number, dur: number, type: OscillatorType, gain: number, whe
   osc.stop(t0 + dur + 0.02);
 }
 
-export function playSfx(name: "ui" | "hit" | "heal" | "spell" | "hurt" | "victory" | "clock" | "step" | "warn") {
+export function playSfx(name: "ui" | "hit" | "heal" | "spell" | "hurt" | "victory" | "clock" | "step" | "warn" | "rise") {
   unlockAudio();
   if (muted || reduced) return;
   if (name === "ui") tone(520, 0.08, "triangle", 0.08);
   if (name === "step") tone(180 + Math.random() * 30, 0.05, "sine", 0.03);
+  if (name === "rise") {
+    tone(196, 0.28, "sine", 0.04);
+    tone(294, 0.36, "triangle", 0.03, 0.08);
+  }
   if (name === "hit") {
     tone(140, 0.12, "square", 0.07);
     tone(90, 0.16, "sawtooth", 0.04);
@@ -91,6 +101,61 @@ export function playSfx(name: "ui" | "hit" | "heal" | "spell" | "hurt" | "victor
   }
 }
 
+export type StepKind = "cobble" | "grass" | "wood" | "stone" | "water";
+
+export function playStep(kind: StepKind) {
+  unlockAudio();
+  if (muted || reduced) return;
+  const base = kind === "grass" ? 128 : kind === "wood" ? 236 : kind === "stone" ? 150 : kind === "water" ? 188 : 176;
+  const wave = kind === "wood" || kind === "stone" ? "triangle" : "sine";
+  tone(base + Math.random() * 22, kind === "water" ? 0.07 : 0.045, wave, 0.034);
+}
+
+function stopAmbience() {
+  if (!bed) return;
+  try {
+    bed.stop();
+  } catch {
+    /* already stopped */
+  }
+  bed.disconnect();
+  bed = null;
+}
+
+function bedKind(mode: string): "vale" | "woods" | "shrine" | "mist" | "ridge" | "quiet" {
+  if (mode === "vale" || mode === "inn" || mode === "title") return "vale";
+  if (mode === "woods" || mode === "reach" || mode === "barrow") return "woods";
+  if (mode === "shrine" || mode === "glass") return "shrine";
+  if (mode === "mist" || mode === "lowbell" || mode === "hold") return "mist";
+  if (mode === "ridge" || mode === "highroad" || mode === "cave" || mode === "berth") return "ridge";
+  return "quiet";
+}
+
+function startAmbience(kind: ReturnType<typeof bedKind>) {
+  stopAmbience();
+  if (!ctx || !music || muted || reduced || quiet || kind === "quiet") return;
+  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 1.5), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  let v = 0;
+  for (let i = 0; i < data.length; i++) {
+    v = v * 0.985 + (Math.random() * 2 - 1) * 0.02;
+    data[i] = v;
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  src.loop = true;
+  const filter = ctx.createBiquadFilter();
+  filter.type = kind === "ridge" ? "highpass" : "lowpass";
+  filter.frequency.value = kind === "vale" ? 680 : kind === "woods" ? 420 : kind === "mist" ? 260 : kind === "ridge" ? 900 : 520;
+  const g = ctx.createGain();
+  g.gain.value = 0.03;
+  src.connect(filter);
+  filter.connect(g);
+  g.connect(music);
+  src.start();
+  bed = src;
+}
+
 const MODES: Record<string, number[]> = {
   title: [196, 247, 294, 247, 220, 196, 174, 196],
   vale: [262, 294, 330, 294, 262, 247, 262, 330],
@@ -111,6 +176,7 @@ const MODES: Record<string, number[]> = {
 };
 
 export function startMusic(mode: keyof typeof MODES) {
+  lastMode = mode;
   unlockAudio();
   stopMusic();
   if (muted || reduced || !ctx) return;
@@ -124,6 +190,7 @@ export function startMusic(mode: keyof typeof MODES) {
   };
   tick();
   musicTimer = window.setInterval(tick, 720);
+  if (!quiet) startAmbience(bedKind(mode));
 }
 
 export function stopMusic() {
@@ -131,6 +198,7 @@ export function stopMusic() {
     window.clearInterval(musicTimer);
     musicTimer = null;
   }
+  stopAmbience();
 }
 
 export function resumeAudio() {
