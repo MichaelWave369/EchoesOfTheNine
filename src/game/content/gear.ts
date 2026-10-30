@@ -2,6 +2,7 @@ import type { CombatantState, EquipLoadout, SaveGame } from "../contracts.ts";
 import { CHARACTERS } from "./characters.ts";
 import { beginSight, spellsForJob } from "./crossing.ts";
 import { beginSkySight } from "./skyweave.ts";
+import { beginHourSight } from "./unwritten.ts";
 
 export interface GearDef {
   id: string;
@@ -157,6 +158,75 @@ export const GEAR: Record<string, GearDef> = {
     defense: 1,
     price: 0,
   },
+  "accessory.beside_clasp": {
+    id: "accessory.beside_clasp",
+    name: "Beside Clasp",
+    blurb: "Mira set the early strike next to the tenth. The first line was not sanded down.",
+    slot: "accessory",
+    defense: 1,
+    mp: 3,
+    price: 0,
+  },
+  "accessory.closed_page": {
+    id: "accessory.closed_page",
+    name: "Closed Page",
+    blurb: "The book shut. The tenth stayed the one you wrote. The early line did not get a chair.",
+    slot: "accessory",
+    defense: 1,
+    speed: 1,
+    price: 0,
+  },
+  "accessory.quiet_clasp": {
+    id: "accessory.quiet_clasp",
+    name: "Quiet Clasp",
+    blurb: "Mira left the early line unwritten too. The blank was a choice, made twice.",
+    slot: "accessory",
+    mp: 5,
+    price: 0,
+  },
+  "accessory.late_ink": {
+    id: "accessory.late_ink",
+    name: "Late Ink",
+    blurb: "Written now, not then. The blank was for the tenth. This hour is a different rudeness.",
+    slot: "accessory",
+    speed: 2,
+    mp: 2,
+    price: 0,
+  },
+  "accessory.early_lash": {
+    id: "accessory.early_lash",
+    name: "Early Lash",
+    blurb: "The knot that predates the morning, cut out and kept where Sera can see the honesty.",
+    slot: "accessory",
+    speed: 2,
+    price: 0,
+  },
+  "accessory.second_stay": {
+    id: "accessory.second_stay",
+    name: "Second Stay",
+    blurb: "A slower lash over a line that was already finished. Careful, and not a denial.",
+    slot: "accessory",
+    defense: 2,
+    price: 0,
+  },
+  "accessory.blank_thread": {
+    id: "accessory.blank_thread",
+    name: "Blank Thread",
+    blurb: "From an hour that was asked to stay unwritten. It keeps a page blank on purpose.",
+    slot: "accessory",
+    defense: 2,
+    mp: 3,
+    price: 0,
+  },
+  "accessory.hour_thread": {
+    id: "accessory.hour_thread",
+    name: "Hour Thread",
+    blurb: "From a page that was finished. It is quicker. It does not explain the shadow.",
+    slot: "accessory",
+    attack: 2,
+    speed: 1,
+    price: 0,
+  },
 };
 
 export const SHOP_IDS = ["weapon.glass_needle", "weapon.oath_blade", "armor.lantern_coat", "armor.pine_mail", "item.lantern_salve", "item.dew_vial"] as const;
@@ -167,6 +237,7 @@ export const GROWTH: Record<string, { hp: number; mp: number; attack: number; de
   kael: { hp: 10, mp: 2, attack: 2, defense: 2 },
   nessa: { hp: 7, mp: 4, attack: 2, defense: 1 },
   sera: { hp: 6, mp: 4, attack: 2, defense: 1 },
+  iri: { hp: 6, mp: 5, attack: 1, defense: 1 },
 };
 
 export function levelForXp(xp: number): number {
@@ -299,7 +370,7 @@ export function useSight(save: SaveGame): { ok: true; save: SaveGame; text: stri
   if (save.sightCharges <= 0) return { ok: false, reason: "The sight is tired. Sleep at the Ninth Wick." };
   const next = structuredClone(save);
   next.sightCharges -= 1;
-  const scene = beginSight(next) ?? beginSkySight(next);
+  const scene = beginSight(next) ?? beginSkySight(next) ?? beginHourSight(next);
   if (scene) return { ok: true, save: scene.save, text: scene.text };
   let text = "For a breath the room is half a step ahead of itself. Nothing hidden keeps.";
   const note = (id: string, line: string) => {

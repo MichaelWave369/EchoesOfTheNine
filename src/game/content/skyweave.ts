@@ -10,14 +10,28 @@ import { syncLevels } from "./gear.ts";
 
 export const ACTIVE_CAP = 4;
 
-export const BENCH_MAPS = ["map.vale", "map.inn", "map.smith", "map.ferry", "map.highroad", "map.ridge", "map.berth"] as const;
+export const BENCH_MAPS = ["map.vale", "map.inn", "map.smith", "map.ferry", "map.highroad", "map.ridge", "map.berth", "map.margin"] as const;
 
 export const SKIFF_DOCKS = [
   { id: "dock.vale", name: "Lantern Vale", mapId: "map.vale", spawn: "sky_pad", blurb: "The north roof of the square." },
   { id: "dock.berth", name: "Skyweave berth", mapId: "map.berth", spawn: "pad", blurb: "The pad above the mist." },
 ] as const;
 
-export type SkiffDockId = (typeof SKIFF_DOCKS)[number]["id"];
+export const MARGIN_DOCK = {
+  id: "dock.margin",
+  name: "The Margin",
+  mapId: "map.margin",
+  spawn: "pad",
+  blurb: "A stair under an hour that left before you did.",
+} as const;
+
+export type SkiffDockId = (typeof SKIFF_DOCKS)[number]["id"] | typeof MARGIN_DOCK.id;
+
+/** Two pads, plus the Margin only after its flag. Open sky is never in this list. */
+export function routeDocks(save: SaveGame) {
+  if (save.flags["flag.margin_dock"]) return [...SKIFF_DOCKS, MARGIN_DOCK];
+  return [...SKIFF_DOCKS];
+}
 
 export const SKY_COPY = {
   seraAsk:
@@ -64,8 +78,10 @@ export const SKY_COPY = {
   stayLearned: "Stayline. One beat where the air holds still. It is a technique, not an answer.",
   skiffShut: "The First Stay is a hull with opinions. It will not cast off until the berth is truly open.",
   skiffHere: "You are already on that pad.",
-  skiffAway: "The skiff only leaves from a pad: the Vale roof, or the Skyweave berth.",
+  skiffAway: "The skiff only leaves from a pad: the Vale roof, the Skyweave berth, or a third pad you have earned.",
   skiffFly: "The First Stay takes the route. It is a line between two pads, not a country, and not an open sky.",
+  skiffMargin: "The Margin is not a pad yet. Four written hours open it. The sky stays shut.",
+  skiffThird: "The First Stay takes the third pad. It is still a line, not a country, and the sky stays shut.",
   hullEarly: "The shadow under the hull is not ready to be noticed. Fly once.",
   hullNote: "A second shadow leaves before the craft does. It is recorded. It is not explained.",
   hullAgain: "The early shadow is already in the book.",
@@ -167,7 +183,6 @@ export function benchToggle(
   if (save.encounter) return { ok: false, reason: SKY_COPY.benchFight };
   if (!BENCH_MAPS.includes(save.mapId as (typeof BENCH_MAPS)[number])) return { ok: false, reason: SKY_COPY.benchPlace };
   if (id === "wanderer") return { ok: false, reason: SKY_COPY.benchYou };
-  if (id === "iri") return { ok: false, reason: SKY_COPY.benchWho };
   const reserve = save.reserve ?? [];
   const inParty = save.party.includes(id);
   const inReserve = reserve.includes(id);
@@ -332,18 +347,21 @@ export function flyTo(
 ): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
   if (save.encounter) return { ok: false, reason: SKY_COPY.benchFight };
   if (!save.flags["flag.skiff_ready"]) return { ok: false, reason: SKY_COPY.skiffShut };
-  const dock = SKIFF_DOCKS.find((d) => d.id === dockId);
+  const pads = [...SKIFF_DOCKS, MARGIN_DOCK];
+  if (!pads.some((d) => d.mapId === save.mapId)) return { ok: false, reason: SKY_COPY.skiffAway };
+  if (dockId === "dock.margin" && !save.flags["flag.margin_dock"]) return { ok: false, reason: SKY_COPY.skiffMargin };
+  const dock = routeDocks(save).find((d) => d.id === dockId);
   if (!dock) return { ok: false, reason: SKY_COPY.skiffAway };
-  if (!SKIFF_DOCKS.some((d) => d.mapId === save.mapId)) return { ok: false, reason: SKY_COPY.skiffAway };
   if (save.mapId === dock.mapId) return { ok: false, reason: SKY_COPY.skiffHere };
   let next = setFlag(save, "flag.flown");
   next.mapId = dock.mapId;
   next.spawnId = dock.spawn;
   next.encounter = null;
+  const text = dock.id === "dock.margin" || save.mapId === "map.margin" ? SKY_COPY.skiffThird : SKY_COPY.skiffFly;
   if (!next.discoveries.includes("disc.skiff")) next.discoveries.push("disc.skiff");
   if (!next.discoveries.includes(`place.${dock.mapId}`)) next.discoveries.push(`place.${dock.mapId}`);
-  if (!next.journal.includes(SKY_COPY.skiffFly)) next.journal.push(SKY_COPY.skiffFly);
-  return { ok: true, save: next, text: SKY_COPY.skiffFly };
+  if (!next.journal.includes(text)) next.journal.push(text);
+  return { ok: true, save: next, text };
 }
 
 export function noteHullShadow(

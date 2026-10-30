@@ -30,6 +30,7 @@ Type stays Fraunces for titles and Source Sans 3 for the road. Buttons stay larg
 | Early Glass | Observatory violet and a dome. |
 | Wind Pocket | Dark stone, a shine only after Sight. |
 | Skyweave berth | A pad and a small hull. |
+| The Margin | Paper violet, two pages, a well, a stair that is not a country. |
 
 Open sky stays a locked mark. Do not paint it as a place you can walk.
 
@@ -55,7 +56,9 @@ Labels on the map appear when you stand next to a thing, point at it, or it is a
 
 Temporal Sight is a teal wash, a ghost a step off the wanderer, a slow scan, and a step count. It shows. It does not solve. Reduced motion holds the wash still and skips the ghost bob.
 
-The First Stay is a route between two pads. The hull is a drawn skiff. Departure waits a short beat, then the chronicle still calls `flyTo`. Reduced motion casts off at once. Do not draw an open skybox.
+The First Stay is a route. Two pads until the hour is written, then a third: the Margin. The hull is a drawn skiff. Departure waits a short beat, then the chronicle still calls `flyTo`. Reduced motion casts off at once. Do not draw an open skybox.
+
+The Margin reuses the ridge stone family and the glass music bed. Landmarks are two pages, a well, and a shine that appears only after the echo is traced. Iri on the road uses the wanderer walk sheet turned violet. She is not a new villager stamp. Inklings and the Hourkeeper are drawn in the battle, not borrowed from the galekeeper. Their plate is `battle-margin.jpg`. The picture still does not open the well.
 
 Future chapters should reuse the same palette, the same frame language, and the same rule: the picture may glow, and the chronicle still decides what happened.
 

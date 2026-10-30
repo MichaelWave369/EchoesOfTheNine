@@ -27,6 +27,7 @@ export const ART_FILES = [
   "battle-shrine.jpg",
   "battle-mist.jpg",
   "battle-ridge.jpg",
+  "battle-margin.jpg",
   "battle-ascent.jpg",
 ] as const;
 
@@ -116,6 +117,11 @@ export function frameFor(
   if (who.includes("kael")) return { file: "kael.png", cols: 4, rows: 4, col, row, filter };
   if (who.includes("nessa")) return { file: "nessa.png", cols: 4, rows: 4, col, row, filter };
   if (who.includes("sera")) return { file: "sera.png", cols: 4, rows: 4, col, row, filter };
+  if (who.includes("iri")) {
+    const veil = "hue-rotate(250deg) saturate(1.35) brightness(1.05)";
+    const merged = filter === "none" ? veil : `${veil} ${filter}`;
+    return { file: "wanderer.png", cols: 4, rows: 4, col, row, filter: merged };
+  }
   if (who.includes("wanderer")) {
     const dye = appearanceFilter(appearance);
     const merged = dye === "none" ? filter : filter === "none" ? dye : `${dye} ${filter}`;
@@ -158,6 +164,8 @@ export function foeFrame(jobId: string): { col: number; row: number; big: boolea
   if (jobId === "enemy.cantor") return { col: 0, row: 1, big: true };
   if (jobId === "enemy.briarling") return { col: 1, row: 1, big: false };
   if (jobId === "enemy.galekeeper") return { col: 2, row: 1, big: true };
+  if (jobId === "enemy.hourkeeper") return { col: 2, row: 1, big: true };
+  if (jobId === "enemy.inkling") return { col: 1, row: 0, big: false };
   if (jobId === "enemy.gustling") return { col: 1, row: 2, big: false };
   if (jobId === "enemy.mistling") return { col: 0, row: 2, big: false };
   if (jobId === "enemy.ferryman") return { col: 2, row: 2, big: true };
@@ -186,6 +194,7 @@ export function hotspotActor(id: string): string | null {
   if (id.includes("wren")) return "wren";
   if (id.includes("ada")) return "ada";
   if (id.includes("orrin")) return "orrin";
+  if (id.includes("iri")) return "iri";
   return null;
 }
 
@@ -207,7 +216,7 @@ export function groundKind(mapId: string, x: number, y: number, path: boolean, t
   if (mapId === "map.woods" || mapId === "map.reach") return path ? (j > 0.66 ? 1 : 2) : j > 0.55 ? 4 : 3;
   if (mapId === "map.barrow" || mapId === "map.cave") return j > 0.7 ? 7 : 2;
   if (mapId === "map.shrine" || mapId === "map.glass") return j > 0.78 ? 7 : 6;
-  if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth") return j > 0.74 ? 1 : 7;
+  if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth" || mapId === "map.margin") return j > 0.74 ? 1 : 7;
   if (mapId === "map.lowbell" || mapId === "map.ferry" || mapId === "map.hold") return path ? (j > 0.6 ? 1 : 7) : j > 0.5 ? 2 : 7;
   return path ? (j > 0.5 ? 1 : 2) : j > 0.5 ? 4 : 3;
 }
@@ -224,6 +233,7 @@ export function battleArt(encounterId: string, ascension: boolean): string {
   if (encounterId === "enc.warden") return "battle-shrine.jpg";
   if (encounterId === "enc.ferryman" || encounterId === "enc.crossing" || encounterId === "enc.vault") return "battle-mist.jpg";
   if (encounterId === "enc.galekeeper" || encounterId === "enc.gust") return "battle-ridge.jpg";
+  if (encounterId === "enc.hourkeeper" || encounterId === "enc.ink") return "battle-margin.jpg";
   return "battle-vale.jpg";
 }
 
@@ -234,7 +244,8 @@ export function elementOf(abilityId?: string): { tone: ElementTone; color: strin
   const id = abilityId ?? "";
   if (/ember|solar|fire/.test(id)) return { tone: "fire", color: "#e07a3a" };
   if (/tide|wake|river|mist|dew/.test(id)) return { tone: "water", color: "#4ec8c0" };
-  if (/gust|gale|crosswind|wind/.test(id)) return { tone: "wind", color: "#d7e4f2" };
+  if (/gust|gale|crosswind|wind|bell_hour/.test(id)) return { tone: "wind", color: "#d7e4f2" };
+  if (/ink|seam|folded|shadow/.test(id)) return { tone: "arcane", color: "#8b6bb8" };
   if (/mend|heal|salve|resin|hymn/.test(id)) return { tone: "life", color: "#8fce6a" };
   if (/strike|oath|knife|lash|cut/.test(id)) return { tone: "steel", color: "#f3e6c8" };
   return { tone: "arcane", color: "#c8b0e8" };
