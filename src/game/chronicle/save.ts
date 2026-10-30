@@ -215,6 +215,25 @@ function journalLine(id: string): string {
     "flag.solar_kiln": "The kiln asked Ember to become noon. Solar Flare answered.",
     "flag.solar_scorch": "A fallen guardian left a vein hot enough for Solar Flare.",
     "flag.memory_from_mira": "Mira taught Memory Tide from a written strike and a sleeping guardian.",
+    "flag.oath_path": "Glasspine remembers Pell's walk in a second order.",
+    "flag.oath_vale": "The Vale well remembers the other order of the same promise.",
+    "flag.oath_held": "Kael kept the words of the oath. Pell's first walk stays.",
+    "flag.oath_served": "Kael put the living person inside the promise. Pell's first walk stays.",
+    "flag.oath_done": "The second order of the oath is answered.",
+    "flag.spring_stone": "Nessa's stone is wet out of season.",
+    "flag.spring_lowbell": "Lowbell's channel is running uphill.",
+    "flag.met_lark": "Lark bottles water dated for tomorrow. She does not press the channel.",
+    "flag.spring_dry": "The dry order of the channel is set from the walk.",
+    "flag.spring_wet": "The wet order of the channel is set from the other view.",
+    "flag.spring_carry": "Nessa let the older water keep working.",
+    "flag.spring_channel": "Nessa gave the channel to the verse already arriving.",
+    "flag.spring_done": "The spring has been answered. The first rhyme stays.",
+    "flag.seam_legacy": "From the walk, the spring mouth shows the oath.",
+    "flag.seam_spring": "From the other view, the spring mouth shows the verse.",
+    "flag.seam_set": "The mouth holds both orders. It did not need every companion.",
+    "flag.veilstep_earned": "Iri can walk an ally off a telegraph. The art is hers.",
+    "flag.veilstep_sheathed": "Veilstep stays on Iri's side of the veil.",
+    "flag.veil_heard": "A thread through the veil was heard. Iri was not recruited by it.",
   };
   return lines[id] ?? `Noted: ${id.replace("flag.", "").replaceAll("_", " ")}`;
 }
@@ -242,6 +261,9 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.mira_hour") return flag(save, "flag.mira_hour_done");
     if (q.id === "quest.sera_hour") return flag(save, "flag.sera_hour_done");
     if (q.id === "quest.iri") return flag(save, "flag.iri_joined") || flag(save, "flag.iri_veil");
+    if (q.id === "quest.oath") return flag(save, "flag.oath_done");
+    if (q.id === "quest.spring") return flag(save, "flag.spring_done");
+    if (q.id === "quest.seam") return flag(save, "flag.seam_set");
     return false;
   };
   const visible = (q: QuestNode) => {
@@ -266,6 +288,9 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.mira_hour") return flag(save, "flag.unwritten_open") && flag(save, "flag.mira_joined");
     if (q.id === "quest.sera_hour") return flag(save, "flag.unwritten_open") && flag(save, "flag.sera_joined");
     if (q.id === "quest.iri") return flag(save, "flag.iri_met") || flag(save, "flag.margin_dock");
+    if (q.id === "quest.oath") return flag(save, "flag.flown") && (flag(save, "flag.kael_law") || flag(save, "flag.kael_people"));
+    if (q.id === "quest.spring") return flag(save, "flag.flown") && (flag(save, "flag.nessa_spring") || flag(save, "flag.nessa_verse"));
+    if (q.id === "quest.seam") return flag(save, "flag.oath_done") && flag(save, "flag.spring_done");
     return false;
   };
   for (const q of save.quests) {

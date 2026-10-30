@@ -62,7 +62,7 @@ export const JOB_KITS: {
   id: string;
   name: string;
   who: string;
-  bearer: "wanderer" | "mira" | "kael" | "nessa" | "sera" | null;
+  bearer: "wanderer" | "mira" | "kael" | "nessa" | "sera" | "iri" | null;
   requires: string;
   arts: string[];
   kit: string[];
@@ -108,8 +108,8 @@ export const JOB_KITS: {
     who: "Kael",
     bearer: "kael",
     requires: "He joins on the Glasspine path.",
-    arts: ["atk.oathcut", "spell.stoneguard", "act.defend", "act.dodge"],
-    kit: ["Oathcut", "Stoneguard", "Defend", "Sidestep"],
+    arts: ["atk.oathcut", "spell.stoneguard", "spell.oathgate", "spell.namedguard", "act.defend", "act.dodge"],
+    kit: ["Oathcut", "Stoneguard", "Oathgate, if the words stay", "Named Guard, if the person is put inside", "Defend", "Sidestep"],
     synergy: "The oath blade hits harder when Kael is the one holding it.",
     playable: true,
   },
@@ -119,8 +119,8 @@ export const JOB_KITS: {
     who: "Nessa",
     bearer: "nessa",
     requires: "She joins in the Reach. Shear is hers from the first step.",
-    arts: ["atk.strike", "spell.shear", "act.defend", "act.dodge"],
-    kit: ["Strike", "Shear", "Defend", "Sidestep"],
+    arts: ["atk.strike", "spell.shear", "spell.springmemory", "act.defend", "act.dodge"],
+    kit: ["Strike", "Shear", "Spring Memory, once the channel is answered", "Defend", "Sidestep"],
     synergy: "A spared Cantor's reed loop sits one step quicker on a spellblade.",
     playable: true,
   },
@@ -144,6 +144,17 @@ export const JOB_KITS: {
     arts: ["atk.strike", "spell.gust", "atk.stayline", "spell.crosswind"],
     kit: ["Strike", "Gust", "Stayline, once earned", "Crosswind, once earned"],
     synergy: "A gale hook in Sera's hand hits harder. It does not refresh a breath.",
+    playable: true,
+  },
+  {
+    id: "job.veilwalker",
+    name: "Veilwalker",
+    who: "Iri",
+    bearer: "iri",
+    requires: "Hers alone, after the hour. Not a trade you can put on. Veilstep is earned in her company, or kept on her side of the veil.",
+    arts: ["atk.strike", "spell.seam", "spell.veilstep", "act.defend", "act.dodge"],
+    kit: ["Strike", "Seam", "Veilstep, once earned", "Defend", "Sidestep"],
+    synergy: "The art walks someone off a telegraph. It does not become yours.",
     playable: true,
   },
   {

@@ -924,6 +924,23 @@ function paintAmbience(ctx: CanvasRenderingContext2D, mapId: string, w: number, 
       ctx.fillRect(x, y, 3, 2);
     }
   }
+  if (mapId === "map.woods") {
+    ctx.strokeStyle = "rgba(232,220,200,0.35)";
+    ctx.beginPath();
+    ctx.moveTo(9 * TILE + 8, 8 * TILE + 20);
+    ctx.lineTo(9 * TILE + 22, 8 * TILE + 8);
+    ctx.moveTo(9 * TILE + 18, 8 * TILE + 22);
+    ctx.lineTo(9 * TILE + 32, 8 * TILE + 6);
+    ctx.stroke();
+  }
+  if (mapId === "map.lowbell") {
+    ctx.strokeStyle = "rgba(78,200,192,0.45)";
+    ctx.beginPath();
+    ctx.moveTo(12 * TILE + 8, 8 * TILE);
+    ctx.lineTo(11 * TILE + 10, 6 * TILE + 8);
+    ctx.lineTo(10 * TILE + 16, 5 * TILE + 6);
+    ctx.stroke();
+  }
   if ((mapId === "map.ferry" || mapId === "map.hold" || mapId === "map.lowbell") && !reduced) {
     ctx.strokeStyle = "rgba(200,214,216,0.28)";
     for (let i = 0; i < 14; i++) {

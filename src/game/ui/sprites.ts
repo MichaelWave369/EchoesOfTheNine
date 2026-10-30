@@ -122,6 +122,9 @@ export function frameFor(
     const merged = filter === "none" ? veil : `${veil} ${filter}`;
     return { file: "wanderer.png", cols: 4, rows: 4, col, row, filter: merged };
   }
+  if (who.includes("lark")) {
+    return { file: "villagers.png", cols: 3, rows: 3, col: 2, row: 1, filter: "hue-rotate(78deg) saturate(1.2)" };
+  }
   if (who.includes("wanderer")) {
     const dye = appearanceFilter(appearance);
     const merged = dye === "none" ? filter : filter === "none" ? dye : `${dye} ${filter}`;
@@ -191,6 +194,7 @@ export function hotspotActor(id: string): string | null {
   if (id.includes("hale")) return "hale";
   if (id.includes("tamsin")) return "tamsin";
   if (id.includes("pell")) return "pell";
+  if (id.includes("lark")) return "lark";
   if (id.includes("wren")) return "wren";
   if (id.includes("ada")) return "ada";
   if (id.includes("orrin")) return "orrin";
@@ -243,11 +247,11 @@ export type ElementTone = "fire" | "water" | "wind" | "life" | "steel" | "arcane
 export function elementOf(abilityId?: string): { tone: ElementTone; color: string } {
   const id = abilityId ?? "";
   if (/ember|solar|fire/.test(id)) return { tone: "fire", color: "#e07a3a" };
-  if (/tide|wake|river|mist|dew/.test(id)) return { tone: "water", color: "#4ec8c0" };
+  if (/tide|wake|river|mist|dew|spring/.test(id)) return { tone: "water", color: "#4ec8c0" };
   if (/gust|gale|crosswind|wind|bell_hour/.test(id)) return { tone: "wind", color: "#d7e4f2" };
-  if (/ink|seam|folded|shadow/.test(id)) return { tone: "arcane", color: "#8b6bb8" };
+  if (/ink|seam|folded|shadow|veil/.test(id)) return { tone: "arcane", color: "#8b6bb8" };
   if (/mend|heal|salve|resin|hymn/.test(id)) return { tone: "life", color: "#8fce6a" };
-  if (/strike|oath|knife|lash|cut/.test(id)) return { tone: "steel", color: "#f3e6c8" };
+  if (/strike|oath|namedguard|knife|lash|cut/.test(id)) return { tone: "steel", color: "#f3e6c8" };
   return { tone: "arcane", color: "#c8b0e8" };
 }
 

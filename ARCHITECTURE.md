@@ -19,6 +19,7 @@ proposeAction → validate → resolveDeterministically → emitEvents → rende
 | `src/game/content/crossing.ts` | Mistwater rules: job change, Sight overlay, hold plate, Double Wake, companion instinct. Instincts are not actions. |
 | `src/game/content/skyweave.ts` | Ridge rules: Sera's choice, the four-person line, formations, the lens, Stayline, Crosswind, the skiff. Two pads, plus the Margin when `routeDocks` says the hour earned it. |
 | `src/game/content/unwritten.ts` | The Unwritten Hour: four clues, the Margin readings, Sight compare and trace, Mira's and Sera's later pages, Iri's walk or veil. No damage math. |
+| `src/game/content/hours.ts` | Optional after the flight: Kael's second oath, Nessa's spring, the hearth and the veil thread, and the Lowbell mouth. No damage math. |
 | `src/game/chronicle/save.ts` | Save version 1, schema 4, migration from schema 1, 2, and 3, flags, quest refresh, bonds, import/export, idempotent rewards, level sync. `localStorage` only. |
 | `src/game/content/gear.ts` | Equipment, shop buy, rest, level curve, spell ranks copied in at battle start, Temporal Sight charges, Elementalist unlock. |
 | `src/game/ui/art.ts` | Presentation only: region colors, landmarks, sprites, Sight wash, battle plates and staging. No rules. |

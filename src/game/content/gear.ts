@@ -1,6 +1,7 @@
 import type { CombatantState, EquipLoadout, SaveGame } from "../contracts.ts";
 import { CHARACTERS } from "./characters.ts";
 import { beginSight, spellsForJob } from "./crossing.ts";
+import { beginHoursSight } from "./hours.ts";
 import { beginSkySight } from "./skyweave.ts";
 import { beginHourSight } from "./unwritten.ts";
 
@@ -370,7 +371,7 @@ export function useSight(save: SaveGame): { ok: true; save: SaveGame; text: stri
   if (save.sightCharges <= 0) return { ok: false, reason: "The sight is tired. Sleep at the Ninth Wick." };
   const next = structuredClone(save);
   next.sightCharges -= 1;
-  const scene = beginSight(next) ?? beginSkySight(next) ?? beginHourSight(next);
+  const scene = beginHoursSight(next) ?? beginSight(next) ?? beginSkySight(next) ?? beginHourSight(next);
   if (scene) return { ok: true, save: scene.save, text: scene.text };
   let text = "For a breath the room is half a step ahead of itself. Nothing hidden keeps.";
   const note = (id: string, line: string) => {
