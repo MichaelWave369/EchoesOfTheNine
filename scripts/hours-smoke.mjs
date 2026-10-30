@@ -9,7 +9,7 @@ import { mkdirSync } from "node:fs";
 import { chromium } from "playwright";
 
 const url = process.env.GAME_SMOKE_URL || "http://127.0.0.1:4173/EchoesOfTheNine/";
-const dir = process.env.GAME_SMOKE_OUT || "/workspace/screenshots";
+const dir = process.env.GAME_SMOKE_OUT || "screenshots";
 mkdirSync(dir, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });
