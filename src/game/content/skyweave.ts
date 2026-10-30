@@ -10,7 +10,7 @@ import { syncLevels } from "./gear.ts";
 
 export const ACTIVE_CAP = 4;
 
-export const BENCH_MAPS = ["map.vale", "map.inn", "map.smith", "map.ferry", "map.highroad", "map.ridge", "map.berth", "map.margin"] as const;
+export const BENCH_MAPS = ["map.vale", "map.inn", "map.smith", "map.ferry", "map.highroad", "map.ridge", "map.berth", "map.margin", "map.deck", "map.cinder"] as const;
 
 export const SKIFF_DOCKS = [
   { id: "dock.vale", name: "Lantern Vale", mapId: "map.vale", spawn: "sky_pad", blurb: "The north roof of the square." },
@@ -86,7 +86,7 @@ export const SKY_COPY = {
   hullNote: "A second shadow leaves before the craft does. It is recorded. It is not explained.",
   hullAgain: "The early shadow is already in the book.",
   benchFight: "Not while a fight is open. A bench does not copy a pack or a breath.",
-  benchPlace: "The line changes where the road is quiet: the Vale, the Wick, Bram's, the station, the high gate, the ridge, or the berth.",
+  benchPlace: "The line changes where the road is quiet: the Vale, the Wick, Bram's, the station, the high gate, the ridge, the berth, the First Stay's deck, or Cinderwatch.",
   benchYou: "You are the road. You do not wait on the rig.",
   benchWho: "They are not walking with you.",
   benchFull: "Four is the line. Send someone to the rig first.",

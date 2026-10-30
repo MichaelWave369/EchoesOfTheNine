@@ -520,6 +520,30 @@ export const ABILITIES: Record<string, Ability> = {
     gate: "public",
     blurb: "Iri walks an ally off the telegraph. The seam does not say what is behind it. It is not a coat.",
   },
+  "enemy.cinder_rake": {
+    id: "enemy.cinder_rake",
+    version: 1,
+    name: "Cinder Rake",
+    kind: "attack",
+    school: "flame",
+    cost: { mp: 0, cooldownTicks: 0 },
+    targeting: "one_enemy",
+    effects: [{ kind: "elemental_damage", power: 16, element: "flame" }],
+    gate: "public",
+    blurb: "Ash on one of you. Tide bites it. Sidestep or brace.",
+  },
+  "enemy.downdraft": {
+    id: "enemy.downdraft",
+    version: 1,
+    name: "Downdraft",
+    kind: "spell",
+    school: "wind",
+    cost: { mp: 0, cooldownTicks: 3 },
+    targeting: "all_enemies",
+    effects: [{ kind: "elemental_damage", power: 13, element: "wind" }],
+    gate: "public",
+    blurb: "The draft hits everyone. Defend. A sidestep will not cover the party. Stone bites this wind.",
+  },
 };
 
 export function ability(id: string): Ability {

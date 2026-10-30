@@ -31,8 +31,11 @@ Type stays Fraunces for titles and Source Sans 3 for the road. Buttons stay larg
 | Wind Pocket | Dark stone, a shine only after Sight. |
 | Skyweave berth | A pad and a small hull. |
 | The Margin | Paper violet, two pages, a well, a stair that is not a country. |
+| First Stay deck | Wood, a wheel, a chart. The country is outside. |
+| Cinderwatch | Ash and cold blue. Not the Vale's lanterns and not the ridge's rope. |
+| The cold stair | A short dark stair and one ember nick. |
 
-Open sky stays a locked mark. Do not paint it as a place you can walk.
+The walked atlas mark called open sky stays locked. Do not paint it as a place you can walk. The Sky Atlas is a separate screen: the First Stay over a bounded chart, with clouds and terrain under the hull. A and Left are west on that chart. Reduced motion snaps the hull and holds the clouds still.
 
 ## How to extend it
 
