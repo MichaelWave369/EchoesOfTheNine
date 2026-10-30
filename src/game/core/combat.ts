@@ -144,6 +144,18 @@ function rewardFor(state: EncounterState, mercy: boolean): RewardGrant {
       unique: true,
     };
   }
+  if (state.encounterId === "enc.hourkeeper") {
+    return {
+      id: mercy ? "reward.hour.mercy" : "reward.hour.defeat",
+      gold: mercy ? 54 : 76,
+      xp: mercy ? 84 : 98,
+      items: mercy ? [{ itemId: "accessory.blank_thread", qty: 1 }] : [{ itemId: "accessory.hour_thread", qty: 1 }],
+      flags: mercy
+        ? ["flag.hour_spared", "flag.hour_complete"]
+        : ["flag.hour_ended", "flag.hour_complete"],
+      unique: true,
+    };
+  }
   if (state.encounterId === "enc.festival") {
     return {
       id: "reward.festival",
@@ -354,6 +366,20 @@ function chooseEnemyIntent(state: EncounterState, actor: CombatantState): Intent
       abilityId === "enemy.lantern_wisp"
         ? "Lantern Wisp — flame. Tide bites this one. Fire slides off."
         : "A smaller spark. Still flame.";
+  } else if (actor.jobId === "enemy.hourkeeper") {
+    if ((actor.phase ?? 1) >= 2 && (actor.cooldowns["enemy.folded_hour"] ?? 0) === 0) {
+      abilityId = "enemy.folded_hour";
+      telegraph = "Folded Hour — both pages hit everyone. Defend. Tide bites the ink. Stone bites the bell.";
+    } else if (state.turnIndex % 2 === 0) {
+      abilityId = "enemy.ink_script";
+      telegraph = "Ink Script — shadow on one of you. Tide bites it. Sidestep or brace.";
+    } else {
+      abilityId = "enemy.bell_hour";
+      telegraph = "Bell Hour — wind on one of you. Stone bites it. Sidestep or brace.";
+    }
+  } else if (actor.jobId === "enemy.inkling") {
+    abilityId = "enemy.ink_script";
+    telegraph = "A short line of ink. Tide bites it. Sidestep or brace.";
   } else if (actor.jobId === "enemy.warden") {
     const phase = actor.phase ?? 1;
     if (phase >= 2 && hasStatus(actor, "exposed")) {
@@ -525,6 +551,10 @@ function applyEffects(
         if (target.hp > 0 && target.jobId === "enemy.galekeeper" && target.hp <= target.maxHp * 0.5 && (target.phase ?? 1) < 2) {
           target.phase = 2;
           raiseAheadGusts(state);
+        }
+        if (target.hp > 0 && target.jobId === "enemy.hourkeeper" && target.hp <= target.maxHp * 0.5 && (target.phase ?? 1) < 2) {
+          target.phase = 2;
+          push(state, { kind: "status", text: "The hour folds. Both pages are in the room." });
         }
         if (target.hp === 0) {
           target.alive = false;
@@ -717,6 +747,8 @@ export interface MercyRules {
   doubleDeparture?: boolean;
   /** Galekeeper mercy opens if the two noons were read, the glass was seen, or Sera lashed the safer stay. */
   skyAsked?: boolean;
+  /** Hourkeeper mercy opens if the Vale contradiction was kept, or the Warden was spared. */
+  hourAsked?: boolean;
 }
 
 export function tryMercy(state: EncounterState, rules?: MercyRules): ActionResult {
@@ -809,6 +841,36 @@ export function tryMercy(state: EncounterState, rules?: MercyRules): ActionResul
       targetId: gale.id,
       text: "You ask which noon it is keeping. The gale sits on the half-span. The early wind does not finish.",
     });
+    grantReward(next, true);
+    return { ok: true, state: next };
+  }
+  if (state.encounterId === "enc.hourkeeper") {
+    const keeper = state.combatants.find((c) => c.jobId === "enemy.hourkeeper" && c.alive);
+    if (!keeper) return { ok: false, reason: "The hour is already quiet.", state };
+    if (keeper.hp > keeper.maxHp * 0.42) {
+      return { ok: false, reason: "The hour is still too loud. Bring it under half and a little more, or finish the page.", state };
+    }
+    if (!rules?.hourAsked && !rules?.wardenSpared) {
+      return {
+        ok: false,
+        reason: "It will not sit for a single hour from hands that ended a guardian. You can still finish the page.",
+        state,
+      };
+    }
+    const next = clone(state);
+    for (const foe of next.combatants) {
+      if (foe.side === "enemy" && foe.alive) {
+        foe.alive = false;
+        foe.hp = 0;
+      }
+    }
+    next.outcome = "mercy";
+    next.phase = "mercy";
+    next.activeActorId = null;
+    const text = rules?.wardenSpared
+      ? "You ask it to leave the hour unwritten, the way you once asked a guardian to sleep. It sits."
+      : "You kept both hours, even after a guardian fell. You ask this one to sit. It does. The contradiction stays.";
+    push(next, { kind: "mercy", targetId: keeper.id, text });
     grantReward(next, true);
     return { ok: true, state: next };
   }

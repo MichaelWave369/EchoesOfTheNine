@@ -200,6 +200,17 @@ const LOOKS: Record<string, RegionLook> = {
     water: null,
     note: "A pad and a hull.",
   },
+  "map.margin": {
+    skyTop: "#2a1840",
+    skyBottom: "#140e18",
+    ground: ["#3a2c38", "#2a2030"],
+    path: "#5a4838",
+    wall: "#120c14",
+    wallCap: "#3a2848",
+    accent: "#c8b8e8",
+    water: "#1a2830",
+    note: "Paper, ink, and a well under a dock.",
+  },
 };
 
 export function regionLook(mapId: string): RegionLook {
@@ -413,6 +424,13 @@ function stampsFor(mapId: string): Stamp[] {
   }
   if (mapId === "map.cave") return [{ file: "lantern.png", x: 8.4, y: 4.4, w: 28, h: 50 }];
   if (mapId === "map.berth") return [{ file: "skiff.png", x: 7.2, y: 4.6, w: 150, h: 90 }];
+  if (mapId === "map.margin") {
+    return [
+      { file: "skiff.png", x: 2.2, y: 3.2, w: 120, h: 72 },
+      { file: "lantern.png", x: 9, y: 3.2, w: 28, h: 50 },
+      { file: "lantern.png", x: 11.2, y: 4.4, w: 28, h: 50 },
+    ];
+  }
   return [];
 }
 
@@ -553,6 +571,7 @@ function isPath(mapId: string, x: number, y: number, w: number, h: number): bool
   if (mapId === "map.woods" || mapId === "map.shrine") return y === Math.floor(h / 2) || x === Math.floor(w / 2);
   if (mapId === "map.lowbell" || mapId === "map.ferry") return y === 6 || y === 7;
   if (mapId === "map.ridge" || mapId === "map.highroad") return y === 4 || y === 5 || y === 6;
+  if (mapId === "map.margin") return y === 5;
   return x === Math.floor(w / 2);
 }
 
@@ -829,11 +848,43 @@ function paintLandmarks(ctx: CanvasRenderingContext2D, mapId: string, tick: numb
       ctx.stroke();
     }
   }
+  if (mapId === "map.margin") {
+    ctx.strokeStyle = "#3a2848";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(7 * TILE, 3 * TILE, 5 * TILE, 3 * TILE);
+    ctx.lineWidth = 1;
+    ctx.fillStyle = sight ? "rgba(232,177,90,0.35)" : "#e7d7c2";
+    ctx.fillRect(8 * TILE + 8, 4 * TILE, 28, 36);
+    ctx.strokeStyle = sight ? "#4ec8c0" : "#c8b8e8";
+    ctx.setLineDash(sight ? [4, 3] : []);
+    ctx.strokeRect(10 * TILE + 4, 4 * TILE + 6, 28, 36);
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "#8b6bb8";
+    ctx.beginPath();
+    ctx.arc(12 * TILE + 8, 6 * TILE, 16, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "#1a2830";
+    ctx.beginPath();
+    ctx.arc(12 * TILE + 8, 6 * TILE, 8, 0, Math.PI * 2);
+    ctx.fill();
+    if (sight) {
+      ctx.strokeStyle = "rgba(78,200,192,0.8)";
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(3 * TILE, 5 * TILE);
+      ctx.lineTo(8 * TILE, 4 * TILE);
+      ctx.lineTo(11 * TILE, 5 * TILE);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = `rgba(232,177,90,${glow})`;
+      ctx.fillRect(11 * TILE + 18, 5 * TILE + 8, 7, 7);
+    }
+  }
 }
 
 function paintAmbience(ctx: CanvasRenderingContext2D, mapId: string, w: number, h: number, tick: number, reduced: boolean) {
   if (reduced) return;
-  if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth") {
+  if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth" || mapId === "map.margin") {
     ctx.strokeStyle = "rgba(232,220,200,0.25)";
     for (let i = 0; i < 5; i++) {
       const y = 20 + i * 28 + ((tick * 2 + i * 10) % 18);
@@ -1477,6 +1528,7 @@ function battleBackdrop(id: string, asc: boolean): { top: string; bottom: string
   if (id === "enc.cantor") return { top: "#1a2414", bottom: "#0c100c", ground: "rgba(106,143,74,0.28)" };
   if (id === "enc.ferryman" || id === "enc.crossing" || id === "enc.vault") return { top: "#142028", bottom: "#0c1418", ground: "rgba(16,40,48,0.45)" };
   if (id === "enc.galekeeper" || id === "enc.gust") return { top: "#2a3a52", bottom: "#141820", ground: "rgba(90,80,68,0.4)" };
+  if (id === "enc.hourkeeper" || id === "enc.ink") return { top: "#24182e", bottom: "#120e16", ground: "rgba(70,50,60,0.45)" };
   if (id === "enc.woods" || id === "enc.thicket") return { top: "#142018", bottom: "#0c140e", ground: "rgba(36,50,34,0.55)" };
   return { top: "#2a1c28", bottom: "#140e14", ground: "rgba(74,52,40,0.5)" };
 }
@@ -1500,6 +1552,36 @@ function battlePose(enc: EncounterLike, c: CombatantLike, reduced: boolean, tick
 const foeBorn = new Map<string, number>();
 
 function paintFoe(ctx: CanvasRenderingContext2D, c: CombatantLike, x: number, y: number, tick: number, reduced: boolean, pose: Pose = "idle") {
+  if (c.jobId === "enemy.hourkeeper" || c.jobId === "enemy.inkling") {
+    const bob = reduced ? 0 : Math.sin(tick / 6 + x) * 2;
+    ctx.save();
+    ctx.translate(x, y + bob);
+    if (c.jobId === "enemy.hourkeeper") {
+      ctx.fillStyle = "rgba(42,24,64,0.9)";
+      ctx.fillRect(-14, -48, 22, 46);
+      ctx.fillStyle = "rgba(232,177,90,0.55)";
+      ctx.fillRect(-6, -56, 22, 46);
+      ctx.strokeStyle = "#c8b8e8";
+      ctx.strokeRect(-14, -48, 22, 46);
+      ctx.strokeRect(-6, -56, 22, 46);
+      ctx.fillStyle = "#4ec8c0";
+      ctx.fillRect(-4, -30, 4, 10);
+      ctx.fillStyle = "#e8b15a";
+      ctx.fillRect(6, -36, 4, 10);
+    } else {
+      ctx.fillStyle = "#1a1028";
+      ctx.beginPath();
+      ctx.ellipse(0, -10, 12, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#8b6bb8";
+      ctx.beginPath();
+      ctx.moveTo(8, -14);
+      ctx.lineTo(16, -28);
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
   const spec = foeFrame(c.jobId);
   if (!foeBorn.has(c.id)) foeBorn.set(c.id, tick);
   const age = tick - (foeBorn.get(c.id) ?? tick);

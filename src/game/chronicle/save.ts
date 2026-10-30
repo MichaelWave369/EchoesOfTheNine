@@ -174,6 +174,31 @@ function journalLine(id: string): string {
     "flag.skiff_ready": "The First Stay can take the route between two pads.",
     "flag.flown": "The First Stay flew a route. It did not open the sky.",
     "flag.hull_shadow": "A second shadow left the hull before the craft. It is not explained.",
+    "flag.unwritten_open": "The berth ledger disagrees with the departure. The hour is open.",
+    "flag.clue_vale": "The Vale's hour is written. Both, or one. The other is not erased.",
+    "flag.hour_both": "You kept both hours at the clock.",
+    "flag.hour_nine": "You kept nine and nine. The thinner ten is still in the room.",
+    "flag.hour_ten": "You kept the thinner ten. The face is still nine and nine.",
+    "flag.clue_lowbell": "Lowbell's margin finished before you reached the stair.",
+    "flag.clue_mist": "Mistwater's window has two stamps. You wrote them without picking a kinder boat.",
+    "flag.clue_ridge": "The berth's early shadow is written. It is not explained.",
+    "flag.margin_dock": "The First Stay has a third pad. The sky stays shut.",
+    "flag.margin_page": "From the walk, the Margin's page says you departed before you cast off.",
+    "flag.margin_echo": "From the other view, the Margin's page is blank and already finished.",
+    "flag.sight_hour_vale": "Sight: two sets of hands share the clock. Neither writes the margin.",
+    "flag.sight_margin": "Sight: two pages occupy one desk. Neither turns itself.",
+    "flag.hour_glint": "An echo along the Margin desk admitted a shine. It did not jump into a hand.",
+    "flag.got_hour_glint": "A loose hour, pocketed. It keeps a shine, not a noon.",
+    "flag.hour_compared": "You compared two versions of a room. The comparison did not press a page.",
+    "flag.echo_traced": "You followed an echo. It did not solve anything.",
+    "flag.mira_hour_done": "Mira answered the line that arrived before the flight. The first choice stays.",
+    "flag.sera_hour_done": "Sera answered the knot that predates her morning. The splice or the stay stays.",
+    "flag.iri_met": "Iri, the Veilwalker, is keeping the seam. She has not explained it.",
+    "flag.iri_joined": "Iri walks with you. Veilwalker is her work, not a coat.",
+    "flag.iri_veil": "Iri kept the veil. She is in the chronicle, and not in the four.",
+    "flag.hour_spared": "The Hourkeeper sat. The page stays blank on purpose.",
+    "flag.hour_ended": "The Hourkeeper's page was finished.",
+    "flag.hour_complete": "The Unwritten Hour is kept.",
     "flag.cleared.enc.thicket": "The briars remember losing.",
     "flag.mira_record": "Mira wrote the tenth strike in the margin.",
     "flag.mira_blank": "Mira left the parish page blank, and will remember it anyway.",
@@ -213,6 +238,10 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.ridge") return flag(save, "flag.sera_joined");
     if (q.id === "quest.glass") return flag(save, "flag.sky_split");
     if (q.id === "quest.skiff") return flag(save, "flag.flown");
+    if (q.id === "quest.unwritten") return flag(save, "flag.hour_complete");
+    if (q.id === "quest.mira_hour") return flag(save, "flag.mira_hour_done");
+    if (q.id === "quest.sera_hour") return flag(save, "flag.sera_hour_done");
+    if (q.id === "quest.iri") return flag(save, "flag.iri_joined") || flag(save, "flag.iri_veil");
     return false;
   };
   const visible = (q: QuestNode) => {
@@ -233,6 +262,10 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.ridge") return flag(save, "flag.ferry_complete");
     if (q.id === "quest.glass") return flag(save, "flag.sera_joined");
     if (q.id === "quest.skiff") return flag(save, "flag.ridge_complete");
+    if (q.id === "quest.unwritten") return flag(save, "flag.flown");
+    if (q.id === "quest.mira_hour") return flag(save, "flag.unwritten_open") && flag(save, "flag.mira_joined");
+    if (q.id === "quest.sera_hour") return flag(save, "flag.unwritten_open") && flag(save, "flag.sera_joined");
+    if (q.id === "quest.iri") return flag(save, "flag.iri_met") || flag(save, "flag.margin_dock");
     return false;
   };
   for (const q of save.quests) {
@@ -290,6 +323,8 @@ export function applyReward(
   if (reward.flags.includes("flag.cantor_defeated")) rememberChoice(next, "cantor", "defeated");
   if (reward.flags.includes("flag.gale_spared")) rememberChoice(next, "gale", "spared");
   if (reward.flags.includes("flag.gale_defeated")) rememberChoice(next, "gale", "defeated");
+  if (reward.flags.includes("flag.hour_spared")) rememberChoice(next, "hour", "spared");
+  if (reward.flags.includes("flag.hour_ended")) rememberChoice(next, "hour", "ended");
   if (reward.flags.includes("flag.cleared.enc.thicket")) next = setFlag(next, "flag.thicket_cleared");
   syncLevels(next);
   return next;
@@ -354,6 +389,17 @@ export function migrateSave(parsed: SaveGame): SaveGame {
   }
   next.reserve = next.reserve.filter((id) => !next.party.includes(id));
   next.formation = next.formation === "wide" ? "wide" : "line";
+  if (next.flags["flag.iri_joined"]) {
+    if (!next.roster.iri) next.roster.iri = makeCombatant("iri", { position: { x: 1.4, z: 2.2 } });
+    next.knownSpells.iri = next.knownSpells.iri?.length ? next.knownSpells.iri : ["spell.seam"];
+    if (!next.equipment.iri) next.equipment.iri = {};
+    next.bonds.iri = next.bonds.iri ?? 1;
+    const seated = next.party.includes("iri") || next.reserve.includes("iri");
+    if (!seated) {
+      if (next.party.length < 4) next.party.push("iri");
+      else next.reserve.push("iri");
+    }
+  }
   next.wardenOutcome = next.wardenOutcome ?? "none";
   if (next.flags["flag.warden_spared"]) next.wardenOutcome = "spared";
   if (next.flags["flag.warden_defeated"]) next.wardenOutcome = "defeated";

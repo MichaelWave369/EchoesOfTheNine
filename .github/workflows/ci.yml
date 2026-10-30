@@ -16,7 +16,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - name: Game tests
-        run: node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/ui/art.test.ts src/game/ui/sprites.test.ts
+        run: node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/core/unwritten.test.ts src/game/ui/art.test.ts src/game/ui/sprites.test.ts
       - name: Production build
         run: npm run build
         env:

@@ -36,6 +36,7 @@ export const ATLAS: AtlasPlace[] = [
   { id: "map.glass", name: "Early Glass", blurb: "An observatory that finishes noon before the sun does.", x: 640, y: 18, requires: "flag.sera_joined", spawn: "door" },
   { id: "map.cave", name: "Wind Pocket", blurb: "A cave that keeps a shine until you have looked twice.", x: 600, y: 78, requires: "flag.ferry_complete", spawn: "mouth" },
   { id: "map.berth", name: "Skyweave berth", blurb: "A pad, a hull, and a route that is not an open sky.", x: 720, y: 48, requires: "flag.ridge_complete", spawn: "pad" },
+  { id: "map.margin", name: "The Margin", blurb: "A third pad, under an hour that left early. Not an open sky.", x: 760, y: 120, requires: "flag.margin_dock", spawn: "pad" },
   { id: "map.sky", name: "Open sky", blurb: "Past the route the air does not offer a country. Not this chapter.", x: 800, y: 200, locked: true, spawn: "" },
 ];
 
@@ -52,6 +53,7 @@ export const ATLAS_ROADS: { from: string; to: string; future?: boolean }[] = [
   { from: "map.ridge", to: "map.glass" },
   { from: "map.ridge", to: "map.cave" },
   { from: "map.ridge", to: "map.berth" },
+  { from: "map.berth", to: "map.margin" },
   { from: "map.ferry", to: "map.sky", future: true },
   { from: "map.berth", to: "map.sky", future: true },
 ];
@@ -376,5 +378,8 @@ export function windupAdvice(abilityId: string): string {
   if (abilityId === "enemy.lantern_wisp" || abilityId === "enemy.spark_tap") return "Flame. Tide bites a lantern. Fire slides off.";
   if (abilityId === "enemy.early_gale") return "Early Gale hits everyone. Defend. Sidestep will not cover the party. Stone bites this wind.";
   if (abilityId === "enemy.gust_lash") return "Wind, with a wrist. Sidestep or brace. Stone bites it.";
+  if (abilityId === "enemy.ink_script") return "Ink Script. Shadow on one of you. Tide bites it. Sidestep or brace.";
+  if (abilityId === "enemy.bell_hour") return "Bell Hour. Wind on one of you. Stone bites it. Sidestep or brace.";
+  if (abilityId === "enemy.folded_hour") return "Folded Hour hits everyone. Defend. Tide bites the ink. Sidestep will not cover the party.";
   return "A short windup. Sidestep, brace, or answer.";
 }

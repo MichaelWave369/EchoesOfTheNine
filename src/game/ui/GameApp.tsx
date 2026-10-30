@@ -40,7 +40,6 @@ import {
 } from "../content/crossing.ts";
 import {
   SKY_COPY,
-  SKIFF_DOCKS,
   benchToggle,
   chooseSera,
   flyTo,
@@ -56,8 +55,31 @@ import {
   talkSera,
   tryDome,
   tryLearnCrosswind,
+  routeDocks,
   wrenSky,
 } from "../content/skyweave.ts";
+import {
+  HOUR_COPY,
+  chooseIri,
+  chooseMiraHour,
+  chooseSeraHour,
+  compareHours,
+  hourObjective,
+  journalBrief,
+  keepValeHours,
+  meetIri,
+  miraHourOffer,
+  openUnwritten,
+  readMargin,
+  seraHourOffer,
+  takeHourGlint,
+  traceHourEcho,
+  tryHourDoor,
+  tryMarginStair,
+  valeHourOffer,
+  writeLowbellMargin,
+  writeMistWindow,
+} from "../content/unwritten.ts";
 import {
   applyReward,
   bumpBond,
@@ -98,6 +120,7 @@ function musicFor(mapId: string): "vale" | "woods" | "shrine" | "reach" | "barro
   if (mapId === "map.glass") return "glass";
   if (mapId === "map.cave") return "cave";
   if (mapId === "map.berth") return "berth";
+  if (mapId === "map.margin") return "glass";
   if (mapId === "map.inn" || mapId === "map.smith") return "inn";
   return "vale";
 }
@@ -117,6 +140,7 @@ const SPEAKER_HUE: Record<string, number> = {
   Wren: 80,
   Sera: 48,
   Ada: 16,
+  Iri: 280,
   Orrin: 200,
   You: 38,
 };
@@ -620,7 +644,7 @@ function Explore({
         push("A warm pebble comes loose under the clock. It keeps pace with you.");
         return;
       }
-      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch", "npc.hale", "npc.wren", "sign.timetable", "sign.pier", "sign.faded", "sign.wake", "sign.board", "door.berth", "npc.sera", "npc.ada", "npc.orrin", "sign.bridge", "sign.salt", "sign.skiff", "sign.cross", "door.dome", "door.gale"].includes(spot.id);
+      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch", "npc.hale", "npc.wren", "sign.timetable", "sign.pier", "sign.faded", "sign.wake", "sign.board", "door.berth", "npc.sera", "npc.ada", "npc.orrin", "sign.bridge", "sign.salt", "sign.skiff", "sign.cross", "door.dome", "door.gale", "sign.ledger", "sign.hourbook", "sign.hourbell", "sign.hourmist", "door.stair", "sign.page", "sign.echo", "sign.glint", "door.hour", "npc.iri"].includes(spot.id);
       if (!special) {
         const key =
           spot.id === "npc.voss"
@@ -639,7 +663,7 @@ function Explore({
       }
     }
     if (spot.id === "npc.shelf") {
-      if (!save.party.includes("mira")) {
+      if (!save.party.includes("mira") && !(save.reserve ?? []).includes("mira")) {
         push("The parish shelf is Mira's. She is not here to argue with a blank page.");
         return;
       }
@@ -657,6 +681,29 @@ function Explore({
             },
           ],
           index: "shelf.ask",
+        });
+        return;
+      }
+      const hour = miraHourOffer(save);
+      if (hour.ok && hour.ask) {
+        setDialogue({
+          nodes: [
+            {
+              id: "shelf.hour",
+              speaker: "Mira",
+              text: hour.text,
+              choices: hour.record
+                ? [
+                    { label: "Set it beside the tenth.", next: "shelf.done", flag: "choice.shelfhour.beside" },
+                    { label: "Close the book. The tenth is enough.", next: "shelf.done", flag: "choice.shelfhour.close" },
+                  ]
+                : [
+                    { label: "Leave this one unwritten too.", next: "shelf.done", flag: "choice.shelfhour.quiet" },
+                    { label: "Write it now.", next: "shelf.done", flag: "choice.shelfhour.late" },
+                  ],
+            },
+          ],
+          index: "shelf.hour",
         });
         return;
       }
@@ -753,9 +800,28 @@ function Explore({
     }
     if (spot.id === "npc.sera") {
       if (save.flags["flag.sera_joined"]) {
+        const offer = seraHourOffer(save);
+        if (offer.ok && offer.ask) {
+          setDialogue({
+            nodes: [
+              {
+                id: "sera.hour",
+                speaker: "Sera",
+                text: offer.text,
+                choices: [
+                  { label: "Cut the early line out.", next: "sera.done", flag: "choice.serahour.cut" },
+                  { label: "Lash a second stay over it.", next: "sera.done", flag: "choice.serahour.lash" },
+                ],
+              },
+            ],
+            index: "sera.hour",
+          });
+          return;
+        }
         const scene = talkSera(save);
         if (scene.save !== save) commit(scene.save);
-        setDialogue({ nodes: [{ id: "sera.back", speaker: "Sera", text: scene.text }], index: "sera.back" });
+        const extra = flag(save, "flag.sera_hour_done") ? ` ${HOUR_COPY.seraKept}` : "";
+        setDialogue({ nodes: [{ id: "sera.back", speaker: "Sera", text: scene.text + extra }], index: "sera.back" });
         return;
       }
       setDialogue({
@@ -802,6 +868,129 @@ function Explore({
         return;
       }
       setPanel("skiff");
+      return;
+    }
+    if (spot.id === "sign.ledger") {
+      const opened = openUnwritten(save);
+      if (!opened.ok) {
+        push(opened.reason);
+        return;
+      }
+      commit(opened.save);
+      push(opened.text);
+      return;
+    }
+    if (spot.id === "sign.hourbook") {
+      const offer = valeHourOffer(save);
+      if (!offer.ok) {
+        push(offer.reason);
+        return;
+      }
+      if (!offer.ask) {
+        push(offer.text);
+        return;
+      }
+      setDialogue({
+        nodes: [
+          {
+            id: "hour.ask",
+            speaker: "The Nine-Nine Clock",
+            text: offer.text,
+            choices: [
+              { label: "Keep both hours.", next: "hour.done", flag: "choice.hour.both" },
+              { label: "Keep nine and nine.", next: "hour.done", flag: "choice.hour.nine" },
+              { label: "Keep the thinner ten.", next: "hour.done", flag: "choice.hour.ten" },
+            ],
+          },
+        ],
+        index: "hour.ask",
+      });
+      return;
+    }
+    if (spot.id === "sign.hourbell") {
+      const written = writeLowbellMargin(save);
+      if (written.ok) commit(written.save);
+      push(written.ok ? written.text : written.reason);
+      return;
+    }
+    if (spot.id === "sign.hourmist") {
+      const written = writeMistWindow(save);
+      if (written.ok) commit(written.save);
+      push(written.ok ? written.text : written.reason);
+      return;
+    }
+    if (spot.id === "door.stair") {
+      const door = tryMarginStair(save);
+      if (!door.ok) {
+        push(door.reason);
+        return;
+      }
+      setPos({ x: 8, y: 5 });
+      setFacing("e");
+      push(door.text);
+      return;
+    }
+    if (spot.id === "sign.page") {
+      const read = readMargin(save, "page");
+      if (read.ok) commit(read.save);
+      push(read.ok ? read.text : read.reason);
+      return;
+    }
+    if (spot.id === "sign.echo") {
+      const read = readMargin(save, "echo");
+      if (read.ok) commit(read.save);
+      push(read.ok ? read.text : read.reason);
+      return;
+    }
+    if (spot.id === "sign.glint") {
+      const taken = takeHourGlint(save);
+      if (taken.ok) commit(taken.save);
+      push(taken.ok ? taken.text : taken.reason);
+      return;
+    }
+    if (spot.id === "door.hour") {
+      const door = tryHourDoor(save);
+      if (!door.ok) {
+        push(door.reason);
+        return;
+      }
+      setPos({ x: 15, y: 5 });
+      setFacing("e");
+      push(door.text);
+      return;
+    }
+    if (spot.id === "npc.iri") {
+      if (save.choiceLog.some((c) => c.id === "choice.iri")) {
+        push(flag(save, "flag.iri_veil") ? HOUR_COPY.iriKeptVeil : HOUR_COPY.iriKeptWalk);
+        return;
+      }
+      if (flag(save, "flag.hour_complete")) {
+        const met = meetIri(save);
+        const text = met.ok ? `${met.text} ${HOUR_COPY.iriAsk}` : HOUR_COPY.iriAsk;
+        if (met.ok && met.save !== save) commit(met.save);
+        setDialogue({
+          nodes: [
+            {
+              id: "iri.ask",
+              speaker: "Iri",
+              text,
+              choices: [
+                { label: "Walk with me.", next: "iri.done", flag: "choice.iri.walk" },
+                { label: "Keep the veil.", next: "iri.done", flag: "choice.iri.veil" },
+              ],
+            },
+          ],
+          index: "iri.ask",
+        });
+        return;
+      }
+      const met = meetIri(save);
+      if (!met.ok) {
+        push(met.reason);
+        return;
+      }
+      commit(met.save);
+      setDialogue({ nodes: [{ id: "iri.meet", speaker: "Iri", text: met.text }], index: "iri.meet" });
       return;
     }
     if (spot.id === "sign.cross") {
@@ -1052,6 +1241,26 @@ function Explore({
         onBattle(makeEncounter(save, "enc.galekeeper"));
         return;
       }
+      if (spot.id === "battle.ink") {
+        if (flag(save, "flag.cleared.enc.ink")) {
+          push(HOUR_COPY.fightInk);
+          return;
+        }
+        onBattle(makeEncounter(save, "enc.ink"));
+        return;
+      }
+      if (spot.id === "battle.hour") {
+        if (flag(save, "flag.hour_complete")) {
+          push(HOUR_COPY.fightHour);
+          return;
+        }
+        if (!flag(save, "flag.margin_page") || !flag(save, "flag.margin_echo")) {
+          push(HOUR_COPY.doorShut);
+          return;
+        }
+        onBattle(makeEncounter(save, "enc.hourkeeper"));
+        return;
+      }
     }
     if (spot.kind === "puzzle") {
       if (spot.id === "puzzle.runes") {
@@ -1145,6 +1354,34 @@ function Explore({
           commit(chosen.save);
           push(chosen.text);
         }
+      }
+      if (who === "hour" && (value === "both" || value === "nine" || value === "ten")) {
+        const chosen = keepValeHours(save, value);
+        if (chosen.ok) {
+          commit(chosen.save);
+          push(chosen.text);
+        } else push(chosen.reason);
+      }
+      if (who === "shelfhour" && (value === "beside" || value === "close" || value === "quiet" || value === "late")) {
+        const chosen = chooseMiraHour(save, value);
+        if (chosen.ok) {
+          commit(chosen.save);
+          push(chosen.text);
+        } else push(chosen.reason);
+      }
+      if (who === "serahour" && (value === "cut" || value === "lash")) {
+        const chosen = chooseSeraHour(save, value);
+        if (chosen.ok) {
+          commit(chosen.save);
+          push(chosen.text);
+        } else push(chosen.reason);
+      }
+      if (who === "iri" && (value === "walk" || value === "veil")) {
+        const chosen = chooseIri(save, value);
+        if (chosen.ok) {
+          commit(chosen.save);
+          push(chosen.text);
+        } else push(chosen.reason);
       }
       setDialogue(null);
       return;
@@ -1411,7 +1648,12 @@ function Explore({
           <PartyStrip save={save} />
           <p className="text-xs text-parchment/60">Move WASD or arrows. E, Enter, or the lantern button speaks, opens, and fights. J journal, I bag, P party.</p>
           <p className="gold-chip text-xs text-amber">{save.gold} gold · {save.xp} xp · circle {levelForXp(save.xp)}</p>
-          {save.ascensionUnlocked && <p className="text-xs text-teal">Ascension is awake. Battles can be stepped into.</p>}
+          {save.ascensionUnlocked && <p className="text-xs text-teal">Ascension is awake. Battles can be stepped into. On the road, the other view is a button.</p>}
+          {save.ascensionUnlocked && (
+            <MenuButton tone="ghost" onClick={foldView}>
+              {save.mode === "ascension" ? "Look from the walk" : "Look from inside the step"}
+            </MenuButton>
+          )}
           {flag(save, "flag.temporal_sight") && (
             <MenuButton tone="ghost" onClick={lookTwice}>
               <span className="sight-mark" aria-hidden /> Temporal Sight ({save.sightCharges})
@@ -1429,6 +1671,38 @@ function Explore({
               >
                 Dismiss the other hour
               </MenuButton>
+              {(flag(save, "flag.unwritten_open") || map.id === "map.margin") && (
+                <>
+              <MenuButton
+                tone="ghost"
+                onClick={() => {
+                  const compared = compareHours(save);
+                  if (!compared.ok) {
+                    push(compared.reason);
+                    return;
+                  }
+                  commit(compared.save);
+                  push(compared.text);
+                }}
+              >
+                Compare the hours
+              </MenuButton>
+              <MenuButton
+                tone="ghost"
+                onClick={() => {
+                  const traced = traceHourEcho(save);
+                  if (!traced.ok) {
+                    push(traced.reason);
+                    return;
+                  }
+                  commit(traced.save);
+                  push(traced.text);
+                }}
+              >
+                Trace the echo
+              </MenuButton>
+                </>
+              )}
             </>
           )}
           {flag(save, "flag.temporal_sight") && (
@@ -1595,12 +1869,25 @@ function Explore({
         >
           {panel === "journal" && (
             <div className="flex flex-col gap-3">
-              {save.quests.filter((q) => q.status !== "hidden").map((q) => (
-                <div key={q.id}>
-                  <p className="font-semibold text-amber">{q.title} · {q.status}</p>
-                  <p className="text-sm">{q.summary}</p>
+              <p className="text-xs tracking-[0.18em] text-teal uppercase">{journalBrief(save).chapter}</p>
+              <p className="text-xs tracking-[0.18em] text-amber uppercase">Active</p>
+              {journalBrief(save).active.length === 0 && <p className="text-sm text-parchment/70">Nothing is asking for you right now.</p>}
+              {journalBrief(save).active.map((q) => (
+                <div key={q.title}>
+                  <p className="font-semibold text-amber">{q.title}</p>
+                  <p className="text-sm">{q.objective}</p>
                 </div>
               ))}
+              <p className="text-xs tracking-[0.18em] text-amber uppercase">Clues</p>
+              {journalBrief(save).clues.length === 0 && <p className="text-sm text-parchment/70">No hour has been written down yet.</p>}
+              <ul className="list-disc pl-4 text-sm text-parchment/80">
+                {journalBrief(save).clues.map((clue) => (
+                  <li key={clue}>{clue}</li>
+                ))}
+              </ul>
+              <p className="text-xs tracking-[0.18em] text-amber uppercase">Completed</p>
+              <p className="text-sm text-parchment/80">{journalBrief(save).done.join(" · ") || "The road is still ahead."}</p>
+              <p className="text-xs tracking-[0.18em] text-amber uppercase">Chronicle</p>
               <ul className="max-h-40 list-disc overflow-auto pl-4 text-sm text-parchment/80">
                 {save.journal.map((j, i) => (
                   <li key={i}>{j}</li>
@@ -1833,25 +2120,28 @@ function Explore({
           )}
           {panel === "skiff" && (
             <div className="flex flex-col gap-3 text-sm">
-              <p>{SKY_COPY.skiffFly} Two pads. No open sky.</p>
-              <svg viewBox="0 0 320 120" className="w-full rounded-md bg-ink" role="img" aria-label="A route between the Vale roof and the Skyweave berth.">
+              <p>{flag(save, "flag.margin_dock") ? "Three pads. Still no open sky." : "Two pads. No open sky."} {SKY_COPY.skiffFly}</p>
+              <svg viewBox="0 0 320 140" className="w-full rounded-md bg-ink" role="img" aria-label="A route between earned pads. The sky past them is not a country.">
                 <defs>
                   <linearGradient id="skiff-sky" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#3a4a62" />
                     <stop offset="100%" stopColor="#1a1420" />
                   </linearGradient>
                 </defs>
-                <rect width="320" height="120" fill="url(#skiff-sky)" />
-                <path d="M0 78 Q80 70 160 78 T320 74" fill="none" stroke="#c8bba8" strokeOpacity="0.45" />
-                <line x1="48" y1="78" x2="272" y2="78" stroke="#4ec8c0" strokeDasharray="6 5" />
-                <circle cx="48" cy="78" r="5" fill="#e8b15a" />
-                <circle cx="272" cy="78" r="5" fill="#e8b15a" />
-                <path d="M132 70 L168 70 L160 86 L140 86 Z" fill="#8a8070" />
-                <image href={artUrl("skiff.png")} x="118" y="36" width="92" height="52" />
+                <rect width="320" height="140" fill="url(#skiff-sky)" />
+                <path d="M0 96 Q80 88 160 96 T320 92" fill="none" stroke="#c8bba8" strokeOpacity="0.45" />
+                <line x1="48" y1="96" x2="272" y2="96" stroke="#4ec8c0" strokeDasharray="6 5" />
+                {flag(save, "flag.margin_dock") && <line x1="160" y1="96" x2="160" y2="48" stroke="#c8b8e8" strokeDasharray="4 4" />}
+                <circle cx="48" cy="96" r="5" fill="#e8b15a" />
+                <circle cx="272" cy="96" r="5" fill="#e8b15a" />
+                {flag(save, "flag.margin_dock") && <circle cx="160" cy="48" r="5" fill="#c8b8e8" />}
+                <path d="M132 88 L168 88 L160 104 L140 104 Z" fill="#8a8070" />
+                <image href={artUrl("skiff.png")} x="118" y="52" width="92" height="52" />
                 <text x="28" y="28" fill="#f3e6c8" fontSize="13">Vale roof</text>
                 <text x="228" y="28" fill="#f3e6c8" fontSize="13">Berth</text>
+                {flag(save, "flag.margin_dock") && <text x="124" y="24" fill="#c8b8e8" fontSize="13">Margin</text>}
               </svg>
-              {SKIFF_DOCKS.map((dock) => (
+              {routeDocks(save).map((dock) => (
                 <MenuButton
                   key={dock.id}
                   tone="ghost"
@@ -2010,6 +2300,7 @@ function Explore({
               <li>WASD or arrows step a tile. On a phone, use the pad.</li>
               <li>E, Enter, or the Act button talks, loots, and starts fights.</li>
               <li>Battles: Attack, Magic, Defend, Item. Ascension adds movement and a real-time cast.</li>
+              <li>When Ascension is awake, Look from inside the step changes the view on the road. The Margin wants the page from the walk and the echo from the other view. A look is not a reading.</li>
               <li>Everything mandatory can be done with buttons. VR is optional and not required.</li>
             </ul>
           )}
@@ -2084,6 +2375,10 @@ function blocked(mapId: string, x: number, y: number): boolean {
     if (y <= 0 || y >= 7 || x >= 13) return true;
     if (x <= 0 && y !== 4) return true;
   }
+  if (mapId === "map.margin") {
+    if (y <= 0 || y >= 9 || x <= 0 || x >= 17) return true;
+    if (x === 6 || x === 13) return true;
+  }
   return false;
 }
 
@@ -2095,6 +2390,8 @@ function ahead(pos: { x: number; y: number }, facing: string) {
 }
 
 function currentObjective(save: SaveGame): string {
+  const hour = hourObjective(save);
+  if (hour) return hour;
   const cantorDone = flag(save, "flag.cantor_spared") || flag(save, "flag.cantor_defeated");
   if (flag(save, "flag.flown")) {
     return flag(save, "flag.hull_shadow")
@@ -2124,7 +2421,7 @@ function currentObjective(save: SaveGame): string {
   return "Listen to how the shrine ends.";
 }
 
-function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden" | "enc.thicket" | "enc.cantor" | "enc.crossing" | "enc.vault" | "enc.ferryman" | "enc.gust" | "enc.galekeeper"): EncounterState {
+function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden" | "enc.thicket" | "enc.cantor" | "enc.crossing" | "enc.vault" | "enc.ferryman" | "enc.gust" | "enc.galekeeper" | "enc.ink" | "enc.hourkeeper"): EncounterState {
   const party = save.party.map((pid, i) => {
     const mate = prepareForBattle(save, pid);
     mate.position = formationSlot(save.formation ?? "line", i);
@@ -2165,6 +2462,13 @@ function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.w
                       ]
                     : id === "enc.galekeeper"
                       ? [{ ...structuredClone(ENEMY_TEMPLATES.galekeeper), id: "gale", position: { x: 0, z: -2.1 } }]
+                    : id === "enc.ink"
+                      ? [
+                          { ...structuredClone(ENEMY_TEMPLATES.inkling), id: "ink-a", position: { x: -0.7, z: -1.4 } },
+                          { ...structuredClone(ENEMY_TEMPLATES.inkling), id: "ink-b", position: { x: 0.8, z: -1.2 } },
+                        ]
+                    : id === "enc.hourkeeper"
+                      ? [{ ...structuredClone(ENEMY_TEMPLATES.hourkeeper), id: "hour", position: { x: 0, z: -2.1 } }]
                   : [{ ...structuredClone(ENEMY_TEMPLATES.warden), id: "warden", position: { x: 0, z: -2.2 } }];
   return createEncounter({
     encounterId: id,
@@ -2873,6 +3177,10 @@ function Battle({
                   ? "Late Ferryman"
                   : enc.encounterId === "enc.galekeeper"
                     ? "Galekeeper"
+                    : enc.encounterId === "enc.hourkeeper"
+                      ? "Hourkeeper"
+                      : enc.encounterId === "enc.ink"
+                        ? "Wet ink"
                     : enc.encounterId === "enc.gust"
                       ? "Early gust"
                   : enc.encounterId === "enc.thicket"
@@ -2919,6 +3227,10 @@ function Battle({
                   ? "The second boarding"
                   : enc.encounterId === "enc.galekeeper"
                     ? "The early noon"
+                    : enc.encounterId === "enc.hourkeeper"
+                      ? "The folded hour"
+                      : enc.encounterId === "enc.ink"
+                        ? "Ink on the stair"
                     : "The prism wakes"}
             </p>
             <p className="font-display text-4xl">
@@ -2928,11 +3240,19 @@ function Battle({
                   ? "Late Ferryman"
                   : enc.encounterId === "enc.galekeeper"
                     ? "Galekeeper"
+                    : enc.encounterId === "enc.hourkeeper"
+                      ? "Hourkeeper"
+                      : enc.encounterId === "enc.ink"
+                        ? "Inklings"
                     : "Crystal Warden"}
             </p>
             <p className="mt-2 max-w-md text-sm text-parchment/80">
               {enc.encounterId === "enc.galekeeper"
                 ? "The wind is early. Under a little less than half you may ask which noon it is keeping, if you read both views, saw the glass, or chose the safer stay. Otherwise finish it. When the early gale starts, the note hits everyone."
+                : enc.encounterId === "enc.hourkeeper"
+                  ? "Ink, then a bell. Tide bites the ink. Stone bites the bell. Under half and a little more you may ask it to sit, if you kept both Vale hours or already asked a guardian to sleep. When the hour folds, the note hits everyone."
+                  : enc.encounterId === "enc.ink"
+                    ? "Wet ink on the stair. Tide bites it. It is not the hour. It is only in the way."
                 : enc.encounterId === "enc.ferryman"
                 ? "He is still boarding. Under two fifths you may ask which departure he is keeping, if you recorded both hours or already learned how to ask. Otherwise finish the line. When the second boarding starts, the note hits everyone."
                 : enc.encounterId === "enc.cantor"
@@ -2987,6 +3307,12 @@ function Battle({
               {enc.encounterId === "enc.galekeeper" && foes.some((f) => f.jobId === "enemy.galekeeper" && (f.phase ?? 1) >= 2) && (
                 <p className="text-sm text-amber">Early gale. The next great note hits everyone. Defend.</p>
               )}
+              {enc.encounterId === "enc.hourkeeper" && foes.some((f) => f.jobId === "enemy.hourkeeper" && f.alive && f.hp <= f.maxHp * 0.42) && (
+                <p className="text-sm text-teal">The hour is quiet enough to ask it to sit. Both Vale hours, or a guardian you already asked to sleep.</p>
+              )}
+              {enc.encounterId === "enc.hourkeeper" && foes.some((f) => f.jobId === "enemy.hourkeeper" && (f.phase ?? 1) >= 2) && (
+                <p className="text-sm text-amber">The hour has folded. The next great note hits everyone. Defend. Tide bites the ink.</p>
+              )}
               <p className="text-sm text-teal">{active.name}'s turn. {enc.mode === "ascension" ? "WASD moves inside the ring. F or Cast strikes the nearest foe. Q dodges. The menu still works." : "Choose, then choose who wears it."}</p>
               {enc.mode === "ascension" && (
                 <div className="flex flex-wrap gap-2 lg:hidden">
@@ -2998,7 +3324,7 @@ function Battle({
                     onAct={() => {
                       const foe = nearestFoe(enc, asc.current);
                       if (!foe || !active) return;
-                      const id = active.id === "kael" ? "atk.oathcut" : active.id === "mira" ? "spell.mend" : active.id === "sera" ? "spell.gust" : "spell.ember";
+                      const id = active.id === "kael" ? "atk.oathcut" : active.id === "mira" ? "spell.mend" : active.id === "sera" ? "spell.gust" : active.id === "iri" ? "spell.seam" : "spell.ember";
                       chooseAbility(id, id.startsWith("spell") ? "cast" : "attack");
                     }}
                   />
@@ -3013,7 +3339,7 @@ function Battle({
                     <MenuButton tone="ghost" onClick={() => chooseAbility("act.dodge", "dodge")}>Sidestep</MenuButton>
                   )}
                   <MenuButton tone="ghost" onClick={() => setPick("item")}>Item</MenuButton>
-                  {(enc.encounterId === "enc.warden" || (enc.encounterId === "enc.cantor" && flag(save, "flag.warden_spared")) || enc.encounterId === "enc.ferryman" || enc.encounterId === "enc.galekeeper") && (
+                  {(enc.encounterId === "enc.warden" || (enc.encounterId === "enc.cantor" && flag(save, "flag.warden_spared")) || enc.encounterId === "enc.ferryman" || enc.encounterId === "enc.galekeeper" || enc.encounterId === "enc.hourkeeper") && (
                     <MenuButton
                       tone="ghost"
                       onClick={() => {
@@ -3022,6 +3348,7 @@ function Battle({
                           wardenSpared: sparedWarden,
                           doubleDeparture: flag(save, "flag.twice_departed"),
                           skyAsked: flag(save, "flag.sky_split") || flag(save, "flag.sight_glass") || flag(save, "flag.sera_stay"),
+                          hourAsked: flag(save, "flag.hour_both"),
                         });
                         if (!res.ok) {
                           push(res.reason ?? "Not yet.");
@@ -3036,11 +3363,13 @@ function Battle({
                               ? "The ferryman sits."
                               : enc.encounterId === "enc.galekeeper"
                                 ? "The gale sits."
+                                : enc.encounterId === "enc.hourkeeper"
+                                  ? "The hour sits."
                                 : "The Warden bows.",
                         );
                       }}
                     >
-                      {enc.encounterId === "enc.ferryman" ? "Ask which departure" : enc.encounterId === "enc.galekeeper" ? "Ask which noon" : "Offer mercy"}
+                      {enc.encounterId === "enc.ferryman" ? "Ask which departure" : enc.encounterId === "enc.galekeeper" ? "Ask which noon" : enc.encounterId === "enc.hourkeeper" ? "Ask it to sit" : "Offer mercy"}
                     </MenuButton>
                   )}
                   {active.id !== "wanderer" && companionInstinct(enc, active.id) && (

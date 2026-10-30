@@ -28,15 +28,21 @@ The far dock, a riverside station, the Twice-Kept Hold, and the Late Ferryman. S
 
 Merged from `feature/beyond-lowbell`.
 
-## Rung 1e — Skyweave Ascent (playable, this branch)
+## Rung 1e — Skyweave Ascent (playable)
 
 The high road becomes a ridge: mill, half-span, salt cave, Early Glass, and a Galekeeper. Sera joins on a splice or a stay, with a four-person line and a rig for the rest. Stayline and Crosswind. The First Stay flies between the berth and the Vale roof. Open sky does not.
 
-Branch: `feature/skyweave-ascent`. Not merged from this workspace.
+Merged from `feature/skyweave-ascent`.
+
+## Rung 1f — The Unwritten Hour (playable, this branch)
+
+After the first flight, the berth ledger starts an argument the world does not agree on. Vale, Lowbell, Mistwater, and the berth each write an hour. Four writings earn a third pad, the Margin: ink, a cross-view well, a shine Sight can show but not take, and the Hourkeeper. Mercy and defeat both finish the hour and pay different threads. Iri will walk or keep the veil. Mira and Sera each answer one later page without sanding the first choice. Open sky stays locked. Dragoon, Healer, and Chronomancer stay shut.
+
+Branch: `feature/unwritten-hour`. Not merged from this workspace.
 
 ## Still after this
 
-More airship destinations, an open skybox, the remaining regions, a fuller job tree, Iri, companion scenes past a later line, and any headset battle. Do not start those inside this PR.
+An open skybox, the remaining regions, a fuller job tree, Kael's and Nessa's own hours after the flight, companion scenes past this line, and any headset battle. Do not start those inside this PR.
 
 ## Rung 2 — switching and comfort
 
@@ -44,7 +50,7 @@ Next: switch at finer sync points, readable boss windups with a longer dodge win
 
 ## Rung 3 — chronology
 
-Three regions were the sketch. Hollowwood and Mistwater are lived-in, and Skyweave is a ridge with one route between two pads. An open skybox is still later. Keep public UI free of later gates.
+Three regions were the sketch. Hollowwood and Mistwater are lived-in, Skyweave is a ridge, and the First Stay has two pads plus the Margin after the hour is written. An open skybox is still later. Keep public UI free of later gates.
 
 
 ## Rung 4 — white room
