@@ -30,7 +30,11 @@ Keyboard and buttons complete every mandatory beat. A headset is optional and is
    - After the ferryman, the high gate opens onto Skyweave Ridge. Ada keeps the mill. Sera asks you to finish a hot splice or lash the safer stay. If four are already walking, she waits at the rig. Party, on a quiet map, can send someone to the rig and call them back. Their kit stays theirs.
    - The Early Glass wants the chart from the walk and the sky from inside the step. Sight shows the eclipse ahead of the sun. It does not press the lens. Ask the Galekeeper which noon, if you kept a reason to ask, or end the wind. The berth opens either way.
    - The First Stay flies from the berth to the Vale roof, and back. Pick the other pad and cast off. It is a route. After one flight you may note a shadow that leaves first. It is not explained.
-   - Jobs and arts, from the sidebar, lists the kits that exist, with costs. Later jobs cannot be taken. A close line and a loose line are chosen from Party, not during a fight.
+   - After one flight, if Kael already answered Pell, Glasspine and the Vale well remember the walk in two orders. Keep the words, or put the living person inside the promise. The first choice stays. Neither answer is the cleaner oath.
+   - After one flight, if Nessa already answered the stone, the Reach is wet out of season and Lowbell runs uphill. Meet Lark. Set the dry order from the walk and the wet order from inside the step. Let the older water work, or give the channel the verse already arriving. The first rhyme stays. Sight shows the water. It does not press it.
+   - The Vale hearth can hear a few pairs once those hours are answered. If Iri walks with you, she can read an earlier hour, and Veilstep stays hers. If she kept the veil, the Margin still has a thread. Hearing it does not recruit her.
+   - When both the oath and the spring are answered, Lowbell's spring mouth can hold them. Read the oath from the walk and the verse from the other view, then set the mouth. Nobody has to be recruited for that.
+   - Jobs and arts, from the sidebar, lists the kits that exist, with costs. Later jobs cannot be taken. Veilwalker is Iri's, not a coat. A close line and a loose line are chosen from Party, not during a fight.
 10. Settings holds mute, text size, captions, reduced motion, contrast, export, import, and reset.
 
 **Move:** WASD or arrows, or the on-screen pad. A gamepad d-pad steps; the south button acts. **Act:** E, Enter, or Act. **Battle:** Attack, Magic, Defend, Sidestep, Item. **Ascension** (after the conduits): WASD inside the ring, F or Cast, Q to dodge. Standing close hits harder. **Switch** spends the turn and keeps HP, intent, and the dice. Tab switches on your turn. **Sight:** the sidebar button, after the conduits.
@@ -43,13 +47,13 @@ Saves from the first chapter still open. They gain the new fields without losing
 npm ci
 npm run dev        # http://127.0.0.1:8080 when run locally
 npm run typecheck
-node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts
+node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/core/unwritten.test.ts src/game/core/hours.test.ts
 npm run build      # skips the database step when DATABASE_URL is unset
 ```
 
-`npm test` also runs the app platform checks. The game contract is the four test files above. `scripts/game-launch-smoke.mjs` checks that a new journey reaches the Vale. It needs a browser, so it is not part of the Actions job.
+`npm test` also runs the app platform checks. The game contract is those test files. `scripts/hours-smoke.mjs` plays the title, a new journey, a step, an interaction, Attack, and one optional oath on the Pages build. GitHub Actions installs Chromium for that smoke and uploads desktop and 390px screenshots. `scripts/game-launch-smoke.mjs` still checks that a new journey reaches the Vale when you run it yourself.
 
-GitHub Actions (`.github/workflows/ci.yml`) installs, typechecks, runs those tests, and builds. No database URL is required.
+GitHub Actions (`.github/workflows/ci.yml`) installs, typechecks, runs those tests, builds, checks the Pages CSS, and runs the browser smoke. No database URL is required.
 
 Saves live in `localStorage` under `eotn.save.v1`. No account, no server, no API key.
 

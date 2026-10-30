@@ -17,12 +17,12 @@ Read the repo root `GAMEPLAY_STATUS.md` before claiming a feature works. The mas
 
 - New spell: `src/game/content/abilities.ts`, then teach it through `knownSpells` in `content/expanses.ts` or `content/crossing.ts` if it is earned. Add a combat test. Job kits live in `JOB_SPELLS` (`crossing.ts`). `switchJob` is the only way the wanderer changes trades, and only on a quiet map with no encounter open.
 - New map: `MAPS` in `content/world.ts`, and a row on `ATLAS` if the player should see it. Exits use `requires` flags. Locked atlas rows stay `locked: true`. Open sky (`map.sky`) stays locked. Skyweave is the ridge, the glass, the salt cave, and the berth. The First Stay flies the Vale roof and the berth, and the Margin only after `flag.margin_dock`. Give the place a `RegionLook` in `src/game/ui/art.ts`. The picture is not allowed to change which squares can be walked. See `ART_DIRECTION.md`.
-- New chapter flag: add the journal line in `chronicle/save.ts` and the objective sentence in `currentObjective`.
+- New chapter flag: add the journal line in `chronicle/save.ts` and the objective sentence in `currentObjective`. Optional post-flight stories live in `content/hours.ts`. They may not set `flag.margin_dock`, `flag.chapter_complete`, or open the sky. Sight in that file is an overlay only.
 
 ## Checks
 
 ```bash
-node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/core/unwritten.test.ts src/game/ui/art.test.ts src/game/ui/sprites.test.ts
+node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/core/unwritten.test.ts src/game/core/hours.test.ts src/game/ui/art.test.ts src/game/ui/sprites.test.ts
 npm run typecheck
 ```
 

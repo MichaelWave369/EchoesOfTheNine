@@ -81,6 +81,26 @@ import {
   writeMistWindow,
 } from "../content/unwritten.ts";
 import {
+  chooseOath,
+  chooseSpring,
+  chooseThread,
+  companyNotes,
+  hoursClues,
+  hoursCoda,
+  hoursObjective,
+  meetLark,
+  nextHearth,
+  nextVeil,
+  noteLowbellSpring,
+  noteMotherStone,
+  noteOathPath,
+  noteOathVale,
+  readSeam,
+  setSeam,
+  setSpringOrder,
+  springOffer,
+} from "../content/hours.ts";
+import {
   applyReward,
   bumpBond,
   clearLocal,
@@ -141,6 +161,7 @@ const SPEAKER_HUE: Record<string, number> = {
   Sera: 48,
   Ada: 16,
   Iri: 280,
+  Lark: 92,
   Orrin: 200,
   You: 38,
 };
@@ -568,7 +589,7 @@ function Explore({
   const [mossPick, setMossPick] = useState<string[]>([]);
   const [kilnPick, setKilnPick] = useState<string[]>([]);
   const [holdPick, setHoldPick] = useState<string[]>([]);
-  const [puzzle, setPuzzle] = useState<null | "runes" | "conduits" | "moss" | "bell" | "kiln" | "hold" | "lens">(null);
+  const [puzzle, setPuzzle] = useState<null | "runes" | "conduits" | "moss" | "bell" | "kiln" | "hold" | "lens" | "spring" | "seam">(null);
   const [conduit, setConduit] = useState(0);
   const moved = useRef(false);
   const padPrev = useRef<boolean[]>([]);
@@ -644,7 +665,7 @@ function Explore({
         push("A warm pebble comes loose under the clock. It keeps pace with you.");
         return;
       }
-      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch", "npc.hale", "npc.wren", "sign.timetable", "sign.pier", "sign.faded", "sign.wake", "sign.board", "door.berth", "npc.sera", "npc.ada", "npc.orrin", "sign.bridge", "sign.salt", "sign.skiff", "sign.cross", "door.dome", "door.gale", "sign.ledger", "sign.hourbook", "sign.hourbell", "sign.hourmist", "door.stair", "sign.page", "sign.echo", "sign.glint", "door.hour", "npc.iri"].includes(spot.id);
+      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch", "npc.hale", "npc.wren", "sign.timetable", "sign.pier", "sign.faded", "sign.wake", "sign.board", "door.berth", "npc.sera", "npc.ada", "npc.orrin", "sign.bridge", "sign.salt", "sign.skiff", "sign.cross", "door.dome", "door.gale", "sign.ledger", "sign.hourbook", "sign.hourbell", "sign.hourmist", "door.stair", "sign.page", "sign.echo", "sign.glint", "door.hour", "npc.iri", "sign.oathvale", "sign.oathpath", "sign.hearth", "npc.lark", "sign.seam"].includes(spot.id);
       if (!special) {
         const key =
           spot.id === "npc.voss"
@@ -716,12 +737,22 @@ function Explore({
       return;
     }
     if (spot.id === "npc.pell") {
-      if (!save.party.includes("kael")) {
+      if (!save.party.includes("kael") && !(save.reserve ?? []).includes("kael")) {
         push("Pell watches the path and will not talk until the oathkeeper is here.");
         return;
       }
       if (save.choiceLog.some((c) => c.id === "choice.kael")) {
-        push(flag(save, "flag.kael_law") ? "Pell is gone, back toward the square." : "Pell finished the walk. The path is only a path again.");
+        const heard = noteOathPath(save);
+        if (!heard.ok) {
+          push(flag(save, "flag.kael_law") ? "Pell is gone, back toward the square." : "Pell finished the walk. The path is only a path again.");
+          return;
+        }
+        if (heard.save !== save) commit(heard.save);
+        if (heard.ask) {
+          openOath(heard.text);
+          return;
+        }
+        push(heard.text);
         return;
       }
       setDialogue({
@@ -741,12 +772,18 @@ function Explore({
       return;
     }
     if (spot.id === "sign.mother") {
-      if (!save.party.includes("nessa")) {
+      if (!save.party.includes("nessa") && !(save.reserve ?? []).includes("nessa")) {
         push("A stone with a worn rhyme. It is waiting for someone who knew the speaker.");
         return;
       }
       if (save.choiceLog.some((c) => c.id === "choice.nessa")) {
-        push(flag(save, "flag.nessa_spring") ? "The old rhyme is spoken. The moss is unconvinced." : "The new verse stands. The stone does not argue.");
+        const noted = noteMotherStone(save);
+        if (!noted.ok) {
+          push(flag(save, "flag.nessa_spring") ? "The old rhyme is spoken. The moss is unconvinced." : "The new verse stands. The stone does not argue.");
+          return;
+        }
+        if (noted.save !== save) commit(noted.save);
+        setDialogue({ nodes: [{ id: "mother.now", speaker: "Nessa", text: noted.text }], index: "mother.now" });
         return;
       }
       setDialogue({
@@ -961,7 +998,19 @@ function Explore({
     }
     if (spot.id === "npc.iri") {
       if (save.choiceLog.some((c) => c.id === "choice.iri")) {
-        push(flag(save, "flag.iri_veil") ? HOUR_COPY.iriKeptVeil : HOUR_COPY.iriKeptWalk);
+        if (flag(save, "flag.iri_veil")) {
+          const scene = nextVeil(save);
+          if ("quiet" in scene) {
+            push(scene.quiet);
+            return;
+          }
+          setDialogue({
+            nodes: [{ id: "veil.listen", speaker: scene.speaker, text: scene.text, choices: scene.choices.map((c) => ({ label: c.label, next: "veil.done", flag: c.flag })) }],
+            index: "veil.listen",
+          });
+          return;
+        }
+        push(HOUR_COPY.iriKeptWalk);
         return;
       }
       if (flag(save, "flag.hour_complete")) {
@@ -991,6 +1040,60 @@ function Explore({
       }
       commit(met.save);
       setDialogue({ nodes: [{ id: "iri.meet", speaker: "Iri", text: met.text }], index: "iri.meet" });
+      return;
+    }
+    if (spot.id === "sign.oathpath") {
+      const heard = noteOathPath(save);
+      if (!heard.ok) {
+        push(heard.reason);
+        return;
+      }
+      if (heard.save !== save) commit(heard.save);
+      if (heard.ask) {
+        openOath(heard.text);
+        return;
+      }
+      push(heard.text);
+      return;
+    }
+    if (spot.id === "sign.oathvale") {
+      const heard = noteOathVale(save);
+      if (!heard.ok) {
+        push(heard.reason);
+        return;
+      }
+      if (heard.save !== save) commit(heard.save);
+      if (heard.ask) {
+        openOath(heard.text);
+        return;
+      }
+      push(heard.text);
+      return;
+    }
+    if (spot.id === "sign.hearth") {
+      const scene = nextHearth(save);
+      if ("quiet" in scene) {
+        push(scene.quiet);
+        return;
+      }
+      setDialogue({
+        nodes: [{ id: "hearth.ask", speaker: scene.speaker, text: scene.text, choices: scene.choices.map((c) => ({ label: c.label, next: "hearth.done", flag: c.flag })) }],
+        index: "hearth.ask",
+      });
+      return;
+    }
+    if (spot.id === "npc.lark") {
+      const met = meetLark(save);
+      if (!met.ok) {
+        push(met.reason);
+        return;
+      }
+      if (met.save !== save) commit(met.save);
+      setDialogue({ nodes: [{ id: "lark.1", speaker: "Lark", text: met.text }], index: "lark.1" });
+      return;
+    }
+    if (spot.id === "sign.seam") {
+      setPuzzle("seam");
       return;
     }
     if (spot.id === "sign.cross") {
@@ -1302,6 +1405,16 @@ function Explore({
         setPuzzle("lens");
         return;
       }
+      if (spot.id === "puzzle.spring") {
+        const noted = noteLowbellSpring(save);
+        if (!noted.ok) {
+          push(noted.reason);
+          return;
+        }
+        if (noted.save !== save) commit(noted.save);
+        setPuzzle("spring");
+        return;
+      }
       if (spot.id === "door.vault") {
         if (flag(save, "flag.hold_open")) {
           setPos({ x: 8, y: 5 });
@@ -1315,11 +1428,28 @@ function Explore({
     }
   }, [save, map, commit, onBattle, push]);
 
+  function openOath(text: string) {
+    setDialogue({
+      nodes: [
+        {
+          id: "oath.ask",
+          speaker: "Kael",
+          text,
+          choices: [
+            { label: "Keep the words as they were sworn.", next: "oath.done", flag: "choice.oath.hold" },
+            { label: "Put the living person inside the promise.", next: "oath.done", flag: "choice.oath.serve" },
+          ],
+        },
+      ],
+      index: "oath.ask",
+    });
+  }
+
   function openTalk(id: "mira" | "kael" | "nessa") {
     const next = bumpBond(save, id);
     commit(next);
     const bond = next.bonds[id] ?? 1;
-    const text = companionAside(id, bond, wardenMemory(next)) + choiceCoda(id, next.flags) + crossingCoda(id, next.flags) + skyCoda(id, next.flags);
+    const text = companionAside(id, bond, wardenMemory(next)) + choiceCoda(id, next.flags) + crossingCoda(id, next.flags) + skyCoda(id, next.flags) + hoursCoda(id, next);
     setDialogue({ nodes: [{ id: `${id}.bond`, speaker: id === "mira" ? "Mira" : id === "kael" ? "Kael" : "Nessa", text }], index: `${id}.bond` });
   }
 
@@ -1378,6 +1508,29 @@ function Explore({
       }
       if (who === "iri" && (value === "walk" || value === "veil")) {
         const chosen = chooseIri(save, value);
+        if (chosen.ok) {
+          commit(chosen.save);
+          push(chosen.text);
+        } else push(chosen.reason);
+      }
+      if (who === "oath" && (value === "hold" || value === "serve")) {
+        const chosen = chooseOath(save, value);
+        if (chosen.ok) {
+          commit(chosen.save);
+          push(chosen.text);
+        } else push(chosen.reason);
+      }
+      if (who === "spring" && (value === "carry" || value === "channel")) {
+        const chosen = chooseSpring(save, value);
+        if (chosen.ok) {
+          commit(chosen.save);
+          push(chosen.text);
+        } else push(chosen.reason);
+      }
+      if (choice.flag.startsWith("choice.thread.")) {
+        const body = choice.flag.slice("choice.thread.".length);
+        const dot = body.lastIndexOf(".");
+        const chosen = chooseThread(save, body.slice(0, dot), body.slice(dot + 1));
         if (chosen.ok) {
           commit(chosen.save);
           push(chosen.text);
@@ -1849,6 +2002,117 @@ function Explore({
           </div>
         </Modal>
       )}
+      {puzzle === "spring" && (
+        <Modal title="Uphill channel" onClose={() => setPuzzle(null)}>
+          <p className="mb-2 text-sm">
+            Two orders. From the walk, the dry stones. From inside the step, the water that is already there. Sight can show the uphill run. It will not press these.
+            {save.mode === "ascension" ? " You are inside the step." : " You are on the walk."}
+          </p>
+          <p className="mb-3 text-xs text-parchment/70">
+            {flag(save, "flag.spring_dry") ? "Dry order set. " : "Dry order not yet. "}
+            {flag(save, "flag.spring_wet") ? "Wet order set. " : "Wet order not yet. "}
+            {flag(save, "flag.met_lark") ? "Lark has spoken." : "Lark has not spoken."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <MenuButton tone="ghost" onClick={foldView}>{save.mode === "ascension" ? "Look from the walk" : "Look from inside the step"}</MenuButton>
+            <MenuButton
+              onClick={() => {
+                const set = setSpringOrder(save, "dry");
+                if (set.ok) commit(set.save);
+                push(set.ok ? set.text : set.reason);
+              }}
+            >
+              Set the dry order
+            </MenuButton>
+            <MenuButton
+              onClick={() => {
+                const set = setSpringOrder(save, "wet");
+                if (set.ok) commit(set.save);
+                push(set.ok ? set.text : set.reason);
+              }}
+            >
+              Set the wet order
+            </MenuButton>
+            {(() => {
+              const offer = springOffer(save);
+              if (!offer.ok || !offer.ask) return null;
+              return (
+              <>
+                <MenuButton
+                  onClick={() => {
+                    const chosen = chooseSpring(save, "carry");
+                    if (chosen.ok) {
+                      commit(chosen.save);
+                      setPuzzle(null);
+                    }
+                    push(chosen.ok ? chosen.text : chosen.reason);
+                  }}
+                >
+                  Let the older water keep working
+                </MenuButton>
+                <MenuButton
+                  onClick={() => {
+                    const chosen = chooseSpring(save, "channel");
+                    if (chosen.ok) {
+                      commit(chosen.save);
+                      setPuzzle(null);
+                    }
+                    push(chosen.ok ? chosen.text : chosen.reason);
+                  }}
+                >
+                  Give the channel the verse already arriving
+                </MenuButton>
+              </>
+              );
+            })()}
+          </div>
+        </Modal>
+      )}
+      {puzzle === "seam" && (
+        <Modal title="Spring mouth" onClose={() => setPuzzle(null)}>
+          <p className="mb-2 text-sm">
+            The oath from the walk. The verse from inside the step. Then set them in the same mouth. Sight may show both. It does not read either, and it does not set the mouth.
+            {save.mode === "ascension" ? " You are inside the step." : " You are on the walk."}
+          </p>
+          <p className="mb-3 text-xs text-parchment/70">
+            {flag(save, "flag.seam_legacy") ? "Walk reading kept. " : "Walk reading not yet. "}
+            {flag(save, "flag.seam_spring") ? "Other reading kept." : "Other reading not yet."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <MenuButton tone="ghost" onClick={foldView}>{save.mode === "ascension" ? "Look from the walk" : "Look from inside the step"}</MenuButton>
+            <MenuButton
+              onClick={() => {
+                const read = readSeam(save, "legacy");
+                if (read.ok) commit(read.save);
+                push(read.ok ? read.text : read.reason);
+              }}
+            >
+              Read the oath
+            </MenuButton>
+            <MenuButton
+              onClick={() => {
+                const read = readSeam(save, "ascension");
+                if (read.ok) commit(read.save);
+                push(read.ok ? read.text : read.reason);
+              }}
+            >
+              Read the verse
+            </MenuButton>
+            <MenuButton
+              onClick={() => {
+                const set = setSeam(save);
+                if (set.ok) {
+                  commit(set.save);
+                  if (set.save.flags["flag.seam_set"]) setPuzzle(null);
+                }
+                push(set.ok ? set.text : set.reason);
+              }}
+            >
+              Set the mouth
+            </MenuButton>
+          </div>
+        </Modal>
+      )}
       {puzzle === "conduits" && (
         <Modal title="Conduit ring" onClose={() => setPuzzle(null)}>
           <p className="mb-2 text-sm">
@@ -1881,10 +2145,12 @@ function Explore({
               <p className="text-xs tracking-[0.18em] text-amber uppercase">Clues</p>
               {journalBrief(save).clues.length === 0 && <p className="text-sm text-parchment/70">No hour has been written down yet.</p>}
               <ul className="list-disc pl-4 text-sm text-parchment/80">
-                {journalBrief(save).clues.map((clue) => (
+                {[...journalBrief(save).clues, ...hoursClues(save)].map((clue) => (
                   <li key={clue}>{clue}</li>
                 ))}
               </ul>
+              <p className="text-xs tracking-[0.18em] text-amber uppercase">Company</p>
+              <p className="text-sm text-parchment/80">{companyNotes(save).join(" · ") || "No hour has been said between them yet."}</p>
               <p className="text-xs tracking-[0.18em] text-amber uppercase">Completed</p>
               <p className="text-sm text-parchment/80">{journalBrief(save).done.join(" · ") || "The road is still ahead."}</p>
               <p className="text-xs tracking-[0.18em] text-amber uppercase">Chronicle</p>
@@ -2301,6 +2567,7 @@ function Explore({
               <li>E, Enter, or the Act button talks, loots, and starts fights.</li>
               <li>Battles: Attack, Magic, Defend, Item. Ascension adds movement and a real-time cast.</li>
               <li>When Ascension is awake, Look from inside the step changes the view on the road. The Margin wants the page from the walk and the echo from the other view. A look is not a reading.</li>
+              <li>After a flight, an oath, a spring, or a veil may ask again. Sight shows the trouble. It does not press it.</li>
               <li>Everything mandatory can be done with buttons. VR is optional and not required.</li>
             </ul>
           )}
@@ -2391,6 +2658,10 @@ function ahead(pos: { x: number; y: number }, facing: string) {
 
 function currentObjective(save: SaveGame): string {
   const hour = hourObjective(save);
+  const kept = hoursObjective(save);
+  const hourOpen = hour && !flag(save, "flag.hour_complete") && !flag(save, "flag.iri_joined") && !flag(save, "flag.iri_veil");
+  if (hourOpen && hour) return hour;
+  if (kept) return kept;
   if (hour) return hour;
   const cantorDone = flag(save, "flag.cantor_spared") || flag(save, "flag.cantor_defeated");
   if (flag(save, "flag.flown")) {

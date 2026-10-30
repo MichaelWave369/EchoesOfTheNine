@@ -44,6 +44,8 @@ export const MAPS: Record<string, MapDef> = {
       { id: "item.salve", x: 7, y: 10, w: 1, h: 1, label: "Festival crate", kind: "item" },
       { id: "exit.woods", x: 19, y: 6, w: 1, h: 1, label: "East woods", kind: "exit" },
       { id: "sign.well", x: 8, y: 8, w: 1, h: 1, label: "Festival well", kind: "sign" },
+      { id: "sign.oathvale", x: 10, y: 7, w: 1, h: 1, label: "Well hour", kind: "sign" },
+      { id: "sign.hearth", x: 8, y: 9, w: 1, h: 1, label: "Hearth", kind: "sign" },
       { id: "npc.shelf", x: 11, y: 9, w: 1, h: 1, label: "Parish shelf", kind: "npc" },
       { id: "npc.voss", x: 9, y: 5, w: 1, h: 1, label: "Elder Voss", kind: "npc" },
       { id: "exit.inn", x: 4, y: 6, w: 1, h: 1, label: "The Ninth Wick", kind: "exit" },
@@ -71,6 +73,7 @@ export const MAPS: Record<string, MapDef> = {
     hotspots: [
       { id: "npc.kael", x: 8, y: 5, w: 1, h: 1, label: "Kael", kind: "npc" },
       { id: "npc.pell", x: 6, y: 7, w: 1, h: 1, label: "Pell", kind: "npc" },
+      { id: "sign.oathpath", x: 9, y: 8, w: 1, h: 1, label: "Doubled prints", kind: "sign" },
       { id: "battle.woods", x: 12, y: 6, w: 1, h: 1, label: "Flicker in the pines", kind: "battle" },
       { id: "sign.pulse", x: 15, y: 4, w: 1, h: 1, label: "Echo pulse", kind: "sign" },
       { id: "exit.vale", x: 0, y: 6, w: 1, h: 1, label: "Back to the Vale", kind: "exit" },
@@ -186,6 +189,9 @@ export const MAPS: Record<string, MapDef> = {
     },
     hotspots: [
       { id: "npc.ivo", x: 8, y: 4, w: 1, h: 1, label: "Ivo", kind: "npc" },
+      { id: "npc.lark", x: 10, y: 5, w: 1, h: 1, label: "Lark", kind: "npc" },
+      { id: "puzzle.spring", x: 11, y: 6, w: 1, h: 1, label: "Uphill channel", kind: "puzzle" },
+      { id: "sign.seam", x: 12, y: 5, w: 1, h: 1, label: "Spring mouth", kind: "sign" },
       { id: "puzzle.bell", x: 8, y: 2, w: 2, h: 1, label: "Split bell", kind: "puzzle" },
       { id: "puzzle.kiln", x: 12, y: 7, w: 1, h: 1, label: "River kiln", kind: "puzzle" },
       { id: "sign.rope", x: 5, y: 8, w: 1, h: 1, label: "Empty rope", kind: "sign" },
@@ -820,6 +826,39 @@ export const INITIAL_QUESTS: QuestNode[] = [
     discoveryId: "disc.iri",
     status: "hidden",
   },
+  {
+    id: "quest.oath",
+    title: "The oath and the hour",
+    gate: "public",
+    summary: "After the flight, Pell's walk happens in two orders. Kael can keep the words or put the person inside them. The first choice stays. Neither answer is cleaner.",
+    factsRequired: ["flag.flown"],
+    alternatives: ["Keep the words", "Put the person inside the promise"],
+    worldEffects: ["flag.oath_done"],
+    discoveryId: "disc.oath",
+    status: "hidden",
+  },
+  {
+    id: "quest.spring",
+    title: "The spring that remembers",
+    gate: "public",
+    summary: "Nessa's stone is wet out of season. The channel at Lowbell runs uphill. Set both orders, then let the old water work or give the channel the verse already arriving.",
+    factsRequired: ["flag.flown"],
+    alternatives: ["Let the older water work", "Give the channel the arriving verse"],
+    worldEffects: ["flag.spring_done"],
+    discoveryId: "disc.spring",
+    status: "hidden",
+  },
+  {
+    id: "quest.seam",
+    title: "The mouth that holds both",
+    gate: "public",
+    summary: "Lowbell's spring mouth can hold the oath and the verse. Read one from the walk and one from the other view. Sight does not set it. No companion is required.",
+    factsRequired: ["flag.oath_done", "flag.spring_done"],
+    alternatives: ["Read from the walk", "Read from inside the step", "Set the mouth"],
+    worldEffects: ["flag.seam_set"],
+    discoveryId: "disc.seam",
+    status: "hidden",
+  },
 ];
 
 /** Future systems. Present in data, never offered on the public critical path. */
@@ -903,6 +942,31 @@ export const ITEMS: Record<string, { id: string; name: string; blurb: string; us
     id: "item.hour_glint",
     name: "Loose Hour",
     blurb: "A shine from a page that was not ready to be taken until you traced it. It does not say which noon was first.",
+  },
+  "item.oath_cord": {
+    id: "item.oath_cord",
+    name: "Kept Cord",
+    blurb: "From an oath whose words stayed put. The other order is still written on it.",
+  },
+  "item.walk_token": {
+    id: "item.walk_token",
+    name: "Walk Token",
+    blurb: "From an oath that moved to fit a person. It does not say the first walk was wrong.",
+  },
+  "item.mother_dew": {
+    id: "item.mother_dew",
+    name: "Mother's Dew",
+    blurb: "Water that kept an older line working. The newer verse was not thrown out.",
+  },
+  "item.verse_pebble": {
+    id: "item.verse_pebble",
+    name: "Verse Pebble",
+    blurb: "A stone from a channel given to the verse already arriving. The older line is still spoken.",
+  },
+  "item.seam_bead": {
+    id: "item.seam_bead",
+    name: "Seam Bead",
+    blurb: "The spring mouth, after both orders were read. It holds a gate and a verse. It does not require a full company.",
   },
 };
 

@@ -349,6 +349,29 @@ export function companionInstinct(
   if (!foes.length) return null;
   const wind = enc.intents[0];
   const aoe = wind && ability(wind.abilityId).targeting === "all_enemies";
+  if (actor.id === "iri" && known.has("spell.veilstep")) {
+    const ward = aoe ? (allies.find((a) => a.id !== actor.id) ?? actor) : allies.find((a) => !a.statuses.some((s) => s.id === "evading"));
+    if (aoe && ward) {
+      return { abilityId: "spell.veilstep", kind: "cast", targetIds: [ward.id], text: `${actor.name} would walk ${ward.name} off the line` };
+    }
+  }
+  if (actor.id === "kael" && known.has("spell.namedguard")) {
+    const hurt = [...allies].filter((a) => a.id !== actor.id).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+    if (hurt && hurt.hp / hurt.maxHp < 0.75) {
+      const nessa = hurt.id === "nessa" ? " inside the oath" : "";
+      return { abilityId: "spell.namedguard", kind: "cast", targetIds: [hurt.id], text: `${actor.name} would put ${hurt.name}${nessa} behind the gate` };
+    }
+  }
+  if (actor.id === "kael" && known.has("spell.oathgate") && aoe) {
+    return { abilityId: "spell.oathgate", kind: "cast", targetIds: [actor.id], text: `${actor.name} would keep the words and brace` };
+  }
+  if (actor.id === "nessa" && known.has("spell.springmemory")) {
+    const hurt = [...allies].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+    if (hurt && hurt.hp / hurt.maxHp < 0.6) {
+      const who = hurt.id === "kael" ? "Kael" : hurt.name;
+      return { abilityId: "spell.springmemory", kind: "cast", targetIds: [hurt.id], text: `${actor.name} would let the spring remember ${who}` };
+    }
+  }
   if (aoe && known.has("act.defend")) {
     return { abilityId: "act.defend", kind: "defend", targetIds: [actor.id], text: `${actor.name} would brace the whole note` };
   }
