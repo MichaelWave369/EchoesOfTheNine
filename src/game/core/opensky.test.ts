@@ -15,22 +15,27 @@ import {
   chooseSignal,
   countAsh,
   dragoonStillShut,
+  enterBeacon,
   headingBlock,
+  headingObjective,
   landAt,
   launchSky,
+  leaveBeacon,
   noteSky,
   pinBearing,
+  readBeaconLog,
   returnDock,
   setCinderOrder,
   setDropOrder,
   skyCell,
   stepSky,
+  swearBeacon,
   takeCache,
   talkCrew,
   teachPerchDrill,
 } from "../content/opensky.ts";
 import { MAPS, PUBLIC_STRING_BAN } from "../content/world.ts";
-import { createEncounter, proposeAction, resolveEnemyTurn } from "./combat.ts";
+import { createEncounter, proposeAction, resolveEnemyTurn, tryMercy } from "./combat.ts";
 import type { CombatAction } from "../contracts.ts";
 
 function ready(name = "Ash") {
@@ -289,9 +294,12 @@ describe("the first open sky", () => {
     assert.equal(signal.save.flags["flag.kael_law"], true);
     assert.equal(chooseSignal(signal.save, "send").ok, true);
     assert.equal(signal.save.inventory.filter((s) => s.itemId === "item.signal_glass").length, 1);
-    const stair = setCinderOrder(signal.save, ["salt", "ash", "ember"]);
+    const onStair = structuredClone(signal.save);
+    onStair.mapId = "map.ashvault";
+    assert.equal(setCinderOrder(signal.save, ["ash", "salt", "ember"]).ok, false);
+    const stair = setCinderOrder(onStair, ["salt", "ash", "ember"]);
     assert.equal(stair.ok, false);
-    const openStair = setCinderOrder(signal.save, ["ash", "salt", "ember"]);
+    const openStair = setCinderOrder(onStair, ["ash", "salt", "ember"]);
     assert.equal(openStair.ok, true);
 
     for (const schema of [1, 2, 3, 4]) {
@@ -473,7 +481,9 @@ describe("the first open sky", () => {
 
     assert.equal(setDropOrder(freshSave("Ash"), ["rise", "hold", "drop"]).ok, false);
     assert.equal(setDropOrder(taught.save, ["drop", "hold", "rise"]).ok, false);
-    const dropped = setDropOrder(taught.save, ["rise", "hold", "drop"]);
+    const onWatch = structuredClone(taught.save);
+    onWatch.mapId = "map.cinder";
+    const dropped = setDropOrder(onWatch, ["rise", "hold", "drop"]);
     assert.equal(dropped.ok, true);
     if (!dropped.ok) return;
     assert.ok(dropped.save.earnedSpells.includes("spell.falling_star"));
@@ -521,5 +531,303 @@ describe("the first open sky", () => {
       assert.equal(back.quests.filter((q) => q.id === "quest.tally").length, 1);
       assert.equal(JOB_KITS.find((j) => j.id === "job.dragoon")?.playable, false);
     }
+  });
+
+  it("refuses Cinderwatch rewards off their tiles and lets both signals finish the beacon", () => {
+    let remote = setFlag(ready(), "flag.found_cinder");
+    remote = setFlag(remote, "flag.sight_cinder");
+    remote.mapId = "map.vale";
+    assert.equal(countAsh(remote).ok, false);
+    assert.equal(remote.inventory.some((s) => s.itemId === "item.cold_vial"), false);
+    assert.equal(chooseSignal(remote, "bank").ok, false);
+    assert.equal(remote.flags["flag.cinder_signal"], undefined);
+
+    let drop = setFlag(ready(), "flag.dragoon_trial");
+    drop.mapId = "map.berth";
+    assert.equal(setDropOrder(drop, ["rise", "hold", "drop"]).ok, false);
+    assert.equal(drop.flags["flag.falling_star"], undefined);
+    drop.mapId = "map.cinder";
+    const fell = setDropOrder(drop, ["rise", "hold", "drop"]);
+    assert.equal(fell.ok, true);
+    if (!fell.ok) return;
+    assert.equal(setDropOrder({ ...fell.save, mapId: "map.vale" }, ["rise", "hold", "drop"]).ok, true);
+    assert.equal(fell.save.inventory.filter((s) => s.itemId === "item.star_glass").length, 1);
+
+    let stair = ready();
+    stair.mapId = "map.cinder";
+    assert.equal(setCinderOrder(stair, ["ash", "salt", "ember"]).ok, false);
+    stair.mapId = "map.vale";
+    assert.equal(setCinderOrder(stair, ["ash", "salt", "ember"]).ok, false);
+    stair.mapId = "map.ashvault";
+    assert.equal(setCinderOrder(stair, ["tide", "ash", "salt"]).ok, false);
+    const opened = setCinderOrder(stair, ["ash", "salt", "ember"]);
+    assert.equal(opened.ok, true);
+    if (!opened.ok) return;
+    assert.equal(setCinderOrder({ ...opened.save, mapId: "map.deck" }, ["ash", "salt", "ember"]).ok, true);
+    assert.equal(opened.save.flags["flag.cinder_stair"], true);
+
+    const watched = (signal: "bank" | "send") => {
+      let save = setFlag(ready(), "flag.found_cinder");
+      save = setFlag(save, "flag.sight_cinder");
+      save = setFlag(save, "flag.dragoon_trial");
+      save = setFlag(save, "flag.falling_star");
+      save = setFlag(save, "flag.ashkite_cleared");
+      save = setFlag(save, "flag.sky_open");
+      save.mapId = "map.cinder";
+      const posted = chooseSignal(save, signal);
+      if (!posted.ok) throw new Error(posted.reason);
+      return posted.save;
+    };
+
+    for (const signal of ["bank", "send"] as const) {
+      const posted = watched(signal);
+      assert.equal(enterBeacon(posted).ok, false);
+      assert.equal(enterBeacon({ ...posted, mapId: "map.vale" }).ok, false);
+      const up = launchSky(posted);
+      assert.equal(up.ok, true);
+      if (!up.ok) return;
+      let sky = up.save;
+      while (skyCell(sky).x > 4) {
+        const step = stepSky(sky, "w");
+        if (!step.ok) throw new Error(step.reason);
+        sky = step.save;
+      }
+      while (skyCell(sky).y > 2) {
+        const step = stepSky(sky, "n");
+        if (!step.ok) throw new Error(step.reason);
+        sky = step.save;
+      }
+      assert.deepEqual([skyCell(sky).x, skyCell(sky).y], [4, 2]);
+      const looked = beginOpenSkySight(sky);
+      assert.equal(looked?.save.flags["flag.sight_sky_beacon"], true);
+      assert.equal(looked?.save.flags["flag.sky_beacon"], undefined);
+      assert.equal(canLand(sky, 4, 2), false);
+      assert.equal(canLand(sky, 14, 2), false);
+      assert.equal(landAt(sky).ok, false);
+      const noted = noteSky(sky);
+      assert.equal(noted.ok, true);
+      if (!noted.ok) return;
+      assert.equal(noted.save.flags["flag.sky_beacon"], true);
+      assert.equal(landAt(noted.save).ok, false);
+      const ground = structuredClone(noted.save);
+      ground.mapId = "map.cinder";
+      ground.flags["sky.aboard"] = false;
+      const road = enterBeacon(ground);
+      assert.equal(road.ok, true);
+      if (!road.ok) return;
+      assert.equal(road.save.mapId, "map.beacon");
+      assert.equal(readBeaconLog({ ...road.save, mapId: "map.cinder" }).ok, false);
+      const record = readBeaconLog(road.save);
+      assert.equal(record.ok, true);
+      if (!record.ok) return;
+      assert.match(record.text, signal === "bank" ? /held/ : /left/);
+      assert.equal(record.save.flags[signal === "bank" ? "flag.cinder_bank" : "flag.cinder_send"], true);
+      record.save.sightCharges = 2;
+      record.save.flags["flag.temporal_sight"] = true;
+      const sight = useSight(record.save);
+      assert.equal(sight.ok, true);
+      if (!sight.ok) return;
+      assert.equal(sight.save.flags["flag.sight_beacon"], true);
+      assert.equal(sight.save.flags["flag.beacon_oath"], undefined);
+      const away = structuredClone(sight.save);
+      away.mapId = "map.cinder";
+      assert.equal(swearBeacon(away, signal === "bank" ? "return" : "depart").ok, false);
+      const sworn = swearBeacon(sight.save, signal === "bank" ? "return" : "depart");
+      assert.equal(sworn.ok, true);
+      if (!sworn.ok) return;
+      assert.equal(sworn.save.flags["flag.beacon_oath"], true);
+      assert.equal(sworn.save.flags[signal === "bank" ? "flag.beacon_return" : "flag.beacon_depart"], true);
+      assert.equal(sworn.save.flags[signal === "bank" ? "flag.cinder_send" : "flag.cinder_bank"], undefined);
+      assert.equal(sworn.save.inventory.filter((s) => s.itemId === "item.beacon_ash").length, 1);
+      assert.match(sworn.text, /Dragoon stays shut/);
+      assert.match(sworn.text, /Falling Star/);
+      const again = swearBeacon(sworn.save, signal === "bank" ? "depart" : "return");
+      assert.equal(again.ok, true);
+      if (!again.ok) return;
+      assert.equal(again.save.inventory.filter((s) => s.itemId === "item.beacon_ash").length, 1);
+      assert.equal(again.save.flags[signal === "bank" ? "flag.beacon_depart" : "flag.beacon_return"], undefined);
+      const home = leaveBeacon(sworn.save);
+      assert.equal(home.ok, true);
+      if (!home.ok) return;
+      assert.equal(home.save.mapId, "map.cinder");
+      const back = returnDock({ ...home.save, flags: { ...home.save.flags, "sky.aboard": true, "sky.dock": "dock.berth" } });
+      assert.equal(back.ok, true);
+      if (!back.ok) return;
+      assert.equal(back.save.mapId, "map.berth");
+      const elsewhere = structuredClone(sworn.save);
+      elsewhere.mapId = "map.vale";
+      elsewhere.flags["flag.hour_complete"] = true;
+      elsewhere.flags["flag.cinder_signal"] = true;
+      elsewhere.flags["flag.cinder_stair"] = true;
+      assert.equal(headingObjective(elsewhere), null);
+    }
+
+    const posted = watched("send");
+    posted.flags["flag.sky_beacon"] = true;
+    posted.mapId = "map.cinder";
+    const road = enterBeacon(posted);
+    assert.equal(road.ok, true);
+    if (!road.ok) return;
+    road.save.sightCharges = 1;
+    road.save.flags["flag.temporal_sight"] = true;
+    const sight = useSight(road.save);
+    assert.equal(sight.ok, true);
+    if (!sight.ok) return;
+    const sworn = swearBeacon(sight.save, "depart");
+    assert.equal(sworn.ok, true);
+    if (!sworn.ok) return;
+
+    let state = createEncounter({
+      encounterId: "enc.oathwing",
+      seed: 5,
+      party: [makeCombatant("wanderer", { position: { x: 0, z: 2 } })],
+      enemies: [{ ...structuredClone(ENEMY_TEMPLATES.oathwing), id: "oathwing", position: { x: 0, z: -2 } }],
+    });
+    const seen: string[] = [];
+    for (let i = 0; i < 4 && state.outcome === "ongoing"; i++) {
+      if (state.phase === "enemy") {
+        const intent = state.intents[0];
+        if (intent) seen.push(intent.abilityId);
+        const enemy = resolveEnemyTurn(state);
+        assert.equal(enemy.ok, true);
+        state = enemy.state;
+      } else {
+        const hit = proposeAction(state, act({ actorId: "wanderer", abilityId: "act.defend", kind: "defend", targetIds: ["wanderer"] }));
+        assert.equal(hit.ok, true);
+        state = hit.state;
+      }
+    }
+    assert.ok(seen.includes("enemy.beacon_flare") || seen.includes("enemy.vow_rake"));
+
+    const phased = createEncounter({
+      encounterId: "enc.oathwing",
+      seed: 6,
+      party: [makeCombatant("wanderer", { position: { x: 0, z: 1.2 } })],
+      enemies: [{ ...structuredClone(ENEMY_TEMPLATES.oathwing), id: "oathwing", hp: 50, position: { x: 0, z: -1.2 } }],
+    });
+    phased.phase = "player";
+    phased.activeActorId = "wanderer";
+    const crack = proposeAction(phased, act({ actorId: "wanderer", abilityId: "spell.ember", kind: "cast", targetIds: ["oathwing"] }));
+    assert.equal(crack.ok, true);
+    const wing = crack.state.combatants.find((c) => c.id === "oathwing");
+    assert.equal(wing && wing.hp > 0 ? wing.phase : 0, 2);
+    const loud = crack.state;
+    if (loud.phase === "enemy") {
+      const intent = loud.intents[0]?.abilityId ?? "";
+      assert.ok(intent === "enemy.broken_record" || intent === "enemy.shear_line");
+    }
+
+    const dying = createEncounter({
+      encounterId: "enc.oathwing",
+      seed: 8,
+      party: [makeCombatant("wanderer", { position: { x: 0, z: 1.2 } })],
+      enemies: [{ ...structuredClone(ENEMY_TEMPLATES.oathwing), id: "oathwing", hp: 1, position: { x: 0, z: -1.2 } }],
+    });
+    dying.phase = "player";
+    dying.activeActorId = "wanderer";
+    const kill = proposeAction(dying, act({ actorId: "wanderer", abilityId: "spell.ember", kind: "cast", targetIds: ["oathwing"] }));
+    assert.equal(kill.ok, true);
+    assert.equal(kill.state.outcome, "victory");
+    assert.equal(kill.state.pendingReward?.id, "reward.oathwing.defeat");
+    const paid = applyReward(sworn.save, kill.state.pendingReward!);
+    const twice = applyReward(paid, kill.state.pendingReward!);
+    assert.equal(twice.inventory.filter((s) => s.itemId === "item.vow_glass").length, 1);
+    assert.equal(twice.flags["flag.beacon_done"], true);
+    assert.equal(twice.flags["flag.dragoon_oath"], true);
+    assert.equal(twice.flags["flag.cinder_send"], true);
+    assert.equal(twice.party.includes("iri"), false);
+    assert.equal(JOB_KITS.find((j) => j.id === "job.dragoon")?.playable, false);
+    assert.equal(dragoonStillShut(), true);
+    assert.equal(switchJob(twice, "job.dragoon").ok, false);
+
+    const blocked = createEncounter({
+      encounterId: "enc.oathwing",
+      seed: 9,
+      party: [makeCombatant("wanderer", { position: { x: 0, z: 1.2 } })],
+      enemies: [{ ...structuredClone(ENEMY_TEMPLATES.oathwing), id: "oathwing", hp: 1, position: { x: 0, z: -1.2 } }],
+      rewardsAlready: ["reward.oathwing.defeat"],
+    });
+    blocked.phase = "player";
+    blocked.activeActorId = "wanderer";
+    const second = proposeAction(blocked, act({ actorId: "wanderer", abilityId: "spell.ember", kind: "cast", targetIds: ["oathwing"] }));
+    assert.equal(second.ok, true);
+    assert.equal(second.state.pendingReward, null);
+
+    const merciful = createEncounter({
+      encounterId: "enc.oathwing",
+      seed: 3,
+      party: [makeCombatant("wanderer", { position: { x: 0, z: 1.2 } })],
+      enemies: [{ ...structuredClone(ENEMY_TEMPLATES.oathwing), id: "oathwing", hp: 20, position: { x: 0, z: -1.2 } }],
+    });
+    assert.equal(tryMercy(merciful, { beaconRead: false, wardenSpared: false }).ok, false);
+    const high = structuredClone(merciful);
+    high.combatants.find((c) => c.id === "oathwing")!.hp = 90;
+    assert.equal(tryMercy(high, { beaconRead: true }).ok, false);
+    const spared = tryMercy(merciful, { beaconRead: true, wardenSpared: false });
+    assert.equal(spared.ok, true);
+    if (!spared.ok) return;
+    assert.equal(spared.state.outcome, "mercy");
+    assert.equal(spared.state.pendingReward?.id, "reward.oathwing.mercy");
+    const sat = applyReward(freshSave("Ash"), spared.state.pendingReward!);
+    const satAgain = applyReward(sat, spared.state.pendingReward!);
+    assert.equal(satAgain.inventory.filter((s) => s.itemId === "item.vow_wick").length, 1);
+    assert.equal(satAgain.inventory.some((s) => s.itemId === "item.vow_glass"), false);
+    assert.equal(satAgain.flags["flag.dragoon_oath"], true);
+    assert.equal(satAgain.party.includes("iri"), false);
+    assert.equal(satAgain.flags["flag.iri_joined"], undefined);
+
+    let crew = structuredClone(twice);
+    crew.flags["flag.sera_joined"] = true;
+    crew.flags["flag.sera_splice"] = true;
+    crew.flags["flag.kael_people"] = true;
+    crew.flags["flag.mira_blank"] = true;
+    crew.reserve = ["sera", "kael", "mira"];
+    crew.party = ["wanderer"];
+    crew.equipment.kael = { weapon: "weapon.festival_knife" };
+    const sera = talkCrew(crew, "sera");
+    assert.equal(sera.ok, true);
+    if (!sera.ok) return;
+    assert.match(sera.text, /bearing/);
+    assert.match(sera.text, /splice/);
+    assert.deepEqual(sera.save.party, ["wanderer"]);
+    assert.deepEqual(sera.save.reserve, ["sera", "kael", "mira"]);
+    assert.equal(sera.save.equipment.kael?.weapon, "weapon.festival_knife");
+    const kael = talkCrew(sera.save, "kael");
+    assert.equal(kael.ok, true);
+    if (!kael.ok) return;
+    assert.match(kael.text, /Pell/);
+    assert.equal(kael.save.party.includes("kael"), false);
+    const mira = talkCrew(kael.save, "mira");
+    assert.equal(mira.ok, true);
+    if (!mira.ok) return;
+    assert.match(mira.text, /blank/);
+    let veiled = structuredClone(crew);
+    veiled.flags["flag.iri_veil"] = true;
+    delete veiled.flags["flag.iri_joined"];
+    const thread = talkCrew(veiled, "veil");
+    assert.equal(thread.ok, true);
+    if (!thread.ok) return;
+    assert.equal(thread.save.flags["flag.beacon_veil_heard"], true);
+    assert.equal(thread.save.flags["flag.iri_joined"], undefined);
+    assert.equal(thread.save.party.includes("iri"), false);
+
+    for (const schema of [1, 2, 3, 4]) {
+      const raw = JSON.parse(serialize(twice)) as Record<string, unknown>;
+      raw.schema = schema;
+      const back = deserialize(JSON.stringify(raw));
+      assert.equal(back.schema, 4);
+      assert.equal(back.flags["flag.beacon_done"], true);
+      assert.equal(back.flags["flag.dragoon_oath"], true);
+      assert.equal(back.flags["flag.cinder_send"], true);
+      assert.equal(back.quests.filter((q) => q.id === "quest.beacon").length, 1);
+      assert.equal(JOB_KITS.find((j) => j.id === "job.dragoon")?.playable, false);
+    }
+
+    assert.equal(MAPS["map.sky"], undefined);
+    assert.equal(ATLAS.find((p) => p.id === "map.sky")?.locked, true);
+    assert.equal(canTravel(twice, "map.sky"), false);
+    assert.equal(canTravel(twice, "map.beacon"), false);
+    const blob = JSON.stringify({ OPEN_COPY, beacon: MAPS["map.beacon"], cinder: MAPS["map.cinder"] }).toLowerCase();
+    for (const banned of PUBLIC_STRING_BAN) assert.equal(blob.includes(banned), false, banned);
   });
 });

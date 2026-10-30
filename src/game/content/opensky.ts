@@ -85,10 +85,12 @@ export const OPEN_COPY = {
   pemma:
     "Pemma bottles the cold that comes off the stair. She says the kite downstairs drafts on people who press the wrong order, and on people who press the right one. Leaving is still allowed.",
   signalAsk: "The post will keep one answer. Bank the light for the watch, or send it along the scratch. Neither one burns the other choice you already made.",
+  signalFar: "The post is at Cinderwatch. A light from another room is not an answer.",
   signalBank: "You bank the light. Cinderwatch keeps it. The scratch in the sky stays scratched. A pane of signal glass comes loose.",
   signalSend: "You send the light along the scratch. The watch keeps its ash. The pane that held the light comes loose anyway.",
   signalKept: "The post already has its answer. It does not take a second one.",
   stairNeed: "The cold stair wants ash, then salt, then ember. Buttons are enough. A look is not a press.",
+  stairFar: "The cold nick is on the stair under the watch. An order from another room does not open it.",
   stairWrong: "The cold does not take that order.",
   stairOpen: "Ash, salt, ember. The stair decides to be a stair. Something below is already drafting.",
   stairKept: "The stair is already open.",
@@ -101,6 +103,7 @@ export const OPEN_COPY = {
   perchNote: "A cold perch under the ash. It points at a drill on the ground. It is not a pad, and it is not the drill.",
   sightPerch: "The perch repeats a fall you have not taken. Sight shows the shape. It does not start the drill.",
   tallyNeed: "The ash falls upward for one breath. Sight has to see it before a count can be a count.",
+  tallyFar: "The upward ash is at Cinderwatch. A count from another room is not a count, even if you have already seen the watch.",
   tallyKept: "The upward ash is already counted. The bottle does not refill.",
   tallyBank: "You count the ash that stayed. The banked light makes the cold honest. A small bottle comes loose. It is not a second signal.",
   tallySend: "You count the ash that left with the light. The scratch is still a scratch. A small bottle comes loose. It is not a second signal.",
@@ -109,6 +112,7 @@ export const OPEN_COPY = {
   perchDone: "The perch is quiet. Sky Lance and Leap are drills in your hands. Dragoon stays shut.",
   perchTeach: "The perch takes the drill. Sky Lance is a committed pierce. Leap leaves the line for one beat and costs more than a sidestep. Neither one is a coat. Dragoon stays shut.",
   dropNeed: "The drop wants rise, then hold, then drop. Buttons are enough. The perch has to be finished first.",
+  dropFar: "The drop is at Cinderwatch. An order spoken somewhere else does not fall.",
   dropEarly: "The drop waits on the perch. A drill you have not stood is not a technique.",
   dropWrong: "The air does not take that order.",
   dropOpen: "Rise, hold, drop. Falling Star is a drill after the perch. It is weaker than noon. Dragoon stays shut.",
@@ -124,6 +128,62 @@ export const OPEN_COPY = {
   pemmaSend: " The bottle is colder because the light left. She does not call that a mistake.",
   pemmaKite: " Come back when you like. The cold is still bottled. The stair is a memory, not a toll.",
   pemmaTally: " The upward ash is counted. She will not ask twice.",
+  beaconNote: "An old beacon answers the hull. Two lights share one minute. It is a landmark. It is not a pad.",
+  sightSkyBeacon: "Sight shows two flight records on the same minute. One held a light. One sent a light. Looking does not write the mark, and it does not swear.",
+  beaconNeedTrial: "The ash road waits on the cold perch. A spark is not the drill, and the coat is still shut.",
+  beaconNeedNote: "The road is listening for a beacon you have not written down. Note it from the chart. It will not land the hull.",
+  beaconEnter: "The ash road takes you to the beacon. The chart does not move. The rail home is still at the watch.",
+  beaconLeave: "You walk back to Cinderwatch. The post is still counting.",
+  beaconFar: "The beacon is down the ash road. A step from another room does not arrive.",
+  recordText: "A flight record with a missing line. Two hands wrote the same minute. One held the light. One sent it on. They do not agree, and the page does not say which hand was kinder.",
+  recordBank: " Your banked light rhymes with the hand that held. It does not erase the hand that sent.",
+  recordSend: " Your sent light rhymes with the hand that left. It does not erase the hand that held.",
+  recordPlain: " The post has not answered yet. The two old hands still disagree without you.",
+  recordFar: "The broken log is at the beacon. A reading from another room does not see it.",
+  recordKept: "The missing line is still missing. You have already read the disagreement.",
+  sightBeacon: "Sight lays both minutes on the log. One hold, one sending. The contradiction is the mystery. It does not swear, and it does not quiet the wing.",
+  vaneText: "Two vanes on one post. One points at the watch. One points along the scratch. The wind is not choosing.",
+  oathAsk: "The beacon will keep one promise of yours. Keep a light for whoever comes back, or for whoever leaves. Neither promise burns the signal you already chose. Neither one opens a coat.",
+  oathReturn: "You swear the beacon keeps a light for whoever comes back. The other promise was not lesser.",
+  oathDepart: "You swear the beacon keeps a light for whoever leaves. The other promise was not lesser.",
+  oathBank: " The light you banked is still banked. The oath does not rewrite the post.",
+  oathSend: " The light you sent is still sent. The oath does not rewrite the post.",
+  oathPlain: " The post has not answered yet. The oath does not choose for it.",
+  oathKept: "The beacon already has your oath. It does not take a second one.",
+  oathFar: "The plinth is at the beacon. An oath from another room is not this oath.",
+  oathNeed: "The wing will not draft until the beacon has an oath. You can still walk home.",
+  wingDone: "The wing is quiet. The oath remains. Dragoon stays shut.",
+  wingSit: "The wing is sitting on both minutes. The oath remains. Dragoon stays shut.",
+  lanceMeans: "Sky Lance is the pierce the old riders used when they meant to arrive. Leap is leaving the line so a draft can miss.",
+  starMeans: " Falling Star is the weaker noon they dropped when they meant to be seen. The three drills are recognized. They are not a coat.",
+  starMissing: " The drop is still unwritten. The oath does not pretend the third drill is already yours, and it does not wait on it.",
+  coatLine: " Dragoon stays shut. An oath kept here is a prerequisite a later chapter may ask for. It is not the coat.",
+  ashHome: "The watch's ash is a different color now. Brant is still counting. Go back if you like. The rail does not wait.",
+  ashHomeEarly: "The watch is still there. The wing is not quiet yet. You can leave whenever you want.",
+  seraBeaconStay: " Sera puts the beacon on the log as a bearing, not a second world. The safer stay is still the one she lashed.",
+  seraBeaconSplice: " Sera puts the beacon on the log as a bearing, not a second world. The hot splice is still the one she finished.",
+  seraBeaconPlain: " Sera puts the beacon on the log as a bearing, not a second world.",
+  seraReturn: " You asked the beacon to keep a light for whoever comes back. She calls that a lash, not a judgment.",
+  seraDepart: " You asked the beacon to keep a light for whoever leaves. She calls that a splice, not a judgment.",
+  miraBeaconRecord: " Mira would write both minutes beside the strike she already kept. She will not sand it, and she will not sand your oath.",
+  miraBeaconBlank: " Mira would leave the beacon's page kind, and remember both minutes anyway. The parish page stays blank.",
+  kaelBeaconLaw: " Kael says a gate can keep a light. The oath you wrote is not a cleaner law than the one that turned Pell back.",
+  kaelBeaconPeople: " Kael says a person can keep a light. The oath you wrote does not undo the walk Pell finished.",
+  nessaBeaconSpring: " Nessa hears older riders in the older water. She does not throw the new minute out.",
+  nessaBeaconVerse: " Nessa hears the minute already arriving. The older line stays spoken.",
+  iriBeacon: " From the beacon the seam is a second crease. The oath did not open it. She will not name what is under it.",
+  veilBeacon: "The thread is thinner over the beacon. You can hear it. You cannot hire it. Iri stays where she chose to stay.",
+  veilBeaconHeard: "You heard the veil from the beacon. Iri was not recruited by it.",
+  brantBeaconBank: " The beacon answered the light you kept. He is not scolding the scratch.",
+  brantBeaconSend: " The beacon answered the light you sent. He is not scolding the watch.",
+  brantReturn: " You asked it to keep a light for whoever comes back. He counts that as weather, not a verdict.",
+  brantDepart: " You asked it to keep a light for whoever leaves. He counts that as weather, not a verdict.",
+  brantWing: " The wing is finished. The ash at the post has a new color. Come look. The rail does not wait.",
+  brantHeard: " An old beacon answered the hull after the drill. Note it from the chart. It will not take the hull.",
+  pemmaBeaconBank: " Her bottle answered the light you kept. She does not call the scratch a mistake.",
+  pemmaBeaconSend: " Her bottle answered the light you sent. She does not call the watch a mistake.",
+  pemmaWing: " The cold is still bottled. The new color at the post is not a toll.",
+  watchedAgain: "You looked at the post again. The new color stays. It does not rewrite the signal.",
 } as const;
 
 const HOME_DOCKS = ["dock.vale", "dock.berth", "dock.margin"] as const;
@@ -144,6 +204,7 @@ export const SKY_FINDS = [
   { id: "later", x: 14, y: 2, flag: "flag.sky_later", text: OPEN_COPY.noteLater },
   { id: "cache", x: 7, y: 6, flag: "flag.sky_cache_seen", text: "A hidden shine under one cloud. It does not jump into a hand from a note." },
   { id: "perch", x: 13, y: 7, flag: "flag.sky_perch", text: "A cold perch under the ash. It points at a drill on the ground. It is not a pad, and it is not the drill." },
+  { id: "beacon", x: 4, y: 2, flag: "flag.sky_beacon", text: "An old beacon answers the hull. Two lights share one minute. It is a landmark. It is not a pad." },
 ] as const;
 
 function remember(save: SaveGame, id: string, value: string) {
@@ -393,7 +454,7 @@ export function takeCache(
 /** Overlay only. Does not pin, land, open the stair, or pay the cache. */
 export function beginOpenSkySight(save: SaveGame): { save: SaveGame; text: string } | null {
   const aboard = Boolean(save.flags["sky.aboard"]);
-  const grounded = save.mapId === "map.deck" || save.mapId === "map.cinder" || save.mapId === "map.ashvault";
+  const grounded = save.mapId === "map.deck" || save.mapId === "map.cinder" || save.mapId === "map.ashvault" || save.mapId === "map.beacon";
   if (!aboard && !grounded) return null;
   let flagId = "flag.sight_sky";
   let text: string = OPEN_COPY.sightSky;
@@ -406,12 +467,16 @@ export function beginOpenSkySight(save: SaveGame): { save: SaveGame; text: strin
   } else if (save.mapId === "map.ashvault" && !aboard) {
     flagId = "flag.sight_ashvault";
     text = OPEN_COPY.sightStair;
+  } else if (save.mapId === "map.beacon" && !aboard) {
+    flagId = "flag.sight_beacon";
+    text = OPEN_COPY.sightBeacon;
   } else if (aboard) {
     const cell = skyCell(save);
     const echo = SKY_FINDS.find((f) => f.id === "echo")!;
     const cache = SKY_FINDS.find((f) => f.id === "cache")!;
     const shear = SKY_FINDS.find((f) => f.id === "shear")!;
     const perch = SKY_FINDS.find((f) => f.id === "perch")!;
+    const beacon = SKY_FINDS.find((f) => f.id === "beacon")!;
     if (cell.x === echo.x && cell.y === echo.y) {
       flagId = "flag.sight_sky_echo";
       text = OPEN_COPY.sightEcho;
@@ -424,6 +489,9 @@ export function beginOpenSkySight(save: SaveGame): { save: SaveGame; text: strin
     } else if (cell.x === perch.x && cell.y === perch.y) {
       flagId = "flag.sight_sky_perch";
       text = OPEN_COPY.sightPerch;
+    } else if (cell.x === beacon.x && cell.y === beacon.y) {
+      flagId = "flag.sight_sky_beacon";
+      text = OPEN_COPY.sightSkyBeacon;
     }
   }
   const next = save.flags[flagId] ? structuredClone(save) : setFlag(save, flagId);
@@ -450,8 +518,8 @@ export function chooseSignal(
   value: "bank" | "send",
 ): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
   if (value !== "bank" && value !== "send") return { ok: false, reason: OPEN_COPY.signalAsk };
-  if (!save.flags["flag.found_cinder"] && save.mapId !== "map.cinder") return { ok: false, reason: OPEN_COPY.signalAsk };
   if (save.flags["flag.cinder_signal"]) return { ok: true, save, text: OPEN_COPY.signalKept };
+  if (save.mapId !== "map.cinder") return { ok: false, reason: OPEN_COPY.signalFar };
   const bank = value === "bank";
   const text = bank ? OPEN_COPY.signalBank : OPEN_COPY.signalSend;
   let next = setFlag(save, bank ? "flag.cinder_bank" : "flag.cinder_send");
@@ -468,6 +536,7 @@ export function setCinderOrder(
   picks: readonly string[],
 ): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
   if (save.flags["flag.cinder_stair"]) return { ok: true, save, text: OPEN_COPY.stairKept };
+  if (save.mapId !== "map.ashvault") return { ok: false, reason: OPEN_COPY.stairFar };
   const match = picks.length === CINDER_ANSWER.length && picks.every((p, i) => p === CINDER_ANSWER[i]);
   if (!match) return { ok: false, reason: OPEN_COPY.stairWrong };
   const next = setFlag(save, "flag.cinder_stair");
@@ -486,53 +555,102 @@ export function talkCrew(
   if (who === "sera") {
     if (!seated(save, "sera") && !save.flags["flag.sera_joined"]) return { ok: true, save, text: OPEN_COPY.deckWait, speaker: "The wheel" };
     const stay = save.flags["flag.sera_stay"] ? " The safer stay is still the one she lashed." : save.flags["flag.sera_splice"] ? " The hot splice is still the one she finished." : "";
-    const next = save.flags["flag.crew_sera"] ? save : setFlag(save, "flag.crew_sera");
-    return { ok: true, save: next, text: OPEN_COPY.deckSera + stay + OPEN_COPY.seraNote, speaker: "Sera" };
+    let next = save.flags["flag.crew_sera"] ? save : setFlag(save, "flag.crew_sera");
+    let text = OPEN_COPY.deckSera + stay + OPEN_COPY.seraNote;
+    if (save.flags["flag.beacon_done"]) {
+      const mark = save.flags["flag.sera_stay"] ? OPEN_COPY.seraBeaconStay : save.flags["flag.sera_splice"] ? OPEN_COPY.seraBeaconSplice : OPEN_COPY.seraBeaconPlain;
+      const oath = save.flags["flag.beacon_return"] ? OPEN_COPY.seraReturn : save.flags["flag.beacon_depart"] ? OPEN_COPY.seraDepart : "";
+      text += mark + oath;
+      if (!next.flags["flag.sera_beacon"]) next = setFlag(next, "flag.sera_beacon");
+    }
+    return { ok: true, save: next, text, speaker: "Sera" };
   }
   if (who === "mira") {
     if (!seated(save, "mira")) return { ok: false, reason: OPEN_COPY.deckMira };
-    const next = save.flags["flag.crew_mira"] ? save : setFlag(save, "flag.crew_mira");
+    let next = save.flags["flag.crew_mira"] ? save : setFlag(save, "flag.crew_mira");
     const page = save.flags["flag.mira_record"] ? " The tenth strike is still in the margin." : save.flags["flag.mira_blank"] ? " The parish page is still blank, and she still remembers it." : "";
-    return { ok: true, save: next, text: OPEN_COPY.miraLine + page, speaker: "Mira" };
+    let text = OPEN_COPY.miraLine + page;
+    if (save.flags["flag.beacon_done"]) {
+      text += save.flags["flag.mira_record"] ? OPEN_COPY.miraBeaconRecord : save.flags["flag.mira_blank"] ? OPEN_COPY.miraBeaconBlank : "";
+      if (!next.flags["flag.mira_beacon"]) next = setFlag(next, "flag.mira_beacon");
+    }
+    return { ok: true, save: next, text, speaker: "Mira" };
   }
   if (who === "kael") {
     if (!seated(save, "kael")) return { ok: false, reason: OPEN_COPY.deckKael };
-    const next = save.flags["flag.crew_kael"] ? save : setFlag(save, "flag.crew_kael");
+    let next = save.flags["flag.crew_kael"] ? save : setFlag(save, "flag.crew_kael");
     const oath = save.flags["flag.kael_law"] ? " The gate still held for Pell." : save.flags["flag.kael_people"] ? " Pell still finished the walk." : "";
-    return { ok: true, save: next, text: OPEN_COPY.kaelLine + oath, speaker: "Kael" };
+    let text = OPEN_COPY.kaelLine + oath;
+    if (save.flags["flag.beacon_done"]) {
+      text += save.flags["flag.kael_law"] ? OPEN_COPY.kaelBeaconLaw : save.flags["flag.kael_people"] ? OPEN_COPY.kaelBeaconPeople : "";
+      if (!next.flags["flag.kael_beacon"]) next = setFlag(next, "flag.kael_beacon");
+    }
+    return { ok: true, save: next, text, speaker: "Kael" };
   }
   if (who === "nessa") {
     if (!seated(save, "nessa")) return { ok: false, reason: OPEN_COPY.deckNessa };
-    const next = save.flags["flag.crew_nessa"] ? save : setFlag(save, "flag.crew_nessa");
+    let next = save.flags["flag.crew_nessa"] ? save : setFlag(save, "flag.crew_nessa");
     const verse = save.flags["flag.nessa_spring"] ? " Her mother's spring is still spoken." : save.flags["flag.nessa_verse"] ? " The new verse still stands." : "";
-    return { ok: true, save: next, text: OPEN_COPY.nessaLine + verse, speaker: "Nessa" };
+    let text = OPEN_COPY.nessaLine + verse;
+    if (save.flags["flag.beacon_done"]) {
+      text += save.flags["flag.nessa_spring"] ? OPEN_COPY.nessaBeaconSpring : save.flags["flag.nessa_verse"] ? OPEN_COPY.nessaBeaconVerse : "";
+      if (!next.flags["flag.nessa_beacon"]) next = setFlag(next, "flag.nessa_beacon");
+    }
+    return { ok: true, save: next, text, speaker: "Nessa" };
   }
   if (who === "iri") {
     if (!save.flags["flag.iri_joined"] || !seated(save, "iri")) return { ok: false, reason: OPEN_COPY.deckIri };
-    const next = save.flags["flag.crew_iri"] ? save : setFlag(save, "flag.crew_iri");
-    return { ok: true, save: next, text: OPEN_COPY.iriLine, speaker: "Iri" };
+    let next = save.flags["flag.crew_iri"] ? save : setFlag(save, "flag.crew_iri");
+    let text: string = OPEN_COPY.iriLine;
+    if (save.flags["flag.beacon_done"]) {
+      text += OPEN_COPY.iriBeacon;
+      if (!next.flags["flag.iri_beacon"]) next = setFlag(next, "flag.iri_beacon");
+    }
+    return { ok: true, save: next, text, speaker: "Iri" };
   }
   if (who === "veil") {
     if (save.flags["flag.iri_joined"] || !save.flags["flag.iri_veil"]) return { ok: false, reason: OPEN_COPY.deckIri };
-    const next = save.flags["flag.sky_veil_heard"] ? save : setFlag(save, "flag.sky_veil_heard");
+    let next = save.flags["flag.sky_veil_heard"] ? save : setFlag(save, "flag.sky_veil_heard");
     say(next, OPEN_COPY.veilHeard);
-    return { ok: true, save: next, text: OPEN_COPY.veilLine, speaker: "A thread" };
+    let text: string = OPEN_COPY.veilLine;
+    if (save.flags["flag.beacon_done"]) {
+      text = OPEN_COPY.veilBeacon;
+      if (!next.flags["flag.beacon_veil_heard"]) next = setFlag(next, "flag.beacon_veil_heard");
+      say(next, OPEN_COPY.veilBeaconHeard);
+    }
+    return { ok: true, save: next, text, speaker: "A thread" };
   }
   if (who === "brant") {
-    const next = save.flags["flag.spoke_brant"] ? save : setFlag(save, "flag.spoke_brant");
+    let next = save.flags["flag.spoke_brant"] ? save : setFlag(save, "flag.spoke_brant");
     const bits: string[] = [OPEN_COPY.brant];
     if (save.flags["flag.cinder_bank"]) bits.push(OPEN_COPY.brantBank);
     if (save.flags["flag.cinder_send"]) bits.push(OPEN_COPY.brantSend);
     if (save.flags["flag.ashkite_cleared"]) bits.push(OPEN_COPY.brantKite);
+    if (save.flags["flag.dragoon_trial"] && !save.flags["flag.sky_beacon"]) bits.push(OPEN_COPY.brantHeard);
+    if (save.flags["flag.beacon_done"]) {
+      if (save.flags["flag.cinder_bank"]) bits.push(OPEN_COPY.brantBeaconBank);
+      if (save.flags["flag.cinder_send"]) bits.push(OPEN_COPY.brantBeaconSend);
+      if (save.flags["flag.beacon_return"]) bits.push(OPEN_COPY.brantReturn);
+      if (save.flags["flag.beacon_depart"]) bits.push(OPEN_COPY.brantDepart);
+      bits.push(OPEN_COPY.brantWing);
+      bits.push(traditionLine(save));
+      if (!next.flags["flag.cinder_after"]) next = setFlag(next, "flag.cinder_after");
+    }
     return { ok: true, save: next, text: bits.join(""), speaker: "Brant" };
   }
   if (who === "pemma") {
-    const next = save.flags["flag.spoke_pemma"] ? save : setFlag(save, "flag.spoke_pemma");
+    let next = save.flags["flag.spoke_pemma"] ? save : setFlag(save, "flag.spoke_pemma");
     const bits: string[] = [OPEN_COPY.pemma];
     if (save.flags["flag.cinder_bank"]) bits.push(OPEN_COPY.pemmaBank);
     if (save.flags["flag.cinder_send"]) bits.push(OPEN_COPY.pemmaSend);
     if (save.flags["flag.cinder_tally"]) bits.push(OPEN_COPY.pemmaTally);
     if (save.flags["flag.ashkite_cleared"]) bits.push(OPEN_COPY.pemmaKite);
+    if (save.flags["flag.beacon_done"]) {
+      if (save.flags["flag.cinder_bank"]) bits.push(OPEN_COPY.pemmaBeaconBank);
+      if (save.flags["flag.cinder_send"]) bits.push(OPEN_COPY.pemmaBeaconSend);
+      bits.push(OPEN_COPY.pemmaWing);
+      if (!next.flags["flag.cinder_after"]) next = setFlag(next, "flag.cinder_after");
+    }
     return { ok: true, save: next, text: bits.join(""), speaker: "Pemma" };
   }
   const next = save.flags["flag.cinder_later"] ? save : setFlag(save, "flag.cinder_later");
@@ -547,8 +665,8 @@ export function logText(save: SaveGame): string {
 export function countAsh(
   save: SaveGame,
 ): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
-  if (!save.flags["flag.found_cinder"] && save.mapId !== "map.cinder") return { ok: false, reason: OPEN_COPY.tallyNeed };
   if (save.flags["flag.cinder_tally"]) return { ok: true, save, text: OPEN_COPY.tallyKept };
+  if (save.mapId !== "map.cinder") return { ok: false, reason: OPEN_COPY.tallyFar };
   if (!save.flags["flag.sight_cinder"]) return { ok: false, reason: OPEN_COPY.tallyNeed };
   const text = save.flags["flag.cinder_bank"] ? OPEN_COPY.tallyBank : save.flags["flag.cinder_send"] ? OPEN_COPY.tallySend : OPEN_COPY.tallyPlain;
   let next = setFlag(save, "flag.cinder_tally");
@@ -576,8 +694,9 @@ export function setDropOrder(
   save: SaveGame,
   picks: readonly string[],
 ): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
-  if (!save.flags["flag.dragoon_trial"]) return { ok: false, reason: OPEN_COPY.dropEarly };
   if (save.flags["flag.falling_star"]) return { ok: true, save, text: OPEN_COPY.dropKept };
+  if (save.mapId !== "map.cinder") return { ok: false, reason: OPEN_COPY.dropFar };
+  if (!save.flags["flag.dragoon_trial"]) return { ok: false, reason: OPEN_COPY.dropEarly };
   const match = picks.length === DROP_ANSWER.length && picks.every((p, i) => p === DROP_ANSWER[i]);
   if (!match) return { ok: false, reason: OPEN_COPY.dropWrong };
   let next = grantEarned(save, "spell.falling_star");
@@ -586,6 +705,87 @@ export function setDropOrder(
   say(next, OPEN_COPY.dropOpen);
   refreshQuests(next);
   return { ok: true, save: next, text: OPEN_COPY.dropOpen };
+}
+
+function signalFlavor(save: SaveGame): string {
+  if (save.flags["flag.cinder_bank"]) return OPEN_COPY.oathBank;
+  if (save.flags["flag.cinder_send"]) return OPEN_COPY.oathSend;
+  return OPEN_COPY.oathPlain;
+}
+
+function traditionLine(save: SaveGame): string {
+  const bits: string[] = [];
+  if (save.flags["flag.dragoon_trial"]) bits.push(OPEN_COPY.lanceMeans);
+  bits.push(save.flags["flag.falling_star"] ? OPEN_COPY.starMeans : OPEN_COPY.starMissing);
+  bits.push(OPEN_COPY.coatLine);
+  return bits.join("");
+}
+
+export function enterBeacon(
+  save: SaveGame,
+): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
+  if (save.mapId !== "map.cinder") return { ok: false, reason: OPEN_COPY.beaconFar };
+  if (!save.flags["flag.dragoon_trial"]) return { ok: false, reason: OPEN_COPY.beaconNeedTrial };
+  if (!save.flags["flag.sky_beacon"]) return { ok: false, reason: OPEN_COPY.beaconNeedNote };
+  const next = structuredClone(save);
+  next.mapId = "map.beacon";
+  next.spawnId = "road";
+  next.encounter = null;
+  const marked = next.flags["flag.beacon_found"] ? next : setFlag(next, "flag.beacon_found");
+  say(marked, OPEN_COPY.beaconEnter);
+  return { ok: true, save: marked, text: OPEN_COPY.beaconEnter + traditionLine(marked) };
+}
+
+export function leaveBeacon(
+  save: SaveGame,
+): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
+  if (save.mapId !== "map.beacon") return { ok: false, reason: OPEN_COPY.beaconFar };
+  const next = structuredClone(save);
+  next.mapId = "map.cinder";
+  next.spawnId = "from_beacon";
+  next.encounter = null;
+  return { ok: true, save: next, text: OPEN_COPY.beaconLeave };
+}
+
+export function readBeaconLog(
+  save: SaveGame,
+): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
+  if (save.mapId !== "map.beacon") return { ok: false, reason: OPEN_COPY.recordFar };
+  const flavor = save.flags["flag.cinder_bank"] ? OPEN_COPY.recordBank : save.flags["flag.cinder_send"] ? OPEN_COPY.recordSend : OPEN_COPY.recordPlain;
+  const text = OPEN_COPY.recordText + flavor;
+  if (save.flags["flag.beacon_record"]) return { ok: true, save, text: OPEN_COPY.recordKept + flavor };
+  const next = setFlag(save, "flag.beacon_record");
+  say(next, text);
+  return { ok: true, save: next, text };
+}
+
+export function swearBeacon(
+  save: SaveGame,
+  value: "return" | "depart",
+): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
+  if (value !== "return" && value !== "depart") return { ok: false, reason: OPEN_COPY.oathAsk };
+  if (save.flags["flag.beacon_oath"]) return { ok: true, save, text: OPEN_COPY.oathKept };
+  if (save.mapId !== "map.beacon") return { ok: false, reason: OPEN_COPY.oathFar };
+  const returning = value === "return";
+  const text = (returning ? OPEN_COPY.oathReturn : OPEN_COPY.oathDepart) + signalFlavor(save) + traditionLine(save);
+  let next = setFlag(save, returning ? "flag.beacon_return" : "flag.beacon_depart");
+  next = setFlag(next, "flag.beacon_oath");
+  remember(next, "choice.beacon", value);
+  giveOnce(next, "beacon_oath", "item.beacon_ash");
+  say(next, text);
+  refreshQuests(next);
+  return { ok: true, save: next, text };
+}
+
+export function watchAgain(
+  save: SaveGame,
+): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
+  if (save.mapId !== "map.cinder" && save.mapId !== "map.beacon") return { ok: false, reason: OPEN_COPY.beaconFar };
+  if (!save.flags["flag.beacon_done"]) return { ok: true, save, text: OPEN_COPY.ashHomeEarly };
+  if (save.flags["flag.cinder_after"]) return { ok: true, save, text: OPEN_COPY.watchedAgain };
+  const next = setFlag(save, "flag.cinder_after");
+  say(next, OPEN_COPY.watchedAgain);
+  return { ok: true, save: next, text: OPEN_COPY.ashHome };
 }
 
 export function chartText(save: SaveGame): string {
@@ -612,11 +812,20 @@ export function headingObjective(save: SaveGame): string | null {
   if (!save.flags["flag.cinder_signal"]) return "Cinderwatch will take the hull. Brant is counting ash. Bank the light, or send it. Neither answer burns the other.";
   if (!save.flags["flag.cinder_stair"]) return "The cold stair under Cinderwatch wants ash, then salt, then ember. Buttons are enough.";
   if (!save.flags["flag.ashkite_cleared"]) return OPEN_COPY.kiteWait;
-  const here = save.mapId === "map.cinder" || save.mapId === "map.ashvault" || save.mapId === "map.deck" || Boolean(save.flags["sky.aboard"]);
+  const here =
+    save.mapId === "map.cinder" ||
+    save.mapId === "map.ashvault" ||
+    save.mapId === "map.beacon" ||
+    save.mapId === "map.deck" ||
+    Boolean(save.flags["sky.aboard"]);
   if (!here) return null;
   if (!save.flags["flag.dragoon_trial"]) return "The rail home does not wait. East of the post, the cold perch is a drill. It will not hand you a coat.";
   if (!save.flags["flag.falling_star"]) return "The drop wants rise, then hold, then drop. Dragoon stays shut. The rail home does not wait.";
   if (!save.flags["flag.cinder_tally"]) return "The upward ash can be counted after a look. It does not rewrite the post. The rail home does not wait.";
+  if (!save.flags["flag.sky_beacon"]) return "An old beacon is answering the hull. Note it from the chart. It is not a pad. The rail home does not wait.";
+  if (!save.flags["flag.beacon_oath"]) return "The ash road at the watch is open. Keep a light for whoever comes back, or for whoever leaves. Neither is cleaner. The rail home does not wait.";
+  if (!save.flags["flag.beacon_done"]) return "The oathwing is drafting on the beacon. Ask it to hold both minutes only if you have seen them, or end the draft. The rail home does not wait.";
+  if (!save.flags["flag.cinder_after"]) return "The watch's ash has a new color. Brant is still counting. The rail home does not wait.";
   return null;
 }
 
@@ -638,7 +847,16 @@ export function skyClues(save: SaveGame): string[] {
   if (save.flags["flag.dragoon_spark"]) clues.push(OPEN_COPY.spark);
   if (save.flags["flag.dragoon_trial"]) clues.push(OPEN_COPY.perchDone);
   if (save.flags["flag.falling_star"]) clues.push(OPEN_COPY.dropKept);
+  if (save.flags["flag.sight_sky_beacon"] && !save.flags["flag.sky_beacon"]) clues.push("Sight showed the beacon's two minutes. The mark is not written until you note it, and it is not a pad.");
+  if (save.flags["flag.sky_beacon"]) clues.push(OPEN_COPY.beaconNote);
+  if (save.flags["flag.beacon_record"]) clues.push("Two old hands wrote the same minute at the beacon. Neither was named kinder.");
+  if (save.flags["flag.sight_beacon"] && !save.flags["flag.beacon_oath"]) clues.push("Sight laid both minutes on the beacon log. It did not swear.");
+  if (save.flags["flag.beacon_return"]) clues.push("The beacon keeps a light for whoever comes back. The other promise was not lesser.");
+  if (save.flags["flag.beacon_depart"]) clues.push("The beacon keeps a light for whoever leaves. The other promise was not lesser.");
+  if (save.flags["flag.beacon_done"]) clues.push(save.flags["flag.oathwing_spared"] ? OPEN_COPY.wingSit : OPEN_COPY.wingDone);
+  if (save.flags["flag.dragoon_oath"]) clues.push("The beacon's oath is written. Dragoon stays shut.");
   if (save.flags["flag.sky_veil_heard"]) clues.push(OPEN_COPY.veilHeard);
+  if (save.flags["flag.beacon_veil_heard"]) clues.push(OPEN_COPY.veilBeaconHeard);
   return clues;
 }
 

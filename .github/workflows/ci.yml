@@ -40,6 +40,7 @@ jobs:
           GAME_SMOKE_URL="http://127.0.0.1:4173/EchoesOfTheNine/" node scripts/hours-smoke.mjs
           GAME_SMOKE_URL="http://127.0.0.1:4173/EchoesOfTheNine/" node scripts/opensky-smoke.mjs
           GAME_SMOKE_URL="http://127.0.0.1:4173/EchoesOfTheNine/" node scripts/wings-smoke.mjs
+          GAME_SMOKE_URL="http://127.0.0.1:4173/EchoesOfTheNine/" node scripts/dragons-smoke.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -57,4 +58,10 @@ jobs:
         with:
           name: wings-first-stay
           path: screenshots/wings-*.png
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dragons-oath
+          path: screenshots/dragons-*.png
           if-no-files-found: ignore

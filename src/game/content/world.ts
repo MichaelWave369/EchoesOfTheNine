@@ -401,6 +401,7 @@ export const MAPS: Record<string, MapDef> = {
       pad: { x: 3, y: 5, facing: "w" },
       from_vault: { x: 12, y: 5, facing: "w" },
       drill: { x: 10, y: 4, facing: "e" },
+      from_beacon: { x: 4, y: 5, facing: "s" },
     },
     hotspots: [
       { id: "sign.rail", x: 2, y: 5, w: 1, h: 1, label: "First Stay", kind: "sign" },
@@ -411,6 +412,7 @@ export const MAPS: Record<string, MapDef> = {
       { id: "sign.tally", x: 9, y: 5, w: 1, h: 1, label: "Upward ash", kind: "sign" },
       { id: "battle.perch", x: 11, y: 4, w: 1, h: 1, label: "Cold perch", kind: "battle" },
       { id: "sign.drop", x: 10, y: 5, w: 1, h: 1, label: "The drop", kind: "sign" },
+      { id: "sign.ashroad", x: 4, y: 6, w: 1, h: 1, label: "Ash road", kind: "sign" },
       { id: "exit.stair", x: 13, y: 5, w: 1, h: 1, label: "Cold stair", kind: "exit" },
     ],
     exits: [{ id: "exit.stair", to: "map.ashvault", spawn: "stair" }],
@@ -428,6 +430,23 @@ export const MAPS: Record<string, MapDef> = {
       { id: "exit.cinder", x: 1, y: 4, w: 1, h: 1, label: "Up to the watch", kind: "exit" },
     ],
     exits: [{ id: "exit.cinder", to: "map.cinder", spawn: "from_vault" }],
+  },
+  "map.beacon": {
+    id: "map.beacon",
+    name: "Ashbound Beacon",
+    blurb: "An old light that answers the hull. Two records share one minute. The road home is the watch.",
+    width: 12,
+    height: 8,
+    spawns: { road: { x: 2, y: 4, facing: "e" } },
+    hotspots: [
+      { id: "sign.watchward", x: 1, y: 4, w: 1, h: 1, label: "Back to the watch", kind: "sign" },
+      { id: "sign.vane", x: 4, y: 3, w: 1, h: 1, label: "Two vanes", kind: "sign" },
+      { id: "sign.record", x: 4, y: 4, w: 1, h: 1, label: "Broken log", kind: "sign" },
+      { id: "sign.plinth", x: 7, y: 4, w: 1, h: 1, label: "The oath", kind: "sign" },
+      { id: "sign.ashhome", x: 7, y: 5, w: 1, h: 1, label: "The post again", kind: "sign" },
+      { id: "battle.oath", x: 9, y: 4, w: 1, h: 1, label: "Oathwing", kind: "battle" },
+    ],
+    exits: [],
   },
 };
 
@@ -965,6 +984,17 @@ export const INITIAL_QUESTS: QuestNode[] = [
     discoveryId: "disc.perch",
     status: "hidden",
   },
+  {
+    id: "quest.beacon",
+    title: "The beacon that answers",
+    gate: "public",
+    summary: "After the perch, an old beacon answers the hull. Note it. It will not land you. Two old flight records disagree. Keep a light for whoever comes back, or for whoever leaves. Then quiet the wing. Neither signal is cleaner. Dragoon stays shut.",
+    factsRequired: ["flag.dragoon_trial"],
+    alternatives: ["Keep a light for whoever comes back", "Keep a light for whoever leaves"],
+    worldEffects: ["flag.beacon_done"],
+    discoveryId: "disc.beacon",
+    status: "hidden",
+  },
 ];
 
 /** Future systems. Present in data, never offered on the public critical path. */
@@ -1108,6 +1138,21 @@ export const ITEMS: Record<string, { id: string; name: string; blurb: string; us
     id: "item.star_glass",
     name: "Star Glass",
     blurb: "From rise, hold, drop. A weaker noon. The coat stays shut.",
+  },
+  "item.beacon_ash": {
+    id: "item.beacon_ash",
+    name: "Beacon Ash",
+    blurb: "Ash from an oath the beacon agreed to keep. Return or depart, it is the same ash. It is not a coat.",
+  },
+  "item.vow_glass": {
+    id: "item.vow_glass",
+    name: "Vow Glass",
+    blurb: "Cooled when the draft was ended. Both old minutes stay written. The coat stays shut.",
+  },
+  "item.vow_wick": {
+    id: "item.vow_wick",
+    name: "Vow Wick",
+    blurb: "A light that agreed to hold two minutes. The draft sat down. The coat stays shut.",
   },
 };
 

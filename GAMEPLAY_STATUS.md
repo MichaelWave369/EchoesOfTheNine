@@ -55,6 +55,15 @@ Honest labels. Updated for the Unwritten Hour. Skyweave's rules are unchanged. T
 - Cinderwatch keeps both signal answers. Sight can show ash falling upward. Counting it is a separate press and pays one cold vial. It does not flip the post. The cold perch, after the kite, is a short fight on the shared core. Sky Lance and Leap are earned there. The drop is rise, hold, drop, and it teaches Falling Star. Both are weaker than noon. Dragoon stays shut. The rail home does not wait.
 - The perch in the air is a note, not a pad and not the fight. Sight on that cell does not write the note and does not start the drill.
 
+## The Dragon's Oath
+
+- The ash tally, the signal, the cold stair, and the Falling Star drop pay only at their own tiles. A discovery flag is not a remote claim. A choice already kept stays kept, from anywhere, and does not pay again.
+- After the perch, the chart can note an old beacon. That cell is not a pad. The later light is still not a pad. The ash road at Cinderwatch opens the beacon only after the note and the drill. Bank and send both finish it. Neither is cleaner, and neither is rewritten.
+- The broken log disagrees with itself. Temporal Sight lays both minutes on it. Sight does not swear and does not end the draft. The oath is return or depart. One ash token. A second swear does not flip the first.
+- Oathwing uses the shared combat core. Tide bites the fire. Under half the record breaks and stone bites it. Mercy needs the look and a wing at or under 45 percent. Defeat is always available. The two rewards are different and cannot both pay. Iri is not required. A Warden ending is not required.
+- `flag.dragoon_oath` is written when the wing settles. The coat stays shut. Sky Lance, Leap, and Falling Star stay earned. The beacon is not on the heading once you leave the watch, the deck, the beacon, or the chart, so the campaign is not gated on it.
+- After the wing, Sera, Mira, Kael, Nessa, and a joined Iri can answer from the deck. A veil thread can be heard and does not recruit. Reserve keeps its kit. The post at the watch can be looked at again. The rail home does not wait.
+
 ## Partial
 
 - Ascension is still a presentation of the turn clock. Companions do not path on their own, and they do not take a turn without you.
@@ -68,13 +77,13 @@ Honest labels. Updated for the Unwritten Hour. Skyweave's rules are unchanged. T
 
 ## Scaffolded
 
-- Dragoon, Healer, Chronomancer, nine Echo records, four endings, return anchors, hub aspects. Not playable.
+- Dragoon, Healer, Chronomancer, nine Echo records, four endings, return anchors, hub aspects. Not playable. The beacon oath is a prerequisite only. It does not open the coat.
 - `echoMemory` and `gnosis` stay stored and unlabeled.
 - Open sky on the walked atlas is still only a locked mark. The first flyable chart is separate: see The First Open Sky above.
 
 ## Not built
 
-- The rest of the sky beyond this first chart, the remaining regions, a full job tree, and any pad past the Vale, the berth, the earned Margin, and Cinderwatch.
+- The rest of the sky beyond this first chart, the remaining regions, a full job tree, and any pad past the Vale, the berth, the earned Margin, and Cinderwatch. The Ashbound Beacon is a ground walk, not a new pad.
 - White room, Custodian, Door, Pleroma, Great Return, New Game Plus.
 - Hand tracking, haptics, a headset battle.
 - Accounts, cloud saves, multiplayer.
@@ -93,4 +102,6 @@ First Open Sky coverage: the walked `map.sky` row stays locked; the heading name
 
 Wings coverage: the perch can be noted and cannot be landed on; Sight on that cell does not write the note; the upward ash needs a look, pays once, and keeps bank or send; the perch reward is once; Sky Lance and Leap survive a job change; Falling Star needs the trial and the order rise, hold, drop; a wrong order pays nothing; the bunk costs six gold and does not wake the sight; schema 1 through 4 keep the drills. Dragoon stays shut. The smoke fixture is not a full campaign playthrough.
 
-`scripts/hours-smoke.mjs` runs in GitHub Actions against the Pages build: title, New Journey, a step, an interaction, Attack, an oath answer, a journal line, and a Kept Cord that survives reload. `scripts/opensky-smoke.mjs` starts the same way, then uses a labeled pre-heading fixture (not a full campaign playthrough) to pin the heading, fly west, land, reload, and return to the berth. `scripts/wings-smoke.mjs` starts the same way, then uses a labeled pre-cinder fixture (not a full campaign playthrough) for the deck, the flight, the tally, the perch, the drop, a reload, and the flight home. Desktop and 390px screenshots are uploaded. `scripts/game-launch-smoke.mjs` still starts a journey locally and is not required on every commit.
+Dragon's Oath coverage: the tally, the signal, the stair, and the drop refuse a remote call and stay idempotent once kept; both bank and send can note the beacon, fail to land on it, walk it from Cinderwatch, read a flavor that matches the signal, see both minutes without swearing, and swear once; a second swear does not flip the oath or pay again; the later light cannot be landed on; return still reaches the berth; the heading is quiet on the Vale; Oathwing telegraphs through the shared core, breaks the record under half, and pays vow glass or vow wick once and not both; mercy fails without the look and at high health, and does not need Iri; crew in reserve remember splice, Pell, and the blank page without copying the party; a veil thread does not recruit; schema 1 through 4 keep the oath, the signal, and `quest.beacon`. Dragoon stays shut. `map.sky` stays locked. The smoke fixture is not a full campaign playthrough.
+
+`scripts/hours-smoke.mjs` runs in GitHub Actions against the Pages build: title, New Journey, a step, an interaction, Attack, an oath answer, a journal line, and a Kept Cord that survives reload. `scripts/opensky-smoke.mjs` starts the same way, then uses a labeled pre-heading fixture (not a full campaign playthrough) to pin the heading, fly west, land, reload, and return to the berth. `scripts/wings-smoke.mjs` starts the same way, then uses a labeled pre-cinder fixture (not a full campaign playthrough) for the deck, the flight, the tally, the perch, the drop, a reload, and the flight home. `scripts/dragons-smoke.mjs` starts the same way, then uses a labeled pre-beacon fixture (not a full campaign playthrough) to bank the signal, note the beacon without landing, walk the ash road, swear, fight Oathwing, reload, and return to the berth. Desktop and 390px screenshots are uploaded. `scripts/game-launch-smoke.mjs` still starts a journey locally and is not required on every commit.

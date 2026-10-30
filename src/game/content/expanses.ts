@@ -162,10 +162,10 @@ export const JOB_KITS: {
     name: "Dragoon",
     who: "Not yet",
     bearer: null,
-    requires: "A later chapter. The perch can teach a drill. No button here will put the coat on.",
+    requires: "A later chapter. The perch can teach a drill. The beacon can take an oath. No button here will put the coat on.",
     arts: [],
     kit: [],
-    synergy: "The coat stays shut. Drills, once earned, stay on the wanderer through a job change. They are weaker than noon.",
+    synergy: "The coat stays shut. The beacon's oath is a prerequisite, not an unlock. Drills, once earned, stay on the wanderer through a job change. They are weaker than noon.",
     playable: false,
   },
   {
@@ -392,5 +392,12 @@ export function windupAdvice(abilityId: string): string {
   if (abilityId === "enemy.ink_script") return "Ink Script. Shadow on one of you. Tide bites it. Sidestep or brace.";
   if (abilityId === "enemy.bell_hour") return "Bell Hour. Wind on one of you. Stone bites it. Sidestep or brace.";
   if (abilityId === "enemy.folded_hour") return "Folded Hour hits everyone. Defend. Tide bites the ink. Sidestep will not cover the party.";
+  if (abilityId === "enemy.downdraft") return "Downdraft hits everyone. Defend. A sidestep will not cover the party. Stone bites this wind.";
+  if (abilityId === "enemy.perch_draft") return "Perch Draft hits everyone. Defend. It is a lesson, not the kite.";
+  if (abilityId === "enemy.perch_rake") return "Perch Rake. Wind on one of you. Stone bites it. Sidestep or brace.";
+  if (abilityId === "enemy.vow_rake") return "Vow Rake. Flame on one of you. Tide bites it. Sidestep or brace.";
+  if (abilityId === "enemy.beacon_flare") return "Beacon Flare hits everyone. Defend. Tide bites this fire. A sidestep will not cover the party.";
+  if (abilityId === "enemy.broken_record") return "Broken Record hits everyone. Defend. Stone bites the page. Tide still bites the fire under it.";
+  if (abilityId === "enemy.shear_line") return "Shear Line. Wind on one of you. Stone bites it. Sidestep or brace.";
   return "A short windup. Sidestep, brace, or answer.";
 }

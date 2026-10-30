@@ -34,27 +34,33 @@ The high road becomes a ridge: mill, half-span, salt cave, Early Glass, and a Ga
 
 Merged from `feature/skyweave-ascent`.
 
-## Rung 1f — The Unwritten Hour (playable, this branch)
+## Rung 1f — The Unwritten Hour (playable)
 
 After the first flight, the berth ledger starts an argument the world does not agree on. Vale, Lowbell, Mistwater, and the berth each write an hour. Four writings earn a third pad, the Margin: ink, a cross-view well, a shine Sight can show but not take, and the Hourkeeper. Mercy and defeat both finish the hour and pay different threads. Iri will walk or keep the veil. Mira and Sera each answer one later page without sanding the first choice. The walked open-sky mark stays locked. Dragoon, Healer, and Chronomancer stay shut.
 
-Branch: `feature/unwritten-hour`. Not merged from this workspace.
+Merged as PR #11 from `feature/unwritten-hour`.
 
-## Rung 1h — The First Open Sky (playable, this branch)
+## Rung 1h — The First Open Sky (playable)
 
 The walked atlas row `map.sky` stays locked. After a route, the hull shadow, both glass readings, and the Unwritten Hour, a cross-view heading opens a bounded Sky Atlas. The First Stay still flies the old pads. One new pad, Cinderwatch, is noted before it will take the hull. A later light will not. Dragoon stays shut. An ash lance is a note, not a coat.
 
-Branch: `feature/first-open-sky`. Not merged from this workspace.
+Merged as PR #13 from `feature/first-open-sky`.
 
-## Rung 1i — Wings of the First Stay (playable, this branch)
+## Rung 1i — Wings of the First Stay (playable)
 
 The chart is still a grid, not a skybox. The hull eases between cells, banks, and shows weather under it. The deck has a log and a bunk that does not wake the sight. Cinderwatch remembers bank or send, and a look can be counted once. After the kite, a cold perch teaches Sky Lance and Leap. Rise, hold, drop teaches Falling Star. Dragoon stays shut. The walked atlas stays locked.
 
-Branch: `feature/wings-first-stay`. Not merged from this workspace.
+Merged as PR #14 from `feature/wings-first-stay`.
+
+## Rung 1j — The Dragon's Oath (playable, this branch)
+
+After the perch, an old beacon answers the hull. It is a note on the chart, not a pad. The ash road at Cinderwatch walks there only after that note. Bank or send changes the flavor and both finish the oath. Temporal Sight shows both minutes and does not swear or end the fight. Oathwing is one fight on the shared core. Mercy needs that look and a quiet wing. Defeat does not. The coat stays shut. `flag.dragoon_oath` is a prerequisite a later chapter may ask for. The later light stays unlandable. The walked atlas stays locked.
+
+Branch: `feature/dragons-oath`. Not merged from this workspace.
 
 ## Still after this
 
-The rest of the sky, the remaining regions, a fuller job tree, and any headset battle. Do not start those inside this PR.
+The rest of the sky, the Dragoon coat, the remaining regions, a fuller job tree, and any headset battle. Do not start those inside this PR.
 
 ## Rung 2 — switching and comfort
 
