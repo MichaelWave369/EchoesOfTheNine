@@ -36,13 +36,19 @@ Merged from `feature/skyweave-ascent`.
 
 ## Rung 1f — The Unwritten Hour (playable, this branch)
 
-After the first flight, the berth ledger starts an argument the world does not agree on. Vale, Lowbell, Mistwater, and the berth each write an hour. Four writings earn a third pad, the Margin: ink, a cross-view well, a shine Sight can show but not take, and the Hourkeeper. Mercy and defeat both finish the hour and pay different threads. Iri will walk or keep the veil. Mira and Sera each answer one later page without sanding the first choice. Open sky stays locked. Dragoon, Healer, and Chronomancer stay shut.
+After the first flight, the berth ledger starts an argument the world does not agree on. Vale, Lowbell, Mistwater, and the berth each write an hour. Four writings earn a third pad, the Margin: ink, a cross-view well, a shine Sight can show but not take, and the Hourkeeper. Mercy and defeat both finish the hour and pay different threads. Iri will walk or keep the veil. Mira and Sera each answer one later page without sanding the first choice. The walked open-sky mark stays locked. Dragoon, Healer, and Chronomancer stay shut.
 
 Branch: `feature/unwritten-hour`. Not merged from this workspace.
 
+## Rung 1h — The First Open Sky (playable, this branch)
+
+The walked atlas row `map.sky` stays locked. After a route, the hull shadow, both glass readings, and the Unwritten Hour, a cross-view heading opens a bounded Sky Atlas. The First Stay still flies the old pads. One new pad, Cinderwatch, is noted before it will take the hull. A later light will not. Dragoon stays shut. An ash lance is a note, not a coat.
+
+Branch: `feature/first-open-sky`. Not merged from this workspace.
+
 ## Still after this
 
-An open skybox, the remaining regions, a fuller job tree, Kael's and Nessa's own hours after the flight, companion scenes past this line, and any headset battle. Do not start those inside this PR.
+The rest of the sky, the remaining regions, a fuller job tree, and any headset battle. Do not start those inside this PR.
 
 ## Rung 2 — switching and comfort
 

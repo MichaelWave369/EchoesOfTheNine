@@ -169,7 +169,7 @@ export function foeFrame(jobId: string): { col: number; row: number; big: boolea
   if (jobId === "enemy.galekeeper") return { col: 2, row: 1, big: true };
   if (jobId === "enemy.hourkeeper") return { col: 2, row: 1, big: true };
   if (jobId === "enemy.inkling") return { col: 1, row: 0, big: false };
-  if (jobId === "enemy.gustling") return { col: 1, row: 2, big: false };
+  if (jobId === "enemy.gustling" || jobId === "enemy.ashkite") return { col: 1, row: 2, big: false };
   if (jobId === "enemy.mistling") return { col: 0, row: 2, big: false };
   if (jobId === "enemy.ferryman") return { col: 2, row: 2, big: true };
   if (jobId === "enemy.glowmoth" || jobId === "enemy.driftlantern") return { col: 0, row: 0, big: false };
@@ -199,6 +199,8 @@ export function hotspotActor(id: string): string | null {
   if (id.includes("ada")) return "ada";
   if (id.includes("orrin")) return "orrin";
   if (id.includes("iri")) return "iri";
+  if (id.includes("brant")) return "bram";
+  if (id.includes("pemma")) return "lira";
   return null;
 }
 
@@ -221,6 +223,8 @@ export function groundKind(mapId: string, x: number, y: number, path: boolean, t
   if (mapId === "map.barrow" || mapId === "map.cave") return j > 0.7 ? 7 : 2;
   if (mapId === "map.shrine" || mapId === "map.glass") return j > 0.78 ? 7 : 6;
   if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth" || mapId === "map.margin") return j > 0.74 ? 1 : 7;
+  if (mapId === "map.deck") return j > 0.55 ? 5 : 2;
+  if (mapId === "map.cinder" || mapId === "map.ashvault") return j > 0.62 ? 7 : 2;
   if (mapId === "map.lowbell" || mapId === "map.ferry" || mapId === "map.hold") return path ? (j > 0.6 ? 1 : 7) : j > 0.5 ? 2 : 7;
   return path ? (j > 0.5 ? 1 : 2) : j > 0.5 ? 4 : 3;
 }
@@ -238,6 +242,7 @@ export function battleArt(encounterId: string, ascension: boolean): string {
   if (encounterId === "enc.ferryman" || encounterId === "enc.crossing" || encounterId === "enc.vault") return "battle-mist.jpg";
   if (encounterId === "enc.galekeeper" || encounterId === "enc.gust") return "battle-ridge.jpg";
   if (encounterId === "enc.hourkeeper" || encounterId === "enc.ink") return "battle-margin.jpg";
+  if (encounterId === "enc.ashkite") return "battle-ridge.jpg";
   return "battle-vale.jpg";
 }
 

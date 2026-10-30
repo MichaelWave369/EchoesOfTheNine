@@ -85,8 +85,10 @@ export function setFlag(save: SaveGame, id: string, value: boolean | string | nu
   if (next.flags[id] === value) return next;
   next.flags[id] = value;
   const line = journalLine(id);
-  if (!next.journal.includes(line)) next.journal.push(line);
-  if (!next.discoveries.includes(id)) next.discoveries.push(id);
+  if (line) {
+    if (!next.journal.includes(line)) next.journal.push(line);
+    if (!next.discoveries.includes(id)) next.discoveries.push(id);
+  }
   refreshQuests(next);
   return next;
 }
@@ -101,6 +103,7 @@ export function bumpBond(save: SaveGame, id: string): SaveGame {
 }
 
 function journalLine(id: string): string {
+  if (id === "sky.x" || id === "sky.y" || id === "sky.facing" || id === "sky.dock" || id === "sky.aboard") return "";
   const lines: Record<string, string> = {
     "flag.spoke_lira": "Lira is glad you came back for the ninth lantern.",
     "flag.saw_sketch": "Nim sketched an ordinary wooden door that isn't anywhere.",
@@ -234,6 +237,42 @@ function journalLine(id: string): string {
     "flag.veilstep_earned": "Iri can walk an ally off a telegraph. The art is hers.",
     "flag.veilstep_sheathed": "Veilstep stays on Iri's side of the veil.",
     "flag.veil_heard": "A thread through the veil was heard. Iri was not recruited by it.",
+    "flag.bearing_land": "From the walk, the needle sits on the roads you already know.",
+    "flag.bearing_cloud": "From inside the step, the needle sits in the gap between those roads.",
+    "flag.heading_roads": "The first heading follows the roads you already know. The other heading was not lesser.",
+    "flag.heading_gap": "The first heading takes the gap between the roads. The walked heading was not lesser.",
+    "flag.sky_open": "The first heading is written. The First Stay can leave the route.",
+    "flag.found_cinder": "Cinderwatch is under the hull. Ash, and a cold blue that is not on the walked road.",
+    "flag.sky_spire": "A broken spire hangs where no road was drawn.",
+    "flag.sky_marker": "An abandoned route marker still points at a road that is not on this chart.",
+    "flag.sky_echo": "A fold in the cloud is written down. Looking at it was not the same as writing it.",
+    "flag.sky_shear": "The wind over one reach of the chart is cut against itself.",
+    "flag.sky_bearing": "A needle scratch points toward a cold blue that is not on the walked chart.",
+    "flag.sky_later": "A later light will not take the hull.",
+    "flag.sky_cache_seen": "A hidden shine sits under one cloud. A note does not pocket it.",
+    "flag.sky_cache": "A thread of cloud is in the pack.",
+    "flag.sight_sky": "Sight: the air is a step ahead of the hull. Nothing lands itself.",
+    "flag.sight_sky_echo": "Sight: a fold in the cloud repeats a minute you have not flown. It does not write itself down.",
+    "flag.sight_sky_cache": "Sight: a shine sits under one cloud and will not climb into a hand.",
+    "flag.sight_sky_shear": "Sight: the wind is cut against itself. Weather, not a door.",
+    "flag.sight_deck": "Sight: the chart lists what you already wrote. The ink does not fly.",
+    "flag.sight_cinder": "Sight: ash falls upward for one breath. The stair does not open itself.",
+    "flag.sight_ashvault": "Sight: the cold stair shows its nick. It does not press the order.",
+    "flag.cinder_bank": "Cinderwatch banked the light. The scratch in the sky stays scratched.",
+    "flag.cinder_send": "Cinderwatch sent the light along the scratch. The watch keeps its ash.",
+    "flag.cinder_signal": "The post at Cinderwatch has one answer.",
+    "flag.cinder_stair": "The cold stair took ash, salt, ember.",
+    "flag.ashkite_cleared": "The ash kite is weather now.",
+    "flag.dragoon_spark": "A spark in the ash. It is not a coat, and Dragoon stays shut.",
+    "flag.crew_sera": "Sera held the wheel. She did not make the edge of the chart into a second world.",
+    "flag.crew_mira": "Mira read the Vale from above and did not correct the clock.",
+    "flag.crew_kael": "Kael said altitude does not make a gate into a better promise.",
+    "flag.crew_nessa": "Nessa liked seeing the lying moss from above.",
+    "flag.crew_iri": "Iri said the seam is a crease from the air. She did not name what is under it.",
+    "flag.sky_veil_heard": "A thread from the veil was heard on the deck. Iri was not recruited by it.",
+    "flag.spoke_brant": "Brant counts ash at Cinderwatch. He does not count you.",
+    "flag.spoke_pemma": "Pemma bottles the cold off the stair. Leaving is still allowed.",
+    "flag.cinder_later": "Cinderwatch will be different weather later. Not today.",
   };
   return lines[id] ?? `Noted: ${id.replace("flag.", "").replaceAll("_", " ")}`;
 }
@@ -264,6 +303,8 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.oath") return flag(save, "flag.oath_done");
     if (q.id === "quest.spring") return flag(save, "flag.spring_done");
     if (q.id === "quest.seam") return flag(save, "flag.seam_set");
+    if (q.id === "quest.heading") return flag(save, "flag.sky_open");
+    if (q.id === "quest.cinder") return flag(save, "flag.cinder_signal");
     return false;
   };
   const visible = (q: QuestNode) => {
@@ -291,6 +332,8 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.oath") return flag(save, "flag.flown") && (flag(save, "flag.kael_law") || flag(save, "flag.kael_people"));
     if (q.id === "quest.spring") return flag(save, "flag.flown") && (flag(save, "flag.nessa_spring") || flag(save, "flag.nessa_verse"));
     if (q.id === "quest.seam") return flag(save, "flag.oath_done") && flag(save, "flag.spring_done");
+    if (q.id === "quest.heading") return flag(save, "flag.hour_complete");
+    if (q.id === "quest.cinder") return flag(save, "flag.found_cinder");
     return false;
   };
   for (const q of save.quests) {

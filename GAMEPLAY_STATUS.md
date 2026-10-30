@@ -18,10 +18,10 @@ Honest labels. Updated for the Unwritten Hour. Skyweave's rules are unchanged. T
 - Formations, also only while no fight is open: a close line, or a loose line. Distance still comes from the shared formula. The formation does not heal anyone.
 - A companion can suggest a brace, a mend, or a weak spot. You still confirm the action.
 - Gear still matters in the fight it starts, including a gale hook on Sera.
-- Lowbell, the split bell, Mistwater, and the Late Ferryman are unchanged. Open sky stays shut.
+- Lowbell, the split bell, Mistwater, and the Late Ferryman are unchanged. The walked open-sky mark stays shut.
 - Skyweave Ridge, after the high gate: Ada at the mill, Sera at the rig, a half-span, a salt cave, and the Early Glass. Gustlings, then a lens that wants the chart from the walk and the sky from inside the step. Sight shows an eclipse ahead of the sun and does not press the lens. Orrin will not press it either. The inner arch opens after both readings and the gusts are quiet. The Galekeeper boards early. Under a little less than half you may ask which noon, if you read both views, saw the glass, or chose the safer stay. Otherwise you can still end it. Either way the berth opens. The second phase hits everyone.
 - The First Stay is one hull. Before the hour, two pads: the Skyweave berth and the Vale roof. After four written hours, a third pad, the Margin. You pick a destination and cast off. It is a route, not a skybox. After one flight you may note a second shadow that leaves before the hull. That note is the start of the Unwritten Hour. It is not an explanation.
-- The Unwritten Hour opens only after that flight, at the berth ledger. The first reading opens the argument. The second writes the early shadow. Then the Vale clock (keep both hours, nine and nine, or the thinner ten), Lowbell's margin (the split bell must already be solved), and Mistwater's window (the ferry settled, or both departures already recorded). Companion scenes do not gate the pad. Open sky stays locked.
+- The Unwritten Hour opens only after that flight, at the berth ledger. The first reading opens the argument. The second writes the early shadow. Then the Vale clock (keep both hours, nine and nine, or the thinner ten), Lowbell's margin (the split bell must already be solved), and Mistwater's window (the ferry settled, or both departures already recorded). Companion scenes do not gate the pad. The walked open-sky mark stays locked.
 - A spared Warden makes the Mistwater window a courtesy. A fallen Warden makes it remember heat. Either window can be written. Neither traps the road.
 - The Margin is three rooms: a landing, a hall, a chamber. Ink blocks the stair until it is fought. The written page is a Legacy reading. The echo page is an Ascension reading. Once the shrine has woken Ascension, the road has a button for that change of view. Sight can compare the two hours and trace a shine. It does not press either page, and tracing is not taking. The well opens only after both readings.
 - The Hourkeeper is the shared combat core. Phase one alternates ink and a bell. Tide bites the ink. Stone bites the bell. Under half and a little more you may ask it to sit if you kept both Vale hours, or if you already asked the Warden to sleep. A fallen Warden and a single Vale hour can still end the fight. Mercy pays the blank thread. Defeat pays the hour thread. A second payout of either is refused. The folded phase hits everyone and does not add bodies.
@@ -34,9 +34,19 @@ Honest labels. Updated for the Unwritten Hour. Skyweave's rules are unchanged. T
 - Mira, after her first parish choice, can answer the early line: beside the tenth or the book closed, if she wrote the strike; unwritten again or written now, if she left the tenth blank. The first choice is not sanded. Each path pays its own clasp. None of them is the written-strike clasp. None of them opens the Margin.
 - Sera, after she has joined, can cut the early line or lash a second stay. The ask remembers whether she spliced or stayed. The first choice is not erased. Each path pays its own lash. Neither opens the Margin.
 - The journal names the chapter, the active hour, clues already written, and completed titles. It does not preview the well.
-- Atlas of walked places, including the ridge, the glass, the cave, the berth, and the Margin once the third pad exists. Travel only to places already walked. The dashed road into open sky is still not a boat.
+- Atlas of walked places, including the ridge, the glass, the cave, the berth, and the Margin once the third pad exists. Travel only to places already walked. The dashed road into open sky is still not a boat. The flyable chart is not that row.
 - Temporal Sight is an overlay for eight steps, including the ridge's early span, the glass, the cave, and the berth. A button spends a charge. The journal keeps the clue. The picture of that hour is a teal wash and a small clock. It still does not press the puzzle.
 - The presentation layer (`src/game/ui/art.ts`, `src/game/ui/sprites.ts`, `src/game/ui/breath.ts`, `ART_DIRECTION.md`) draws region tiles, landmarks, party sprites, the title, the First Stay, and a staged battle. A cloak dye is cosmetic. A follow camera is a local view, not a save field. Walk interpolation, festival loops, weather, and footfalls are cosmetic. Quiet world parks the loops. The picture does not decide damage, doors, jobs, or rewards. Schema stays 4.
+
+## The First Open Sky
+
+- The route between the Vale roof, the Skyweave berth, and the Margin (only after its flag) is unchanged. Casting off for a named pad is still a line, not the chart.
+- The heading opens after that route, the early hull shadow, both readings of the glass, and the Unwritten Hour. Mercy and defeat both count. No companion is required. Iri may have joined or kept the veil. Neither blocks it. The veil is not a recruitment.
+- Pin the roads from the walk and the gap from inside the step. Then take the roads you know, or the gap. Neither heading is cleaner. One Sky Needle. A second choice does not flip it or pay again. Sight does not pin.
+- The Sky Atlas is a bounded chart on its own screen. A or Left is west. D or Right is east. The hull moves one cell at a time. The edge refuses. Reduced motion snaps. Land only on an eligible pad. A later light can be noted and cannot be landed on. Cinderwatch becomes a pad only after you note it. Return to the last earned dock always works, and falls back to the berth if the Margin flag is gone.
+- The deck is a small interior: wheel, chart, company if they came, party line, and the rail. Cinderwatch has Brant, Pemma, a bank-or-send light, and a cold stair. The stair wants ash, salt, ember. The Ash Kite below uses the shared combat core. Downdraft hits the party. The ash lance is once. Dragoon stays shut.
+- Optional marks: a hanging spire, an abandoned route marker, a cloud fold, a shear, a scratch toward the cold blue, and a cache that waits on Sight or the marker. Looking is not writing the fold down, and it is not pocketing the shine.
+- Schema stays 4. Sky position is flags. Schema 1 through 4 still open.
 
 ## Partial
 
@@ -45,7 +55,7 @@ Honest labels. Updated for the Unwritten Hour. Skyweave's rules are unchanged. T
 - Spell ranks still add a little power. Ember, Tide Whisper, Echo Lash, and Gust have one evolution each.
 - Job kits you can switch are three. Sera's Skywright is hers. There is no full tree, and no day-night schedule of who is at the stall.
 - Map art is original sprite and tile art in the page. Temporal Sight is still a wash, a ghost of the wanderer, and a step count. After the hour is open it can also compare two versions and trace an echo. It is not a second level, and it still does not press a puzzle.
-- The airship is a route of two pads, or three after the hour is written. It is not an open sky.
+- The airship is a route of two pads, or three after the hour is written. That route is still not the sky chart. After the heading, the Sky Atlas is a separate screen.
 - Iri can join or keep the veil after the Hourkeeper. She is not a kit the wanderer can switch into. If she walks with you, the hearth can change how an earlier hour reads, without opening what is behind the seam. If she stayed veiled, you can still hear her from the Margin. That is not a recruitment.
 - WebXR detects a headset and can open a reference session. It does not render the battle. It was not tested on Quest 3.
 
@@ -53,18 +63,18 @@ Honest labels. Updated for the Unwritten Hour. Skyweave's rules are unchanged. T
 
 - Dragoon, Healer, Chronomancer, nine Echo records, four endings, return anchors, hub aspects. Not playable.
 - `echoMemory` and `gnosis` stay stored and unlabeled.
-- Open sky is an atlas mark only.
+- Open sky on the walked atlas is still only a locked mark. The first flyable chart is separate: see The First Open Sky above.
 
 ## Not built
 
-- An open skybox, the remaining regions, a full job tree, any pad past the Vale, the berth, and the earned Margin.
+- The rest of the sky beyond this first chart, the remaining regions, a full job tree, and any pad past the Vale, the berth, the earned Margin, and Cinderwatch.
 - White room, Custodian, Door, Pleroma, Great Return, New Game Plus.
 - Hand tracking, haptics, a headset battle.
 - Accounts, cloud saves, multiplayer.
 
 ## Tests that ran
 
-`node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/core/unwritten.test.ts src/game/core/hours.test.ts src/game/ui/art.test.ts src/game/ui/sprites.test.ts`
+`node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/core/unwritten.test.ts src/game/core/hours.test.ts src/game/core/opensky.test.ts src/game/ui/art.test.ts src/game/ui/sprites.test.ts`
 
 Skyweave coverage: the berth stays shut until the gale; open sky stays locked; Sight on the glass spends a charge and does not write either noon; the chart is Legacy and the sky is Ascension; both readings give one lens shard; Orrin does not set the flags; the dome wants the split and a quiet west room; Sera joins once, a full line puts her in reserve, and the bench keeps breath, gold, pack, gear, bonds, and spells; formations do not heal; Stayline and Crosswind go through `proposeAction`; stone bites a gustling harder than wind; gale mercy needs a noon you kept, defeat pays a different unique item, and a second mercy payout is refused; phase two adds ahead-gusts without ending the fight; Early Gale hits the party; a companion instinct does not deal damage; the First Stay flies both ways without minting gold; the hull shadow waits for a flight and does not explain itself; a schema 3 chronicle gains reserve and formation and keeps a spared Warden. Public copy still fails the late-chronicle ban list.
 
@@ -72,4 +82,6 @@ Unwritten Hour coverage: the ledger stays shut before a flight; four clues open 
 
 Hours coverage: both of Pell's first answers can hold the words or serve the person, once, without sanding the first oath or paying twice; a benched Kael keeps his kit; both rhyme answers can carry or channel, and Sight on Lowbell does not set the orders or the order sentence; the wrong view fails closed; the mouth can be set with no Iri and will not pay a second bead; Veilstep is taught only to Iri, and a veil thread does not recruit her or give the art to the wanderer; the four new arts resolve through `proposeAction`; a hurt ally draws Spring Memory as a suggestion only; schema 1 through 4 migrate and keep the oath. Public copy still fails the late-chronicle ban list.
 
-`scripts/hours-smoke.mjs` runs in GitHub Actions against the Pages build: title, New Journey, a step, an interaction, Attack, an oath answer, a journal line, and a Kept Cord that survives reload. Desktop and 390px screenshots are uploaded as the `hours-we-keep` artifact. `scripts/game-launch-smoke.mjs` still starts a journey locally and is not required on every commit.
+First Open Sky coverage: the walked `map.sky` row stays locked; the heading names a missing route, shadow, glass, or hour; both Warden outcomes can take either heading once and the second choice does not flip or pay again; the wrong view fails closed; Sight does not pin, write the echo, or pay the cache; Iri joined or veiled does not block it and the veil does not recruit; the chart refuses its edge, a Margin pad without the flag, a later light, and Cinderwatch until it is noted; return from a lost Margin flag still reaches the berth; schema 1 through 4 keep the sky cell and one needle; the Ash Kite's downdraft is the shared core and the ash lance pays once. Dragoon stays shut.
+
+`scripts/hours-smoke.mjs` runs in GitHub Actions against the Pages build: title, New Journey, a step, an interaction, Attack, an oath answer, a journal line, and a Kept Cord that survives reload. `scripts/opensky-smoke.mjs` starts the same way, then uses a labeled pre-heading fixture (not a full campaign playthrough) to pin the heading, fly west, land, reload, and return to the berth. Desktop and 390px screenshots are uploaded. `scripts/game-launch-smoke.mjs` still starts a journey locally and is not required on every commit.

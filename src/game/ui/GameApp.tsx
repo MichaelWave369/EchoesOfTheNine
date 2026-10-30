@@ -101,6 +101,20 @@ import {
   springOffer,
 } from "../content/hours.ts";
 import {
+  OPEN_COPY,
+  castOff,
+  chartText,
+  chooseHeading,
+  chooseSignal,
+  headingBlock,
+  headingObjective,
+  pinBearing,
+  returnDock,
+  setCinderOrder,
+  skyClues,
+  talkCrew,
+} from "../content/opensky.ts";
+import {
   applyReward,
   bumpBond,
   clearLocal,
@@ -117,17 +131,18 @@ import {
 import { createEncounter, proposeAction, resolveEnemyTurn, tryMercy } from "../core/combat.ts";
 import { configureAudio, resumeAudio, playSfx, playStep, startMusic, unlockAudio } from "../audio.ts";
 import { paintArena, paintExploration } from "./art.ts";
+import { SkyAtlas } from "./SkyAtlas.tsx";
 import { artUrl, cameraOrigin, portraitMood, portraitSpec, warmArt } from "./sprites.ts";
 import { glide, stepKind } from "./breath.ts";
 import { detectXr, requestReferenceSession, XR_BINDINGS, type XrCapability } from "../xr/adapter.ts";
 
-type Screen = "title" | "name" | "explore" | "battle" | "ending";
+type Screen = "title" | "name" | "explore" | "battle" | "ending" | "sky";
 
 type Toast = { id: number; text: string };
 
 const TILE = 48;
 
-function musicFor(mapId: string): "vale" | "woods" | "shrine" | "reach" | "barrow" | "inn" | "lowbell" | "mist" | "hold" | "highroad" | "ridge" | "glass" | "cave" | "berth" | "battle" | "title" {
+function musicFor(mapId: string): "vale" | "woods" | "shrine" | "reach" | "barrow" | "inn" | "lowbell" | "mist" | "hold" | "highroad" | "ridge" | "glass" | "cave" | "berth" | "sky" | "battle" | "title" {
   if (mapId === "map.shrine") return "shrine";
   if (mapId === "map.woods") return "woods";
   if (mapId === "map.reach") return "reach";
@@ -138,9 +153,10 @@ function musicFor(mapId: string): "vale" | "woods" | "shrine" | "reach" | "barro
   if (mapId === "map.highroad") return "highroad";
   if (mapId === "map.ridge") return "ridge";
   if (mapId === "map.glass") return "glass";
-  if (mapId === "map.cave") return "cave";
-  if (mapId === "map.berth") return "berth";
+  if (mapId === "map.cave" || mapId === "map.ashvault") return "cave";
+  if (mapId === "map.berth" || mapId === "map.deck") return "berth";
   if (mapId === "map.margin") return "glass";
+  if (mapId === "map.cinder") return "sky";
   if (mapId === "map.inn" || mapId === "map.smith") return "inn";
   return "vale";
 }
@@ -163,6 +179,8 @@ const SPEAKER_HUE: Record<string, number> = {
   Iri: 280,
   Lark: 92,
   Orrin: 200,
+  Brant: 18,
+  Pemma: 200,
   You: 38,
 };
 
@@ -237,8 +255,8 @@ export function GameApp() {
             unlockAudio();
             playSfx("ui");
             setSave(loaded);
-            startMusic(musicFor(loaded.mapId));
-            setScreen(loaded.encounter ? "battle" : "explore");
+            startMusic(loaded.flags["sky.aboard"] ? "sky" : loaded.encounter ? "battle" : musicFor(loaded.mapId));
+            setScreen(loaded.encounter ? "battle" : loaded.flags["sky.aboard"] ? "sky" : "explore");
           }}
           onSettings={() => {
             setFromTitle(true);
@@ -280,6 +298,23 @@ export function GameApp() {
             startMusic("shrine");
             playSfx("victory");
             setScreen("ending");
+          }}
+          onSky={(next) => {
+            commit(next);
+            startMusic("sky");
+            setScreen("sky");
+          }}
+        />
+      )}
+      {screen === "sky" && save && (
+        <SkyAtlas
+          save={save}
+          commit={commit}
+          push={push}
+          onGround={(next) => {
+            commit(next);
+            startMusic(musicFor(next.mapId));
+            setScreen("explore");
           }}
         />
       )}
@@ -566,6 +601,7 @@ function Explore({
   onBattle,
   onMenu,
   onEnding,
+  onSky,
 }: {
   save: SaveGame;
   commit: (s: SaveGame, slot?: "auto" | "manual") => SaveGame;
@@ -573,6 +609,7 @@ function Explore({
   onBattle: (e: EncounterState) => void;
   onMenu: () => void;
   onEnding: () => void;
+  onSky: (s: SaveGame) => void;
 }) {
   const map = MAPS[save.mapId] ?? MAPS["map.vale"];
   const spawn = map.spawns[save.spawnId] ?? map.spawns[Object.keys(map.spawns)[0]!]!;
@@ -589,7 +626,8 @@ function Explore({
   const [mossPick, setMossPick] = useState<string[]>([]);
   const [kilnPick, setKilnPick] = useState<string[]>([]);
   const [holdPick, setHoldPick] = useState<string[]>([]);
-  const [puzzle, setPuzzle] = useState<null | "runes" | "conduits" | "moss" | "bell" | "kiln" | "hold" | "lens" | "spring" | "seam">(null);
+  const [cinderPick, setCinderPick] = useState<string[]>([]);
+  const [puzzle, setPuzzle] = useState<null | "runes" | "conduits" | "moss" | "bell" | "kiln" | "hold" | "lens" | "spring" | "seam" | "heading" | "cinder">(null);
   const [conduit, setConduit] = useState(0);
   const moved = useRef(false);
   const padPrev = useRef<boolean[]>([]);
@@ -627,9 +665,13 @@ function Explore({
   const interact = useCallback(() => {
     const front = ahead(pos, facing);
     const here = { x: pos.x, y: pos.y };
+    const exact = (h: MapHotspot, x: number, y: number) =>
+      x >= h.x && x < h.x + h.w && y >= h.y && y < h.y + h.h;
     const covers = (h: MapHotspot, x: number, y: number) =>
       x >= h.x - 1 && x < h.x + h.w + 1 && y >= h.y - 1 && y < h.y + h.h + 1;
     const spot =
+      map.hotspots.find((h) => exact(h, front.x, front.y)) ??
+      map.hotspots.find((h) => exact(h, here.x, here.y)) ??
       map.hotspots.find((h) => covers(h, front.x, front.y)) ??
       map.hotspots.find((h) => covers(h, here.x, here.y)) ??
       map.hotspots
@@ -665,7 +707,7 @@ function Explore({
         push("A warm pebble comes loose under the clock. It keeps pace with you.");
         return;
       }
-      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch", "npc.hale", "npc.wren", "sign.timetable", "sign.pier", "sign.faded", "sign.wake", "sign.board", "door.berth", "npc.sera", "npc.ada", "npc.orrin", "sign.bridge", "sign.salt", "sign.skiff", "sign.cross", "door.dome", "door.gale", "sign.ledger", "sign.hourbook", "sign.hourbell", "sign.hourmist", "door.stair", "sign.page", "sign.echo", "sign.glint", "door.hour", "npc.iri", "sign.oathvale", "sign.oathpath", "sign.hearth", "npc.lark", "sign.seam"].includes(spot.id);
+      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch", "npc.hale", "npc.wren", "sign.timetable", "sign.pier", "sign.faded", "sign.wake", "sign.board", "door.berth", "npc.sera", "npc.ada", "npc.orrin", "sign.bridge", "sign.salt", "sign.skiff", "sign.heading", "sign.cross", "door.dome", "door.gale", "sign.ledger", "sign.hourbook", "sign.hourbell", "sign.hourmist", "door.stair", "sign.page", "sign.echo", "sign.glint", "door.hour", "npc.iri", "sign.oathvale", "sign.oathpath", "sign.hearth", "npc.lark", "sign.seam", "sign.wheel", "sign.chart", "sign.mira", "sign.kael", "sign.nessa", "sign.iri", "sign.veil", "sign.party", "sign.home", "sign.rail", "npc.brant", "npc.pemma", "sign.signal", "sign.watch"].includes(spot.id);
       if (!special) {
         const key =
           spot.id === "npc.voss"
@@ -905,6 +947,101 @@ function Explore({
         return;
       }
       setPanel("skiff");
+      return;
+    }
+    if (spot.id === "sign.heading") {
+      setPuzzle("heading");
+      return;
+    }
+    if (spot.id === "sign.wheel") {
+      const scene = talkCrew(save, "sera");
+      if (scene.ok && scene.save !== save) commit(scene.save);
+      push(scene.ok ? scene.text : scene.reason);
+      return;
+    }
+    if (spot.id === "sign.chart") {
+      push(chartText(save));
+      return;
+    }
+    if (spot.id === "sign.mira" || spot.id === "sign.kael" || spot.id === "sign.nessa" || spot.id === "sign.iri") {
+      const who = spot.id.replace("sign.", "") as "mira" | "kael" | "nessa" | "iri";
+      const scene = talkCrew(save, who);
+      if (scene.ok && scene.save !== save) commit(scene.save);
+      push(scene.ok ? scene.text : scene.reason);
+      return;
+    }
+    if (spot.id === "sign.veil") {
+      const scene = talkCrew(save, "veil");
+      if (!scene.ok) {
+        push(scene.reason);
+        return;
+      }
+      if (scene.save !== save) commit(scene.save);
+      push(scene.text);
+      return;
+    }
+    if (spot.id === "sign.party") {
+      setPanel("party");
+      return;
+    }
+    if (spot.id === "sign.home") {
+      const back = returnDock(save);
+      if (!back.ok) {
+        push(back.reason);
+        return;
+      }
+      commit(back.save);
+      startMusic(musicFor(back.save.mapId));
+      push(back.text);
+      return;
+    }
+    if (spot.id === "sign.rail") {
+      const off = castOff(save);
+      if (!off.ok) {
+        push(off.reason);
+        return;
+      }
+      onSky(off.save);
+      push(off.text);
+      return;
+    }
+    if (spot.id === "npc.brant") {
+      const scene = talkCrew(save, "brant");
+      if (scene.ok && scene.save !== save) commit(scene.save);
+      push(scene.ok ? scene.text : scene.reason);
+      return;
+    }
+    if (spot.id === "npc.pemma") {
+      const scene = talkCrew(save, "pemma");
+      if (scene.ok && scene.save !== save) commit(scene.save);
+      push(scene.ok ? scene.text : scene.reason);
+      return;
+    }
+    if (spot.id === "sign.signal") {
+      if (flag(save, "flag.cinder_signal")) {
+        push(OPEN_COPY.signalKept);
+        return;
+      }
+      setDialogue({
+        nodes: [
+          {
+            id: "signal.ask",
+            speaker: "Brant",
+            text: OPEN_COPY.signalAsk,
+            choices: [
+              { label: "Bank the light. Let the watch keep it.", next: "signal.done", flag: "choice.signal.bank" },
+              { label: "Send the light along the scratch.", next: "signal.done", flag: "choice.signal.send" },
+            ],
+          },
+        ],
+        index: "signal.ask",
+      });
+      return;
+    }
+    if (spot.id === "sign.watch") {
+      const scene = talkCrew(save, "watch");
+      if (scene.ok && scene.save !== save) commit(scene.save);
+      push(scene.ok ? scene.text : scene.reason);
       return;
     }
     if (spot.id === "sign.ledger") {
@@ -1364,6 +1501,18 @@ function Explore({
         onBattle(makeEncounter(save, "enc.hourkeeper"));
         return;
       }
+      if (spot.id === "battle.ash") {
+        if (flag(save, "flag.ashkite_cleared")) {
+          push(OPEN_COPY.kiteDone);
+          return;
+        }
+        if (!flag(save, "flag.cinder_stair")) {
+          push(OPEN_COPY.kiteShut);
+          return;
+        }
+        onBattle(makeEncounter(save, "enc.ashkite"));
+        return;
+      }
     }
     if (spot.kind === "puzzle") {
       if (spot.id === "puzzle.runes") {
@@ -1415,6 +1564,15 @@ function Explore({
         setPuzzle("spring");
         return;
       }
+      if (spot.id === "puzzle.cinder") {
+        if (flag(save, "flag.cinder_stair")) {
+          push(OPEN_COPY.stairKept);
+          return;
+        }
+        setCinderPick([]);
+        setPuzzle("cinder");
+        return;
+      }
       if (spot.id === "door.vault") {
         if (flag(save, "flag.hold_open")) {
           setPos({ x: 8, y: 5 });
@@ -1426,7 +1584,7 @@ function Explore({
         setPuzzle("hold");
       }
     }
-  }, [save, map, commit, onBattle, push]);
+  }, [save, map, commit, onBattle, push, onSky]);
 
   function openOath(text: string) {
     setDialogue({
@@ -1527,6 +1685,13 @@ function Explore({
           push(chosen.text);
         } else push(chosen.reason);
       }
+      if (who === "signal" && (value === "bank" || value === "send")) {
+        const chosen = chooseSignal(save, value);
+        if (chosen.ok) {
+          commit(chosen.save);
+          push(chosen.text);
+        } else push(chosen.reason);
+      }
       if (choice.flag.startsWith("choice.thread.")) {
         const body = choice.flag.slice("choice.thread.".length);
         const dot = body.lastIndexOf(".");
@@ -1618,6 +1783,19 @@ function Explore({
     setPos({ x: 8, y: 5 });
     setFacing("e");
     push(learned.text);
+    playSfx("spell");
+  }
+
+  function submitCinder() {
+    const set = setCinderOrder(save, cinderPick);
+    if (!set.ok) {
+      push(set.reason);
+      setCinderPick([]);
+      return;
+    }
+    commit(set.save);
+    setPuzzle(null);
+    push(set.text);
     playSfx("spell");
   }
 
@@ -2113,6 +2291,97 @@ function Explore({
           </div>
         </Modal>
       )}
+      {puzzle === "heading" && (
+        <Modal title="The first heading" onClose={() => setPuzzle(null)}>
+          <p className="mb-2 text-sm">
+            {headingBlock(save) ?? (flag(save, "flag.sky_open") ? OPEN_COPY.skyKept : "Pin both views. Neither pin is the answer by itself. Sight will not pin them.")}
+            {save.mode === "ascension" ? " You are inside the step." : " You are on the walk."}
+          </p>
+          <p className="mb-3 text-xs text-parchment/70">
+            {flag(save, "flag.bearing_land") ? "Roads pinned. " : "Roads not pinned. "}
+            {flag(save, "flag.bearing_cloud") ? "Gap pinned." : "Gap not pinned."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <MenuButton tone="ghost" onClick={foldView}>Change the view</MenuButton>
+            <MenuButton
+              tone="ghost"
+              onClick={() => {
+                const pinned = pinBearing(save, "land");
+                if (pinned.ok) commit(pinned.save);
+                push(pinned.ok ? pinned.text : pinned.reason);
+              }}
+            >
+              Pin the roads from the walk
+            </MenuButton>
+            <MenuButton
+              tone="ghost"
+              onClick={() => {
+                const pinned = pinBearing(save, "cloud");
+                if (pinned.ok) commit(pinned.save);
+                push(pinned.ok ? pinned.text : pinned.reason);
+              }}
+            >
+              Pin the gap from inside the step
+            </MenuButton>
+            {!flag(save, "flag.sky_open") && flag(save, "flag.bearing_land") && flag(save, "flag.bearing_cloud") && (
+              <>
+                <MenuButton
+                  onClick={() => {
+                    const chosen = chooseHeading(save, "roads");
+                    if (chosen.ok) commit(chosen.save);
+                    push(chosen.ok ? chosen.text : chosen.reason);
+                  }}
+                >
+                  Take the roads you already know
+                </MenuButton>
+                <MenuButton
+                  onClick={() => {
+                    const chosen = chooseHeading(save, "gap");
+                    if (chosen.ok) commit(chosen.save);
+                    push(chosen.ok ? chosen.text : chosen.reason);
+                  }}
+                >
+                  Take the gap between the roads
+                </MenuButton>
+              </>
+            )}
+            {flag(save, "flag.sky_open") && (
+              <MenuButton
+                onClick={() => {
+                  const off = castOff(save);
+                  if (!off.ok) {
+                    push(off.reason);
+                    return;
+                  }
+                  setPuzzle(null);
+                  onSky(off.save);
+                }}
+              >
+                Open the sky
+              </MenuButton>
+            )}
+          </div>
+        </Modal>
+      )}
+      {puzzle === "cinder" && (
+        <Modal title="Cold nick" onClose={() => setPuzzle(null)}>
+          <p className="mb-3 text-sm">{OPEN_COPY.stairNeed}</p>
+          <div className="mb-3 flex gap-2">
+            {cinderPick.map((r, i) => (
+              <span key={r + i} className="rounded-md bg-ink px-2 py-1 text-teal">{r}</span>
+            ))}
+            {cinderPick.length === 0 && <span className="text-parchment/50">The cold is listening.</span>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["ash", "salt", "ember", "tide"].map((r) => (
+              <MenuButton key={r} tone="ghost" disabled={cinderPick.includes(r)} onClick={() => setCinderPick((p) => [...p, r].slice(0, 3))}>
+                {r}
+              </MenuButton>
+            ))}
+            <MenuButton onClick={submitCinder}>Set the order</MenuButton>
+          </div>
+        </Modal>
+      )}
       {puzzle === "conduits" && (
         <Modal title="Conduit ring" onClose={() => setPuzzle(null)}>
           <p className="mb-2 text-sm">
@@ -2145,7 +2414,7 @@ function Explore({
               <p className="text-xs tracking-[0.18em] text-amber uppercase">Clues</p>
               {journalBrief(save).clues.length === 0 && <p className="text-sm text-parchment/70">No hour has been written down yet.</p>}
               <ul className="list-disc pl-4 text-sm text-parchment/80">
-                {[...journalBrief(save).clues, ...hoursClues(save)].map((clue) => (
+                {[...journalBrief(save).clues, ...hoursClues(save), ...skyClues(save)].map((clue) => (
                   <li key={clue}>{clue}</li>
                 ))}
               </ul>
@@ -2386,7 +2655,7 @@ function Explore({
           )}
           {panel === "skiff" && (
             <div className="flex flex-col gap-3 text-sm">
-              <p>{flag(save, "flag.margin_dock") ? "Three pads. Still no open sky." : "Two pads. No open sky."} {SKY_COPY.skiffFly}</p>
+              <p>{flag(save, "flag.sky_open") ? "The route is still here. The sky past it is a chart you earned." : flag(save, "flag.margin_dock") ? "Three pads. Still no open sky." : "Two pads. No open sky."} {SKY_COPY.skiffFly}</p>
               <svg viewBox="0 0 320 140" className="w-full rounded-md bg-ink" role="img" aria-label="A route between earned pads. The sky past them is not a country.">
                 <defs>
                   <linearGradient id="skiff-sky" x1="0" y1="0" x2="0" y2="1">
@@ -2444,6 +2713,24 @@ function Explore({
               >
                 Note the shadow under the hull
               </MenuButton>
+              <MenuButton tone="ghost" onClick={() => { setPanel("none"); setPuzzle("heading"); }}>
+                Read the first heading
+              </MenuButton>
+              {flag(save, "flag.sky_open") && (
+                <MenuButton
+                  onClick={() => {
+                    const off = castOff(save);
+                    if (!off.ok) {
+                      push(off.reason);
+                      return;
+                    }
+                    setPanel("none");
+                    onSky(off.save);
+                  }}
+                >
+                  Open the sky
+                </MenuButton>
+              )}
             </div>
           )}
           {panel === "rest" && (
@@ -2556,6 +2843,9 @@ function Explore({
                       );
                     })}
                     <p className="text-parchment/70">{job.synergy}</p>
+                    {job.id === "job.dragoon" && flag(save, "flag.dragoon_spark") && (
+                      <p className="text-teal">{OPEN_COPY.spark}</p>
+                    )}
                   </div>
                 );
               })}
@@ -2568,6 +2858,7 @@ function Explore({
               <li>Battles: Attack, Magic, Defend, Item. Ascension adds movement and a real-time cast.</li>
               <li>When Ascension is awake, Look from inside the step changes the view on the road. The Margin wants the page from the walk and the echo from the other view. A look is not a reading.</li>
               <li>After a flight, an oath, a spring, or a veil may ask again. Sight shows the trouble. It does not press it.</li>
+              <li>When the first heading is written, the Sky Atlas is a chart with edges. A or Left is west. D or Right is east. Land only where a pad agrees. The walked atlas still does not open the sky.</li>
               <li>Everything mandatory can be done with buttons. VR is optional and not required.</li>
             </ul>
           )}
@@ -2646,6 +2937,16 @@ function blocked(mapId: string, x: number, y: number): boolean {
     if (y <= 0 || y >= 9 || x <= 0 || x >= 17) return true;
     if (x === 6 || x === 13) return true;
   }
+  if (mapId === "map.deck") {
+    if (y <= 1 || y >= 7 || x <= 0 || x >= 11) return true;
+  }
+  if (mapId === "map.cinder") {
+    if (y <= 1 || y >= 8 || x >= 15) return true;
+    if (x <= 0 && y !== 5) return true;
+  }
+  if (mapId === "map.ashvault") {
+    if (y <= 1 || y >= 6 || x <= 0 || x >= 9) return true;
+  }
   return false;
 }
 
@@ -2659,8 +2960,10 @@ function ahead(pos: { x: number; y: number }, facing: string) {
 function currentObjective(save: SaveGame): string {
   const hour = hourObjective(save);
   const kept = hoursObjective(save);
+  const skyLine = headingObjective(save);
   const hourOpen = hour && !flag(save, "flag.hour_complete") && !flag(save, "flag.iri_joined") && !flag(save, "flag.iri_veil");
   if (hourOpen && hour) return hour;
+  if (skyLine) return skyLine;
   if (kept) return kept;
   if (hour) return hour;
   const cantorDone = flag(save, "flag.cantor_spared") || flag(save, "flag.cantor_defeated");
@@ -2692,7 +2995,7 @@ function currentObjective(save: SaveGame): string {
   return "Listen to how the shrine ends.";
 }
 
-function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden" | "enc.thicket" | "enc.cantor" | "enc.crossing" | "enc.vault" | "enc.ferryman" | "enc.gust" | "enc.galekeeper" | "enc.ink" | "enc.hourkeeper"): EncounterState {
+function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden" | "enc.thicket" | "enc.cantor" | "enc.crossing" | "enc.vault" | "enc.ferryman" | "enc.gust" | "enc.galekeeper" | "enc.ink" | "enc.hourkeeper" | "enc.ashkite"): EncounterState {
   const party = save.party.map((pid, i) => {
     const mate = prepareForBattle(save, pid);
     mate.position = formationSlot(save.formation ?? "line", i);
@@ -2740,6 +3043,8 @@ function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.w
                         ]
                     : id === "enc.hourkeeper"
                       ? [{ ...structuredClone(ENEMY_TEMPLATES.hourkeeper), id: "hour", position: { x: 0, z: -2.1 } }]
+                    : id === "enc.ashkite"
+                      ? [{ ...structuredClone(ENEMY_TEMPLATES.ashkite), id: "ashkite", position: { x: 0, z: -2 } }]
                   : [{ ...structuredClone(ENEMY_TEMPLATES.warden), id: "warden", position: { x: 0, z: -2.2 } }];
   return createEncounter({
     encounterId: id,

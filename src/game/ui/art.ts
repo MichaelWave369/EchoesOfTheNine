@@ -211,6 +211,39 @@ const LOOKS: Record<string, RegionLook> = {
     water: "#1a2830",
     note: "Paper, ink, and a well under a dock.",
   },
+  "map.deck": {
+    skyTop: "#243044",
+    skyBottom: "#141820",
+    ground: ["#6a5040", "#4a382c"],
+    path: "#8a6848",
+    wall: "#1a140e",
+    wallCap: "#5a4030",
+    accent: "#e8b15a",
+    water: null,
+    note: "A wooden deck, a wheel, and a chart.",
+  },
+  "map.cinder": {
+    skyTop: "#1c3048",
+    skyBottom: "#101820",
+    ground: ["#5a4038", "#2e2428"],
+    path: "#7a5848",
+    wall: "#140e10",
+    wallCap: "#3a2a30",
+    accent: "#7eb6d6",
+    water: null,
+    note: "Ash under a cold blue. Not the Vale, and not the ridge.",
+  },
+  "map.ashvault": {
+    skyTop: "#100e14",
+    skyBottom: "#0c0a10",
+    ground: ["#2a2228", "#161216"],
+    path: "#3a3034",
+    wall: "#0a080c",
+    wallCap: "#3a2830",
+    accent: "#c45a32",
+    water: null,
+    note: "A short stair and a cold nick.",
+  },
 };
 
 export function regionLook(mapId: string): RegionLook {
@@ -431,6 +464,19 @@ function stampsFor(mapId: string): Stamp[] {
       { file: "lantern.png", x: 11.2, y: 4.4, w: 28, h: 50 },
     ];
   }
+  if (mapId === "map.deck") {
+    return [
+      { file: "skiff.png", x: 5.2, y: 1.2, w: 120, h: 70 },
+      { file: "lantern.png", x: 4.2, y: 3.2, w: 26, h: 46 },
+    ];
+  }
+  if (mapId === "map.cinder") {
+    return [
+      { file: "lantern.png", x: 7.1, y: 3.4, w: 28, h: 50 },
+      { file: "house.png", x: 5.4, y: 2.8, w: 100, h: 84 },
+    ];
+  }
+  if (mapId === "map.ashvault") return [{ file: "lantern.png", x: 4.2, y: 3.2, w: 26, h: 48 }];
   return [];
 }
 
@@ -880,11 +926,49 @@ function paintLandmarks(ctx: CanvasRenderingContext2D, mapId: string, tick: numb
       ctx.fillRect(11 * TILE + 18, 5 * TILE + 8, 7, 7);
     }
   }
+  if (mapId === "map.deck") {
+    ctx.strokeStyle = "#8a6848";
+    ctx.strokeRect(3 * TILE, 2 * TILE, 6 * TILE, 3 * TILE);
+    ctx.fillStyle = "#c8bba8";
+    ctx.fillRect(5 * TILE + 8, 3 * TILE, 28, 18);
+    ctx.strokeStyle = "#e8b15a";
+    ctx.beginPath();
+    ctx.arc(6 * TILE + 16, 3 * TILE + 8, 10, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  if (mapId === "map.cinder") {
+    ctx.fillStyle = "#2a2428";
+    ctx.beginPath();
+    ctx.moveTo(4 * TILE, 7 * TILE);
+    ctx.lineTo(6 * TILE, 3 * TILE);
+    ctx.lineTo(9 * TILE, 7 * TILE);
+    ctx.fill();
+    ctx.fillStyle = "#7eb6d6";
+    ctx.fillRect(7 * TILE + 8, 4 * TILE, 6, 22);
+    ctx.fillStyle = "#c45a32";
+    ctx.beginPath();
+    ctx.arc(13 * TILE, 4 * TILE, 18, Math.PI, 0);
+    ctx.fill();
+    if (sight) {
+      ctx.fillStyle = "rgba(126,182,214,0.45)";
+      ctx.fillRect(6 * TILE, 2 * TILE, 3 * TILE, TILE);
+    }
+  }
+  if (mapId === "map.ashvault") {
+    ctx.strokeStyle = "#c45a32";
+    ctx.strokeRect(3 * TILE, 3 * TILE, 4 * TILE, 2 * TILE);
+    ctx.fillStyle = "#1a1214";
+    ctx.fillRect(6 * TILE, 2 * TILE, 2 * TILE, 4 * TILE);
+    if (sight) {
+      ctx.fillStyle = "rgba(196,90,50,0.8)";
+      ctx.fillRect(4 * TILE + 10, 4 * TILE + 8, 8, 8);
+    }
+  }
 }
 
 function paintAmbience(ctx: CanvasRenderingContext2D, mapId: string, w: number, h: number, tick: number, reduced: boolean) {
   if (reduced) return;
-  if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth" || mapId === "map.margin") {
+  if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth" || mapId === "map.margin" || mapId === "map.cinder" || mapId === "map.deck") {
     ctx.strokeStyle = "rgba(232,220,200,0.25)";
     for (let i = 0; i < 5; i++) {
       const y = 20 + i * 28 + ((tick * 2 + i * 10) % 18);

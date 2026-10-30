@@ -341,6 +341,7 @@ export const MAPS: Record<string, MapDef> = {
     spawns: { pad: { x: 7, y: 4, facing: "e" }, from_ridge: { x: 1, y: 4, facing: "e" } },
     hotspots: [
       { id: "sign.skiff", x: 8, y: 3, w: 1, h: 1, label: "First Stay", kind: "sign" },
+      { id: "sign.heading", x: 8, y: 4, w: 1, h: 1, label: "First heading", kind: "sign" },
       { id: "sign.ledger", x: 6, y: 3, w: 1, h: 1, label: "Berth ledger", kind: "sign" },
       { id: "sign.cross", x: 10, y: 4, w: 1, h: 1, label: "Berth wind", kind: "sign" },
       { id: "exit.ridge", x: 0, y: 4, w: 1, h: 1, label: "Down to the ridge", kind: "exit" },
@@ -366,6 +367,61 @@ export const MAPS: Record<string, MapDef> = {
       { id: "battle.hour", x: 16, y: 6, w: 1, h: 1, label: "Hourkeeper", kind: "battle" },
     ],
     exits: [],
+  },
+  "map.deck": {
+    id: "map.deck",
+    name: "First Stay deck",
+    blurb: "A rail, a wheel, and a chart. The country is outside. The company, if it came, is here.",
+    width: 12,
+    height: 8,
+    spawns: { chart: { x: 6, y: 4, facing: "n" } },
+    hotspots: [
+      { id: "sign.wheel", x: 6, y: 3, w: 1, h: 1, label: "The wheel", kind: "sign" },
+      { id: "sign.chart", x: 4, y: 3, w: 1, h: 1, label: "Sky chart", kind: "sign" },
+      { id: "sign.mira", x: 3, y: 4, w: 1, h: 1, label: "Mira's place", kind: "sign" },
+      { id: "sign.kael", x: 8, y: 4, w: 1, h: 1, label: "Kael's place", kind: "sign" },
+      { id: "sign.nessa", x: 3, y: 5, w: 1, h: 1, label: "Nessa's place", kind: "sign" },
+      { id: "sign.iri", x: 8, y: 5, w: 1, h: 1, label: "Iri's place", kind: "sign" },
+      { id: "sign.veil", x: 9, y: 3, w: 1, h: 1, label: "A thread", kind: "sign" },
+      { id: "sign.party", x: 5, y: 5, w: 1, h: 1, label: "The line", kind: "sign" },
+      { id: "sign.home", x: 2, y: 4, w: 1, h: 1, label: "Last dock", kind: "sign" },
+      { id: "sign.rail", x: 6, y: 6, w: 1, h: 1, label: "Back to the rail", kind: "sign" },
+    ],
+    exits: [],
+  },
+  "map.cinder": {
+    id: "map.cinder",
+    name: "Cinderwatch",
+    blurb: "Ash, cold blue, and a watch that is not on the walked road. The stair under it counts a different weather.",
+    width: 16,
+    height: 10,
+    spawns: {
+      pad: { x: 3, y: 5, facing: "w" },
+      from_vault: { x: 12, y: 5, facing: "w" },
+    },
+    hotspots: [
+      { id: "sign.rail", x: 2, y: 5, w: 1, h: 1, label: "First Stay", kind: "sign" },
+      { id: "npc.brant", x: 6, y: 4, w: 1, h: 1, label: "Brant", kind: "npc" },
+      { id: "npc.pemma", x: 8, y: 6, w: 1, h: 1, label: "Pemma", kind: "npc" },
+      { id: "sign.signal", x: 7, y: 5, w: 1, h: 1, label: "Signal post", kind: "sign" },
+      { id: "sign.watch", x: 9, y: 4, w: 1, h: 1, label: "Later weather", kind: "sign" },
+      { id: "exit.stair", x: 13, y: 5, w: 1, h: 1, label: "Cold stair", kind: "exit" },
+    ],
+    exits: [{ id: "exit.stair", to: "map.ashvault", spawn: "stair" }],
+  },
+  "map.ashvault": {
+    id: "map.ashvault",
+    name: "The cold stair",
+    blurb: "A short stair under the ash. The order is a button. The draft at the bottom is a fight, and it is not the way home.",
+    width: 10,
+    height: 8,
+    spawns: { stair: { x: 2, y: 4, facing: "e" } },
+    hotspots: [
+      { id: "puzzle.cinder", x: 4, y: 4, w: 1, h: 1, label: "Cold nick", kind: "puzzle" },
+      { id: "battle.ash", x: 7, y: 4, w: 1, h: 1, label: "Downward draft", kind: "battle" },
+      { id: "exit.cinder", x: 1, y: 4, w: 1, h: 1, label: "Up to the watch", kind: "exit" },
+    ],
+    exits: [{ id: "exit.cinder", to: "map.cinder", spawn: "from_vault" }],
   },
 };
 
@@ -859,6 +915,28 @@ export const INITIAL_QUESTS: QuestNode[] = [
     discoveryId: "disc.seam",
     status: "hidden",
   },
+  {
+    id: "quest.heading",
+    title: "The first heading",
+    gate: "public",
+    summary: "After a route, the early shadow, both readings of the glass, and the hour, pin the roads from the walk and the gap from inside the step. Then choose. Neither heading is cleaner. No companion is required.",
+    factsRequired: ["flag.hour_complete"],
+    alternatives: ["Take the roads you know", "Take the gap between them"],
+    worldEffects: ["flag.sky_open"],
+    discoveryId: "disc.heading",
+    status: "hidden",
+  },
+  {
+    id: "quest.cinder",
+    title: "The watch that counts ash",
+    gate: "public",
+    summary: "Cinderwatch is a pad you note from the air. Bank the light, or send it along the scratch. The cold stair is optional. The rail home does not wait on it.",
+    factsRequired: ["flag.found_cinder"],
+    alternatives: ["Bank the light", "Send the light"],
+    worldEffects: ["flag.cinder_signal"],
+    discoveryId: "disc.cinder",
+    status: "hidden",
+  },
 ];
 
 /** Future systems. Present in data, never offered on the public critical path. */
@@ -967,6 +1045,26 @@ export const ITEMS: Record<string, { id: string; name: string; blurb: string; us
     id: "item.seam_bead",
     name: "Seam Bead",
     blurb: "The spring mouth, after both orders were read. It holds a gate and a verse. It does not require a full company.",
+  },
+  "item.sky_needle": {
+    id: "item.sky_needle",
+    name: "Sky Needle",
+    blurb: "A heading you chose once. It points the way you picked. It does not say the other way was lesser.",
+  },
+  "item.cloud_thread": {
+    id: "item.cloud_thread",
+    name: "Cloud Thread",
+    blurb: "From a shine that waited on a second look, or a route marker. It keeps a shine. It does not name a later road.",
+  },
+  "item.signal_glass": {
+    id: "item.signal_glass",
+    name: "Signal Glass",
+    blurb: "From the post at Cinderwatch. Banked or sent, the pane is the same pane. The other answer was not burned.",
+  },
+  "item.ash_lance": {
+    id: "item.ash_lance",
+    name: "Ash Lance",
+    blurb: "Cooled ash from a kite that drafted down. A note toward a coat that is not open. It is not a job.",
   },
 };
 

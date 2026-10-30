@@ -19,7 +19,9 @@ export function glide(
 export function stepKind(mapId: string, x: number, y: number): StepKind {
   if (mapId === "map.woods" || mapId === "map.reach" || mapId === "map.barrow") return "grass";
   if (mapId === "map.inn" || mapId === "map.smith") return "wood";
-  if (mapId === "map.shrine" || mapId === "map.ridge" || mapId === "map.glass" || mapId === "map.highroad" || mapId === "map.cave" || mapId === "map.berth" || mapId === "map.margin") return "stone";
+  if (mapId === "map.shrine" || mapId === "map.ridge" || mapId === "map.glass" || mapId === "map.highroad" || mapId === "map.cave" || mapId === "map.berth" || mapId === "map.margin" || mapId === "map.ashvault") return "stone";
+  if (mapId === "map.deck") return "wood";
+  if (mapId === "map.cinder") return "stone";
   if ((mapId === "map.lowbell" && y >= 8) || (mapId === "map.ferry" && y >= 9) || (mapId === "map.hold" && y >= 6)) return "water";
   if (mapId === "map.vale" && (x <= 2 || y >= 12)) return "grass";
   return "cobble";

@@ -26,7 +26,8 @@ Keyboard and buttons complete every mandatory beat. A headset is optional and is
    - After the bell, the far dock opens onto Mistwater Crossing. Hale says the ferry left at nine. Tamsin says ten. Hear them both, or look twice and then record the window. The contradiction is not explained.
    - Under the station, the Twice-Kept Hold wants flame, then tide, then stone. If the Warden fell, stone, stone, flame also opens it. Sight and the chalk show the cut. They do not turn the plate. Past the plate: lanterns, then the Late Ferryman. Ask which departure if you spared the Warden or recorded both hours, once he is under two fifths. Or end the boarding. The high road opens either way. The water beyond it does not.
    - Change a trade at the Wick, Bram's stall, the station, the high gate, the ridge, or the berth, when no fight is open. Wayfinder, Elementalist (after the conduits), Riverward (after the plate). Your breath, gold, and pack stay put. Double Wake wants Echo Lash twice and the crossing finished. Skywright is Sera's kit. You cannot take it.
-   - The atlas travels only to places you have already walked. Open sky stays a dashed road.
+   - The atlas travels only to places you have already walked. The dashed road into open sky is still not a boat.
+   - After the hour is kept, the berth has a first heading one step east of the pad. Pin the roads from the walk and the gap from inside the step. Take the roads you know, or the gap. Neither is cleaner. No companion is required. Then the Sky Atlas is a bounded chart: A or Left is west, D or Right is east. Land only on a pad. Note Cinderwatch before it will take the hull. The deck can hold the company. The cold stair wants ash, salt, ember. The draft at the bottom is one fight. The rail home does not wait on it. Dragoon stays shut.
    - After the ferryman, the high gate opens onto Skyweave Ridge. Ada keeps the mill. Sera asks you to finish a hot splice or lash the safer stay. If four are already walking, she waits at the rig. Party, on a quiet map, can send someone to the rig and call them back. Their kit stays theirs.
    - The Early Glass wants the chart from the walk and the sky from inside the step. Sight shows the eclipse ahead of the sun. It does not press the lens. Ask the Galekeeper which noon, if you kept a reason to ask, or end the wind. The berth opens either way.
    - The First Stay flies from the berth to the Vale roof, and back. Pick the other pad and cast off. It is a route. After one flight you may note a shadow that leaves first. It is not explained.
@@ -47,11 +48,11 @@ Saves from the first chapter still open. They gain the new fields without losing
 npm ci
 npm run dev        # http://127.0.0.1:8080 when run locally
 npm run typecheck
-node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/core/unwritten.test.ts src/game/core/hours.test.ts
+node --experimental-strip-types --test src/game/core/combat.test.ts src/game/core/expanses.test.ts src/game/core/crossing.test.ts src/game/core/skyweave.test.ts src/game/core/unwritten.test.ts src/game/core/hours.test.ts src/game/core/opensky.test.ts
 npm run build      # skips the database step when DATABASE_URL is unset
 ```
 
-`npm test` also runs the app platform checks. The game contract is those test files. `scripts/hours-smoke.mjs` plays the title, a new journey, a step, an interaction, Attack, and one optional oath on the Pages build. GitHub Actions installs Chromium for that smoke and uploads desktop and 390px screenshots. `scripts/game-launch-smoke.mjs` still checks that a new journey reaches the Vale when you run it yourself.
+`npm test` also runs the app platform checks. The game contract is those test files. `scripts/hours-smoke.mjs` plays the title, a new journey, a step, an interaction, Attack, and one optional oath on the Pages build. `scripts/opensky-smoke.mjs` plays the title and a new journey, then a labeled pre-heading fixture — not a full campaign playthrough — and from there flies, lands, reloads, and returns. GitHub Actions installs Chromium for that smoke and uploads desktop and 390px screenshots. `scripts/game-launch-smoke.mjs` still checks that a new journey reaches the Vale when you run it yourself.
 
 GitHub Actions (`.github/workflows/ci.yml`) installs, typechecks, runs those tests, builds, checks the Pages CSS, and runs the browser smoke. No database URL is required.
 

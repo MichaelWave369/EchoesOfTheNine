@@ -166,6 +166,16 @@ function rewardFor(state: EncounterState, mercy: boolean): RewardGrant {
       unique: true,
     };
   }
+  if (state.encounterId === "enc.ashkite") {
+    return {
+      id: "reward.ashkite",
+      gold: 58,
+      xp: 86,
+      items: [{ itemId: "item.ash_lance", qty: 1 }],
+      flags: ["flag.ashkite_cleared", "flag.dragoon_spark"],
+      unique: true,
+    };
+  }
   return {
     id: `reward.${state.encounterId}`,
     gold: 20,
@@ -380,6 +390,14 @@ function chooseEnemyIntent(state: EncounterState, actor: CombatantState): Intent
   } else if (actor.jobId === "enemy.inkling") {
     abilityId = "enemy.ink_script";
     telegraph = "A short line of ink. Tide bites it. Sidestep or brace.";
+  } else if (actor.jobId === "enemy.ashkite") {
+    if (state.turnIndex % 3 === 0 && (actor.cooldowns["enemy.downdraft"] ?? 0) === 0) {
+      abilityId = "enemy.downdraft";
+      telegraph = "Downdraft — the whole party. Defend. A sidestep will not cover everyone. Stone bites this wind.";
+    } else {
+      abilityId = "enemy.cinder_rake";
+      telegraph = "Cinder Rake — ash on one of you. Tide bites it. Sidestep or brace.";
+    }
   } else if (actor.jobId === "enemy.warden") {
     const phase = actor.phase ?? 1;
     if (phase >= 2 && hasStatus(actor, "exposed")) {
