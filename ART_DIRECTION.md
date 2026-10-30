@@ -49,6 +49,8 @@ Dialogue portraits are large, and a few words in the line already spoken can war
 
 The wanderer's cloak can be lantern, festival, river, or ridge. That is a dye. It is not a job. Old chronicles without the field become lantern. Schema stays 4.
 
+The walk glides between tiles. The integer square is still the one that collides, speaks, and starts a fight. Festival extras walk short loops that do not sit on a required person, the well, or the lantern-crash square. Quiet world, in Settings, parks them. Reduced motion parks them and skips the glide.
+
 Labels on the map appear when you stand next to a thing, point at it, or it is a way out. Do not put a permanent caption on every tile.
 
 Temporal Sight is a teal wash, a ghost a step off the wanderer, a slow scan, and a step count. It shows. It does not solve. Reduced motion holds the wash still and skips the ghost bob.

@@ -73,9 +73,10 @@ import {
   writeLocal,
 } from "../chronicle/save.ts";
 import { createEncounter, proposeAction, resolveEnemyTurn, tryMercy } from "../core/combat.ts";
-import { configureAudio, resumeAudio, playSfx, startMusic, unlockAudio } from "../audio.ts";
+import { configureAudio, resumeAudio, playSfx, playStep, startMusic, unlockAudio } from "../audio.ts";
 import { paintArena, paintExploration } from "./art.ts";
 import { artUrl, cameraOrigin, portraitMood, portraitSpec, warmArt } from "./sprites.ts";
+import { glide, stepKind } from "./breath.ts";
 import { detectXr, requestReferenceSession, XR_BINDINGS, type XrCapability } from "../xr/adapter.ts";
 
 type Screen = "title" | "name" | "explore" | "battle" | "ending";
@@ -160,8 +161,9 @@ export function GameApp() {
       muted: save.settings.muted,
       volume: save.settings.masterVolume,
       reducedMotion: save.settings.reducedMotion,
+      quiet: save.settings.motionDetail === "quiet",
     });
-  }, [save?.settings.muted, save?.settings.masterVolume, save?.settings.reducedMotion]);
+  }, [save?.settings.muted, save?.settings.masterVolume, save?.settings.reducedMotion, save?.settings.motionDetail]);
 
   useEffect(() => {
     const onVis = () => {
@@ -572,7 +574,7 @@ function Explore({
       if (dy > 0) setFacing("s");
       if (dy < 0) setFacing("n");
       if ((save.sightSteps ?? 0) > 0) commit(tickSight(save));
-      if (!save.settings.reducedMotion) playSfx("step");
+      if (!save.settings.reducedMotion) playStep(stepKind(map.id, nx, ny));
     },
     [pos, map, save, commit],
   );
@@ -1388,6 +1390,8 @@ function Explore({
             party={save.party}
             hotspots={map.hotspots}
             reduced={save.settings.reducedMotion}
+            life={save.settings.motionDetail !== "quiet"}
+            comfort={save.settings.cameraComfort}
             follow={followCam}
             sight={Boolean(save.sightScene) && save.sightSteps > 0 && (save.sightScene === `sight.${map.id.replace("map.", "")}` || (map.id === "map.lowbell" && save.sightScene === "sight.lowbell") || (map.id === "map.ferry" && save.sightScene === "sight.ferry") || (map.id === "map.hold" && save.sightScene === "sight.hold") || (map.id === "map.highroad" && save.sightScene === "sight.stair"))}
             appearance={save.appearance}
@@ -1441,6 +1445,7 @@ function Explore({
           text={node.text}
           choices={node.choices}
           appearance={node.speaker === save.playerName ? save.appearance : undefined}
+          reduced={save.settings.reducedMotion}
           onNext={() => advanceDialogue()}
           onChoice={(c) => advanceDialogue(c)}
         />
@@ -2196,6 +2201,8 @@ function MapCanvas({
   appearance = "lantern",
   sightSteps = 0,
   follow = true,
+  life = true,
+  comfort = "gentle",
 }: {
   mapId: string;
   width: number;
@@ -2209,23 +2216,18 @@ function MapCanvas({
   appearance?: string;
   sightSteps?: number;
   follow?: boolean;
+  life?: boolean;
+  comfort?: "gentle" | "standard";
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const [tick, setTick] = useState(0);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
-  const prev = useRef(pos);
-  const walkUntil = useRef(0);
-  if (prev.current.x !== pos.x || prev.current.y !== pos.y) {
-    prev.current = pos;
-    walkUntil.current = tick + 4;
-  }
-  const moving = tick <= walkUntil.current && walkUntil.current > 0;
-  useEffect(() => {
-    if (reduced) return;
-    const id = window.setInterval(() => setTick((n) => (n + 1) % 240), 90);
-    return () => window.clearInterval(id);
-  }, [reduced]);
-  useEffect(() => {
+  const glideRef = useRef(1);
+  const fromRef = useRef(pos);
+  const toRef = useRef(pos);
+  const paintRef = useRef<() => void>(() => {});
+  paintRef.current = () => {
     const c = ref.current;
     if (!c) return;
     const ctx = c.getContext("2d");
@@ -2238,6 +2240,8 @@ function MapCanvas({
     c.style.width = "100%";
     c.style.height = "auto";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const t = reduced ? 1 : glideRef.current;
+    const body = glide(fromRef.current, toRef.current, t);
     paintExploration(ctx, {
       mapId,
       width,
@@ -2252,22 +2256,19 @@ function MapCanvas({
       hover,
       blocked: (x, y) => blocked(mapId, x, y),
       appearance,
-      moving,
+      moving: !reduced && t < 1,
       sightSteps: sight ? sightSteps : 0,
+      body,
+      life,
     });
-  }, [mapId, width, height, pos, facing, party, hotspots, reduced, sight, tick, hover, appearance, moving, sightSteps]);
-  const frameRef = useRef<HTMLDivElement>(null);
-  const look = cameraOrigin(pos.x, pos.y, width, height);
-  useEffect(() => {
-    const canvas = ref.current;
     const frame = frameRef.current;
-    if (!canvas) return;
     if (!follow || !frame) {
-      canvas.style.transform = "";
+      c.style.transform = "";
       return;
     }
-    const mapCssW = canvas.clientWidth || frame.clientWidth;
-    const mapCssH = canvas.clientHeight || mapCssW * (height / Math.max(1, width));
+    const look = cameraOrigin(body.x, body.y, width, height);
+    const mapCssW = c.clientWidth || frame.clientWidth;
+    const mapCssH = c.clientHeight || mapCssW * (height / Math.max(1, width));
     const tilePx = frame.clientWidth < 720 ? 72 : 84;
     const zoom = Math.min(4.2, Math.max(1.15, (tilePx * width) / Math.max(1, mapCssW)));
     const focusX = look.x * mapCssW * zoom;
@@ -2276,12 +2277,37 @@ function MapCanvas({
       if (content <= view) return (view - content) / 2;
       return Math.min(0, Math.max(view - content, view / 2 - focus));
     };
-    const dx = place(frame.clientWidth, mapCssW * zoom, focusX);
-    const dy = place(frame.clientHeight, mapCssH * zoom, focusY);
-    canvas.style.transformOrigin = "0 0";
-    canvas.style.transition = reduced ? "none" : "transform 140ms linear";
-    canvas.style.transform = `translate(${dx}px, ${dy}px) scale(${zoom})`;
-  }, [follow, look.x, look.y, width, height, reduced, tick]);
+    c.style.transformOrigin = "0 0";
+    c.style.transition = "none";
+    c.style.transform = `translate(${place(frame.clientWidth, mapCssW * zoom, focusX)}px, ${place(frame.clientHeight, mapCssH * zoom, focusY)}px) scale(${zoom})`;
+  };
+  useEffect(() => {
+    if (reduced) return;
+    const id = window.setInterval(() => setTick((n) => (n + 1) % 240), 90);
+    return () => window.clearInterval(id);
+  }, [reduced]);
+  useEffect(() => {
+    paintRef.current();
+  }, [mapId, width, height, pos, facing, party, hotspots, reduced, sight, tick, hover, appearance, sightSteps, follow, life, comfort]);
+  useEffect(() => {
+    fromRef.current = glide(fromRef.current, toRef.current, reduced ? 1 : glideRef.current);
+    toRef.current = pos;
+    if (reduced) {
+      glideRef.current = 1;
+      paintRef.current();
+      return;
+    }
+    const started = performance.now();
+    const dur = comfort === "gentle" ? 220 : 140;
+    let raf = 0;
+    const loop = (now: number) => {
+      glideRef.current = Math.min(1, (now - started) / dur);
+      paintRef.current();
+      if (glideRef.current < 1) raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [pos.x, pos.y, reduced, comfort]);
   return (
     <div ref={frameRef} className={follow ? "relative h-[62vh] max-h-[520px] min-h-56 overflow-hidden" : "relative"}>
     <canvas
@@ -2419,6 +2445,7 @@ function DialogueBox({
   onNext,
   onChoice,
   appearance,
+  reduced = false,
 }: {
   speaker: string;
   text: string;
@@ -2426,14 +2453,34 @@ function DialogueBox({
   onNext: () => void;
   onChoice: (c: { label: string; next: string; flag?: string }) => void;
   appearance?: string;
+  reduced?: boolean;
 }) {
+  const [count, setCount] = useState(reduced ? text.length : 1);
+  useEffect(() => {
+    if (reduced) {
+      setCount(text.length);
+      return;
+    }
+    setCount(1);
+    const id = window.setInterval(() => {
+      setCount((n) => (n >= text.length ? n : Math.min(text.length, n + 2)));
+    }, 16);
+    return () => window.clearInterval(id);
+  }, [text, reduced]);
+  const shown = text.slice(0, count);
+  const done = count >= text.length;
   return (
-    <div className="dialogue-plate dialogue-rise fixed inset-x-0 bottom-0 z-40 border-t border-amber/40 bg-ink-2/95 p-4" role="dialog" aria-label={speaker}>
+    <div
+      className="dialogue-plate dialogue-rise fixed inset-x-0 bottom-0 z-40 border-t border-amber/40 bg-ink-2/95 p-4"
+      role="dialog"
+      aria-label={speaker}
+      onClick={() => { if (!done) setCount(text.length); }}
+    >
       <div className="mx-auto flex max-w-3xl gap-3">
-        <Portrait hue={SPEAKER_HUE[speaker] ?? 36} name={speaker} appearance={appearance} large mood={portraitMood(text)} />
+        <Portrait hue={SPEAKER_HUE[speaker] ?? 36} name={speaker} appearance={appearance} large mood={portraitMood(shown)} />
         <div className="min-w-0 flex-1">
           <p className="text-xs tracking-widest text-amber uppercase">{speaker}</p>
-          <p className="mt-1 text-lg">{text}</p>
+          <p className="mt-1 min-h-8 text-lg">{shown}{done ? "" : " ▍"}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {choices?.length ? (
               choices.map((c) => (
@@ -2442,7 +2489,7 @@ function DialogueBox({
                 </MenuButton>
               ))
             ) : (
-              <MenuButton onClick={onNext}>Continue</MenuButton>
+              <MenuButton onClick={() => (done ? onNext() : setCount(text.length))}>{done ? "Continue" : "Skip"}</MenuButton>
             )}
           </div>
         </div>
@@ -2493,6 +2540,7 @@ function Battle({
   encRef.current = enc;
   saveRef.current = save;
   const arena = useRef<HTMLCanvasElement>(null);
+  const [iris, setIris] = useState(!save.settings.reducedMotion);
   const asc = useRef({ x: 0, z: 2.2, keys: new Set<string>() });
   const [ascPos, setAscPos] = useState({ x: 0, z: 2.2 });
   const enemyTimer = useRef<number | null>(null);
@@ -2655,6 +2703,13 @@ function Battle({
   }, [intro, save.settings.reducedMotion]);
 
   useEffect(() => {
+    if (save.settings.reducedMotion) return;
+    playSfx("rise");
+    const t = window.setTimeout(() => setIris(false), 460);
+    return () => window.clearTimeout(t);
+  }, [save.settings.reducedMotion]);
+
+  useEffect(() => {
     const c = arena.current;
     if (!c) return;
     let raf = 0;
@@ -2805,7 +2860,7 @@ function Battle({
       : foes.filter((f) => f.alive);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-3 px-3 py-3">
+    <div className="battle-shell mx-auto flex min-h-screen max-w-6xl flex-col gap-3 px-3 py-3">
       <header className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-xs tracking-[0.22em] text-amber uppercase">{enc.mode === "legacy" ? "Legacy" : "Ascension"} · {enc.encounterId.replace("enc.", "")}</p>
@@ -2854,6 +2909,7 @@ function Battle({
       </header>
       <div className="battle-stage relative overflow-hidden rounded-md border border-line bg-ink">
         <canvas ref={arena} className="block h-72 w-full sm:h-[440px]" />
+        {iris && <div className="battle-iris pointer-events-none absolute inset-0 z-20 bg-ink" />}
         {intro && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/75 text-center">
             <p className="text-xs tracking-[0.28em] text-teal uppercase">
@@ -2899,9 +2955,11 @@ function Battle({
           </p>
         )}
       </div>
-      <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
-        <PartyStrip save={{ ...save, roster: Object.fromEntries(party.map((p) => [p.id, p])), party: party.map((p) => p.id) }} />
-        <div className="rounded-md border border-line bg-panel p-3">
+      <div className="battle-board grid min-h-0 gap-3 lg:grid-cols-[220px_1fr]">
+        <div className="battle-party min-h-0">
+          <PartyStrip save={{ ...save, roster: Object.fromEntries(party.map((p) => [p.id, p])), party: party.map((p) => p.id) }} />
+        </div>
+        <div className="battle-commands min-h-0 rounded-md border border-line bg-panel p-3">
           {enc.outcome !== "ongoing" && <p className="font-display text-xl">{enc.outcome === "mercy" ? "A pact, not a kill." : enc.outcome === "victory" ? "The light holds." : "You fall, and wake."}</p>}
           {enc.phase === "enemy" && <p className="text-amber-2">{active?.name} is moving.</p>}
           {enc.phase === "switch_lock" && <p>The two views agree with each other…</p>}
@@ -3157,6 +3215,7 @@ function SettingsSheet({
     muted: false,
     masterVolume: 0.7,
     reducedMotion: false,
+    motionDetail: "full" as const,
     highContrast: false,
     cameraComfort: "gentle" as const,
     buttonOnly: false,
@@ -3189,6 +3248,10 @@ function SettingsSheet({
         <label className="flex items-center justify-between gap-3">
           Reduced motion
           <input type="checkbox" checked={s.reducedMotion} onChange={(e) => set({ reducedMotion: e.target.checked })} />
+        </label>
+        <label className="flex items-center justify-between gap-3">
+          Quiet world
+          <input type="checkbox" checked={s.motionDetail === "quiet"} onChange={(e) => set({ motionDetail: e.target.checked ? "quiet" : "full" })} />
         </label>
         <label className="flex items-center justify-between gap-3">
           High contrast

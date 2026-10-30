@@ -295,6 +295,8 @@ export interface AccessibilitySettings {
   muted: boolean;
   masterVolume: number;
   reducedMotion: boolean;
+  /** Cosmetic. Quiet parks festival life and soft weather. Not a story flag. */
+  motionDetail: "full" | "quiet";
   highContrast: boolean;
   cameraComfort: "gentle" | "standard";
   buttonOnly: boolean;
@@ -307,6 +309,7 @@ export const DEFAULT_SETTINGS: AccessibilitySettings = {
   muted: false,
   masterVolume: 0.7,
   reducedMotion: false,
+  motionDetail: "full",
   highContrast: false,
   cameraComfort: "gentle",
   buttonOnly: false,

@@ -1,6 +1,6 @@
 # Gameplay status
 
-Honest labels. Updated for the living battlefield. Skyweave's rules are unchanged. The fights look staged. The math did not move.
+Honest labels. Updated for the breathing world. Skyweave's rules are unchanged. The Vale moves. The math did not.
 
 ## Working
 
@@ -23,7 +23,7 @@ Honest labels. Updated for the living battlefield. Skyweave's rules are unchange
 - The First Stay is one hull and two pads: the Skyweave berth and the Vale roof. You pick a destination and cast off. It is a route, not a skybox. After one flight you may note a second shadow that leaves before the hull. It is recorded. It is not explained.
 - Atlas of walked places, including the ridge, the glass, the cave, and the berth. Travel only to places already walked. The dashed road into open sky is still not a boat.
 - Temporal Sight is an overlay for eight steps, including the ridge's early span, the glass, the cave, and the berth. A button spends a charge. The journal keeps the clue. The picture of that hour is a teal wash and a small clock. It still does not press the puzzle.
-- The presentation layer (`src/game/ui/art.ts`, `src/game/ui/sprites.ts`, `ART_DIRECTION.md`) draws region tiles, landmarks, party sprites, the title, the First Stay, and a staged battle: a region plate, larger fighters, a last-event streak, and a number taken from that event. A cloak dye is cosmetic. A follow camera is a local view, not a save field. The picture does not decide damage, doors, jobs, or rewards.
+- The presentation layer (`src/game/ui/art.ts`, `src/game/ui/sprites.ts`, `src/game/ui/breath.ts`, `ART_DIRECTION.md`) draws region tiles, landmarks, party sprites, the title, the First Stay, and a staged battle. A cloak dye is cosmetic. A follow camera is a local view, not a save field. Walk interpolation, festival loops, weather, and footfalls are cosmetic. Quiet world parks the loops. The picture does not decide damage, doors, jobs, or rewards. Schema stays 4.
 
 ## Partial
 

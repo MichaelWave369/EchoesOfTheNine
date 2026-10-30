@@ -19,7 +19,8 @@ async function pass(name, width, height) {
   page.on("pageerror", (err) => errors.push(`${name}: ${err}`));
   await page.goto(url, { waitUntil: "networkidle", timeout: 45000 });
   const h1 = await page.locator("h1").boundingBox();
-  if (!h1 || h1.height > 140 || h1.width > width) {
+  const titleCap = width <= 360 ? 240 : 140;
+  if (!h1 || h1.height > titleCap || h1.width > width + 8) {
     throw new Error(`${name} title bounds ${JSON.stringify(h1)}`);
   }
   await page.screenshot({ path: `${dir}/canvas-title-${name}.png` });
@@ -52,8 +53,12 @@ async function pass(name, width, height) {
   await page.getByRole("button", { name: "Attack" }).waitFor({ timeout: 8000 });
   await page.waitForTimeout(500);
   const stage = await page.locator(".battle-stage canvas").boundingBox();
-  const minH = width < 700 ? 250 : 400;
+  const attack = await page.getByRole("button", { name: "Attack" }).boundingBox();
+  const minH = width < 420 ? 160 : width < 700 ? 250 : 400;
   if (!stage || stage.height < minH) throw new Error(`${name} battle stage ${JSON.stringify(stage)}`);
+  if (!attack || attack.y < -1 || attack.y + attack.height > height + 8) {
+    throw new Error(`${name} attack offscreen ${JSON.stringify(attack)}`);
+  }
   await page.screenshot({ path: `${dir}/canvas-battle-${name}.png` });
   await page.close();
 }
@@ -87,10 +92,11 @@ async function sight(name, width, height) {
 try {
   await pass("desktop", 1280, 800);
   await pass("mobile", 390, 844);
+  await pass("narrow", 320, 700);
   await sight("desktop", 1280, 800);
   await sight("mobile", 390, 844);
   if (errors.length) throw new Error(errors.join("\n"));
-  console.log(JSON.stringify({ ok: true, shots: ["title", "vale", "talk", "party", "battle", "sight"], viewports: ["desktop", "mobile"] }));
+  console.log(JSON.stringify({ ok: true, shots: ["title", "vale", "talk", "party", "battle", "sight"], viewports: ["desktop", "mobile", "narrow"] }));
 } catch (err) {
   console.error(JSON.stringify({ ok: false, error: String(err), errors }, null, 2));
   process.exit(1);

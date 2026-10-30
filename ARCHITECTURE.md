@@ -22,6 +22,7 @@ proposeAction → validate → resolveDeterministically → emitEvents → rende
 | `src/game/content/gear.ts` | Equipment, shop buy, rest, level curve, spell ranks copied in at battle start, Temporal Sight charges, Elementalist unlock. |
 | `src/game/ui/art.ts` | Presentation only: region colors, landmarks, sprites, Sight wash, battle plates and staging. No rules. |
 | `src/game/ui/sprites.ts` | Frame sheets, cloak dyes, tile jitter, battle plate names, and the follow-camera origin. No rules. |
+| `src/game/ui/breath.ts` | Glide, festival loops, and footfall kind. No rules and nothing saved. |
 | `src/game/ui/GameApp.tsx` | Title, exploration, shops, inn, Legacy menu, Ascension arena, Sight, ending, settings. |
 | `src/game/audio.ts` | Procedural Web Audio. Unlocks on the first gesture. |
 | `src/game/xr/adapter.ts` | Capability detection, reference session, and an empty `XR_PRESENTATION` hook. Not a headset-tested renderer. |

@@ -364,6 +364,7 @@ export function migrateSave(parsed: SaveGame): SaveGame {
   }
   next.chronicle = next.chronicle?.length ? next.chronicle : [blankChronicle()];
   next.settings = { ...DEFAULT_SETTINGS, ...next.settings };
+  if (next.settings.motionDetail !== "quiet") next.settings.motionDetail = "full";
   refreshQuests(next);
   return next;
 }

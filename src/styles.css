@@ -87,11 +87,35 @@
   to { transform: none; opacity: 1; }
 }
 
+.battle-iris {
+  animation: battle-iris 460ms ease-out forwards;
+}
+
+@keyframes battle-iris {
+  from { opacity: 0.92; }
+  to { opacity: 0; }
+}
+
+@media (max-width: 420px) {
+  .battle-shell {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .battle-stage canvas { height: 188px !important; }
+  .battle-board { min-height: 0; }
+  .battle-party { max-height: 76px; overflow: auto; }
+  .battle-commands { min-height: 0; overflow: auto; }
+}
+
+
 @media (prefers-reduced-motion: reduce) {
   .motion-ok { animation: none !important; transition: none !important; }
   .lantern-flicker { animation: none !important; }
   .skiff-rise { animation: none !important; }
   .dialogue-rise, .dialogue-face { animation: none !important; }
+  .battle-iris { animation: none !important; opacity: 0; }
 }
 
 @keyframes lantern-glow {
