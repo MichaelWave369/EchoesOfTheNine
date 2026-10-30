@@ -273,6 +273,12 @@ function journalLine(id: string): string {
     "flag.spoke_brant": "Brant counts ash at Cinderwatch. He does not count you.",
     "flag.spoke_pemma": "Pemma bottles the cold off the stair. Leaving is still allowed.",
     "flag.cinder_later": "Cinderwatch will be different weather later. Not today.",
+    "flag.sky_perch": "A cold perch under the ash. It points at a drill on the ground. It is not a pad.",
+    "flag.sight_sky_perch": "Sight: the perch repeats a fall you have not taken. It does not start the drill.",
+    "flag.cinder_tally": "The upward ash is counted. The post was not rewritten.",
+    "flag.dragoon_trial": "The cold perch took the drill. Sky Lance and Leap are in your hands. Dragoon stays shut.",
+    "flag.falling_star": "Rise, hold, drop. Falling Star is a drill after the perch. The coat stays shut.",
+    "flag.deck_rest": "You slept in the First Stay's bunk. The sight did not wake there.",
   };
   return lines[id] ?? `Noted: ${id.replace("flag.", "").replaceAll("_", " ")}`;
 }
@@ -305,6 +311,8 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.seam") return flag(save, "flag.seam_set");
     if (q.id === "quest.heading") return flag(save, "flag.sky_open");
     if (q.id === "quest.cinder") return flag(save, "flag.cinder_signal");
+    if (q.id === "quest.tally") return flag(save, "flag.cinder_tally");
+    if (q.id === "quest.perch") return flag(save, "flag.dragoon_trial") && flag(save, "flag.falling_star");
     return false;
   };
   const visible = (q: QuestNode) => {
@@ -334,6 +342,8 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.seam") return flag(save, "flag.oath_done") && flag(save, "flag.spring_done");
     if (q.id === "quest.heading") return flag(save, "flag.hour_complete");
     if (q.id === "quest.cinder") return flag(save, "flag.found_cinder");
+    if (q.id === "quest.tally") return flag(save, "flag.found_cinder");
+    if (q.id === "quest.perch") return flag(save, "flag.dragoon_spark");
     return false;
   };
   for (const q of save.quests) {

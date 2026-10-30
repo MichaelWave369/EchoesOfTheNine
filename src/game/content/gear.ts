@@ -2,9 +2,10 @@ import type { CombatantState, EquipLoadout, SaveGame } from "../contracts.ts";
 import { CHARACTERS } from "./characters.ts";
 import { beginSight, spellsForJob } from "./crossing.ts";
 import { beginHoursSight } from "./hours.ts";
-import { beginOpenSkySight } from "./opensky.ts";
+import { beginOpenSkySight, OPEN_COPY } from "./opensky.ts";
 import { beginSkySight } from "./skyweave.ts";
 import { beginHourSight } from "./unwritten.ts";
+import { setFlag } from "../chronicle/save.ts";
 
 export interface GearDef {
   id: string;
@@ -365,6 +366,23 @@ export function restParty(save: SaveGame): { ok: true; save: SaveGame } | { ok: 
     c.alive = true;
   }
   return { ok: true, save: next };
+}
+
+/** Six gold. Heals the party. Does not wake Temporal Sight. The Wick still does that. */
+export function restOnDeck(save: SaveGame): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
+  if (save.mapId !== "map.deck") return { ok: false, reason: OPEN_COPY.deckPoor };
+  if (save.gold < 6) return { ok: false, reason: OPEN_COPY.deckPoor };
+  let next = structuredClone(save);
+  next.gold -= 6;
+  for (const id of next.party) {
+    const c = next.roster[id];
+    if (!c) continue;
+    c.hp = c.maxHp;
+    c.mp = c.maxMp;
+    c.alive = true;
+  }
+  if (!next.flags["flag.deck_rest"]) next = setFlag(next, "flag.deck_rest");
+  return { ok: true, save: next, text: OPEN_COPY.deckRested };
 }
 
 export function useSight(save: SaveGame): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {

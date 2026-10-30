@@ -371,13 +371,15 @@ export const MAPS: Record<string, MapDef> = {
   "map.deck": {
     id: "map.deck",
     name: "First Stay deck",
-    blurb: "A rail, a wheel, and a chart. The country is outside. The company, if it came, is here.",
+    blurb: "A rail, a wheel, a bunk, and a chart. The country is outside. The company, if it came, is here.",
     width: 12,
     height: 8,
     spawns: { chart: { x: 6, y: 4, facing: "n" } },
     hotspots: [
       { id: "sign.wheel", x: 6, y: 3, w: 1, h: 1, label: "The wheel", kind: "sign" },
       { id: "sign.chart", x: 4, y: 3, w: 1, h: 1, label: "Sky chart", kind: "sign" },
+      { id: "sign.log", x: 4, y: 5, w: 1, h: 1, label: "The log", kind: "sign" },
+      { id: "sign.bunk", x: 5, y: 3, w: 1, h: 1, label: "The bunk", kind: "sign" },
       { id: "sign.mira", x: 3, y: 4, w: 1, h: 1, label: "Mira's place", kind: "sign" },
       { id: "sign.kael", x: 8, y: 4, w: 1, h: 1, label: "Kael's place", kind: "sign" },
       { id: "sign.nessa", x: 3, y: 5, w: 1, h: 1, label: "Nessa's place", kind: "sign" },
@@ -398,6 +400,7 @@ export const MAPS: Record<string, MapDef> = {
     spawns: {
       pad: { x: 3, y: 5, facing: "w" },
       from_vault: { x: 12, y: 5, facing: "w" },
+      drill: { x: 10, y: 4, facing: "e" },
     },
     hotspots: [
       { id: "sign.rail", x: 2, y: 5, w: 1, h: 1, label: "First Stay", kind: "sign" },
@@ -405,6 +408,9 @@ export const MAPS: Record<string, MapDef> = {
       { id: "npc.pemma", x: 8, y: 6, w: 1, h: 1, label: "Pemma", kind: "npc" },
       { id: "sign.signal", x: 7, y: 5, w: 1, h: 1, label: "Signal post", kind: "sign" },
       { id: "sign.watch", x: 9, y: 4, w: 1, h: 1, label: "Later weather", kind: "sign" },
+      { id: "sign.tally", x: 9, y: 5, w: 1, h: 1, label: "Upward ash", kind: "sign" },
+      { id: "battle.perch", x: 11, y: 4, w: 1, h: 1, label: "Cold perch", kind: "battle" },
+      { id: "sign.drop", x: 10, y: 5, w: 1, h: 1, label: "The drop", kind: "sign" },
       { id: "exit.stair", x: 13, y: 5, w: 1, h: 1, label: "Cold stair", kind: "exit" },
     ],
     exits: [{ id: "exit.stair", to: "map.ashvault", spawn: "stair" }],
@@ -937,6 +943,28 @@ export const INITIAL_QUESTS: QuestNode[] = [
     discoveryId: "disc.cinder",
     status: "hidden",
   },
+  {
+    id: "quest.tally",
+    title: "Ash that falls upward",
+    gate: "public",
+    summary: "Sight can show the ash at Cinderwatch falling upward. Counting it is a separate press. The bottle is once. The signal you already chose stays.",
+    factsRequired: ["flag.found_cinder"],
+    alternatives: ["Look, then count"],
+    worldEffects: ["flag.cinder_tally"],
+    discoveryId: "disc.tally",
+    status: "hidden",
+  },
+  {
+    id: "quest.perch",
+    title: "A drill, not a coat",
+    gate: "public",
+    summary: "After the kite, the cold perch is a short fight. Sky Lance and Leap are earned there. The drop after it is rise, hold, drop. Dragoon stays shut.",
+    factsRequired: ["flag.dragoon_spark"],
+    alternatives: ["Stand the perch", "Rise, hold, drop"],
+    worldEffects: ["flag.dragoon_trial", "flag.falling_star"],
+    discoveryId: "disc.perch",
+    status: "hidden",
+  },
 ];
 
 /** Future systems. Present in data, never offered on the public critical path. */
@@ -1065,6 +1093,21 @@ export const ITEMS: Record<string, { id: string; name: string; blurb: string; us
     id: "item.ash_lance",
     name: "Ash Lance",
     blurb: "Cooled ash from a kite that drafted down. A note toward a coat that is not open. It is not a job.",
+  },
+  "item.cold_vial": {
+    id: "item.cold_vial",
+    name: "Cold Vial",
+    blurb: "A count of ash that fell upward. Banked or sent, the bottle is the same bottle. It does not rewrite the post.",
+  },
+  "item.perch_cord": {
+    id: "item.perch_cord",
+    name: "Perch Cord",
+    blurb: "From a drill on the cold perch. It remembers a pierce and a leap. It is not a coat.",
+  },
+  "item.star_glass": {
+    id: "item.star_glass",
+    name: "Star Glass",
+    blurb: "From rise, hold, drop. A weaker noon. The coat stays shut.",
   },
 };
 

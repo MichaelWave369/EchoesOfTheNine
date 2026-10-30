@@ -1,5 +1,6 @@
 import type { SaveGame } from "../contracts.ts";
 import { refreshQuests, setFlag } from "../chronicle/save.ts";
+import { grantEarned } from "./crossing.ts";
 import { JOB_KITS } from "./expanses.ts";
 
 /**
@@ -12,6 +13,7 @@ export const SKY_W = 18;
 export const SKY_H = 12;
 
 export const CINDER_ANSWER = ["ash", "salt", "ember"] as const;
+export const DROP_ANSWER = ["rise", "hold", "drop"] as const;
 
 export type SkyFacing = "n" | "s" | "e" | "w";
 
@@ -96,6 +98,32 @@ export const OPEN_COPY = {
   watchLater: "The watch is quieter. Come back when the next weather arrives. It will not be today.",
   chartEmpty: "The chart is a blank country with edges. Nothing extra is written yet.",
   spark: "A spark in the ash. It is not a coat, and Dragoon stays shut.",
+  perchNote: "A cold perch under the ash. It points at a drill on the ground. It is not a pad, and it is not the drill.",
+  sightPerch: "The perch repeats a fall you have not taken. Sight shows the shape. It does not start the drill.",
+  tallyNeed: "The ash falls upward for one breath. Sight has to see it before a count can be a count.",
+  tallyKept: "The upward ash is already counted. The bottle does not refill.",
+  tallyBank: "You count the ash that stayed. The banked light makes the cold honest. A small bottle comes loose. It is not a second signal.",
+  tallySend: "You count the ash that left with the light. The scratch is still a scratch. A small bottle comes loose. It is not a second signal.",
+  tallyPlain: "You count the upward ash. The post has not answered yet. A small bottle comes loose anyway. It does not choose for the post.",
+  perchShut: "The perch is a drill for a spark. The kite has not left one yet.",
+  perchDone: "The perch is quiet. Sky Lance and Leap are drills in your hands. Dragoon stays shut.",
+  perchTeach: "The perch takes the drill. Sky Lance is a committed pierce. Leap leaves the line for one beat and costs more than a sidestep. Neither one is a coat. Dragoon stays shut.",
+  dropNeed: "The drop wants rise, then hold, then drop. Buttons are enough. The perch has to be finished first.",
+  dropEarly: "The drop waits on the perch. A drill you have not stood is not a technique.",
+  dropWrong: "The air does not take that order.",
+  dropOpen: "Rise, hold, drop. Falling Star is a drill after the perch. It is weaker than noon. Dragoon stays shut.",
+  dropKept: "Falling Star is already yours. The coat is still shut.",
+  deckRest: "A bunk on the First Stay. Six gold. The party mends. The Wick is still the place that wakes the sight.",
+  deckPoor: "The bunk is six gold. The rail is free.",
+  deckRested: "You sleep in the bunk. The company mends. The sight does not wake here. The Wick still does that.",
+  seraNote: " Her margin on the wheel says the stay holds, the edge of the chart is still an edge, and she will not bolt a second world onto it.",
+  brantBank: " You banked the light. He is counting a quieter ash.",
+  brantSend: " You sent the light. He is counting the scratch, not scolding it.",
+  brantKite: " The kite is weather. The perch east of the post is a drill. It will not hand you a coat.",
+  pemmaBank: " The bottle is colder because you kept the light.",
+  pemmaSend: " The bottle is colder because the light left. She does not call that a mistake.",
+  pemmaKite: " Come back when you like. The cold is still bottled. The stair is a memory, not a toll.",
+  pemmaTally: " The upward ash is counted. She will not ask twice.",
 } as const;
 
 const HOME_DOCKS = ["dock.vale", "dock.berth", "dock.margin"] as const;
@@ -115,6 +143,7 @@ export const SKY_FINDS = [
   { id: "bearing", x: 10, y: 8, flag: "flag.sky_bearing", text: "A needle scratch points toward a cold blue that is not on the walked chart. The scratch is not the landing." },
   { id: "later", x: 14, y: 2, flag: "flag.sky_later", text: OPEN_COPY.noteLater },
   { id: "cache", x: 7, y: 6, flag: "flag.sky_cache_seen", text: "A hidden shine under one cloud. It does not jump into a hand from a note." },
+  { id: "perch", x: 13, y: 7, flag: "flag.sky_perch", text: "A cold perch under the ash. It points at a drill on the ground. It is not a pad, and it is not the drill." },
 ] as const;
 
 function remember(save: SaveGame, id: string, value: string) {
@@ -382,6 +411,7 @@ export function beginOpenSkySight(save: SaveGame): { save: SaveGame; text: strin
     const echo = SKY_FINDS.find((f) => f.id === "echo")!;
     const cache = SKY_FINDS.find((f) => f.id === "cache")!;
     const shear = SKY_FINDS.find((f) => f.id === "shear")!;
+    const perch = SKY_FINDS.find((f) => f.id === "perch")!;
     if (cell.x === echo.x && cell.y === echo.y) {
       flagId = "flag.sight_sky_echo";
       text = OPEN_COPY.sightEcho;
@@ -391,6 +421,9 @@ export function beginOpenSkySight(save: SaveGame): { save: SaveGame; text: strin
     } else if (cell.x === shear.x && cell.y === shear.y) {
       flagId = "flag.sight_sky_shear";
       text = OPEN_COPY.sightShear;
+    } else if (cell.x === perch.x && cell.y === perch.y) {
+      flagId = "flag.sight_sky_perch";
+      text = OPEN_COPY.sightPerch;
     }
   }
   const next = save.flags[flagId] ? structuredClone(save) : setFlag(save, flagId);
@@ -452,24 +485,27 @@ export function talkCrew(
 ): { ok: true; save: SaveGame; text: string; speaker: string } | { ok: false; reason: string } {
   if (who === "sera") {
     if (!seated(save, "sera") && !save.flags["flag.sera_joined"]) return { ok: true, save, text: OPEN_COPY.deckWait, speaker: "The wheel" };
-    const stay = save.flags["flag.sera_stay"] ? " The safer stay is still the one she lashed." : " The hot splice is still the one she finished.";
+    const stay = save.flags["flag.sera_stay"] ? " The safer stay is still the one she lashed." : save.flags["flag.sera_splice"] ? " The hot splice is still the one she finished." : "";
     const next = save.flags["flag.crew_sera"] ? save : setFlag(save, "flag.crew_sera");
-    return { ok: true, save: next, text: OPEN_COPY.deckSera + stay, speaker: "Sera" };
+    return { ok: true, save: next, text: OPEN_COPY.deckSera + stay + OPEN_COPY.seraNote, speaker: "Sera" };
   }
   if (who === "mira") {
     if (!seated(save, "mira")) return { ok: false, reason: OPEN_COPY.deckMira };
     const next = save.flags["flag.crew_mira"] ? save : setFlag(save, "flag.crew_mira");
-    return { ok: true, save: next, text: OPEN_COPY.miraLine, speaker: "Mira" };
+    const page = save.flags["flag.mira_record"] ? " The tenth strike is still in the margin." : save.flags["flag.mira_blank"] ? " The parish page is still blank, and she still remembers it." : "";
+    return { ok: true, save: next, text: OPEN_COPY.miraLine + page, speaker: "Mira" };
   }
   if (who === "kael") {
     if (!seated(save, "kael")) return { ok: false, reason: OPEN_COPY.deckKael };
     const next = save.flags["flag.crew_kael"] ? save : setFlag(save, "flag.crew_kael");
-    return { ok: true, save: next, text: OPEN_COPY.kaelLine, speaker: "Kael" };
+    const oath = save.flags["flag.kael_law"] ? " The gate still held for Pell." : save.flags["flag.kael_people"] ? " Pell still finished the walk." : "";
+    return { ok: true, save: next, text: OPEN_COPY.kaelLine + oath, speaker: "Kael" };
   }
   if (who === "nessa") {
     if (!seated(save, "nessa")) return { ok: false, reason: OPEN_COPY.deckNessa };
     const next = save.flags["flag.crew_nessa"] ? save : setFlag(save, "flag.crew_nessa");
-    return { ok: true, save: next, text: OPEN_COPY.nessaLine, speaker: "Nessa" };
+    const verse = save.flags["flag.nessa_spring"] ? " Her mother's spring is still spoken." : save.flags["flag.nessa_verse"] ? " The new verse still stands." : "";
+    return { ok: true, save: next, text: OPEN_COPY.nessaLine + verse, speaker: "Nessa" };
   }
   if (who === "iri") {
     if (!save.flags["flag.iri_joined"] || !seated(save, "iri")) return { ok: false, reason: OPEN_COPY.deckIri };
@@ -484,14 +520,72 @@ export function talkCrew(
   }
   if (who === "brant") {
     const next = save.flags["flag.spoke_brant"] ? save : setFlag(save, "flag.spoke_brant");
-    return { ok: true, save: next, text: OPEN_COPY.brant, speaker: "Brant" };
+    const bits: string[] = [OPEN_COPY.brant];
+    if (save.flags["flag.cinder_bank"]) bits.push(OPEN_COPY.brantBank);
+    if (save.flags["flag.cinder_send"]) bits.push(OPEN_COPY.brantSend);
+    if (save.flags["flag.ashkite_cleared"]) bits.push(OPEN_COPY.brantKite);
+    return { ok: true, save: next, text: bits.join(""), speaker: "Brant" };
   }
   if (who === "pemma") {
     const next = save.flags["flag.spoke_pemma"] ? save : setFlag(save, "flag.spoke_pemma");
-    return { ok: true, save: next, text: OPEN_COPY.pemma, speaker: "Pemma" };
+    const bits: string[] = [OPEN_COPY.pemma];
+    if (save.flags["flag.cinder_bank"]) bits.push(OPEN_COPY.pemmaBank);
+    if (save.flags["flag.cinder_send"]) bits.push(OPEN_COPY.pemmaSend);
+    if (save.flags["flag.cinder_tally"]) bits.push(OPEN_COPY.pemmaTally);
+    if (save.flags["flag.ashkite_cleared"]) bits.push(OPEN_COPY.pemmaKite);
+    return { ok: true, save: next, text: bits.join(""), speaker: "Pemma" };
   }
   const next = save.flags["flag.cinder_later"] ? save : setFlag(save, "flag.cinder_later");
   return { ok: true, save: next, text: OPEN_COPY.watchLater, speaker: "Cinderwatch" };
+}
+
+export function logText(save: SaveGame): string {
+  const pads = SKY_DOCKS.filter((d) => canLand(save, d.x, d.y)).map((d) => d.name);
+  return `${chartText(save)} Pads that will take the hull: ${pads.length ? pads.join(", ") : "none yet"}.`;
+}
+
+export function countAsh(
+  save: SaveGame,
+): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
+  if (!save.flags["flag.found_cinder"] && save.mapId !== "map.cinder") return { ok: false, reason: OPEN_COPY.tallyNeed };
+  if (save.flags["flag.cinder_tally"]) return { ok: true, save, text: OPEN_COPY.tallyKept };
+  if (!save.flags["flag.sight_cinder"]) return { ok: false, reason: OPEN_COPY.tallyNeed };
+  const text = save.flags["flag.cinder_bank"] ? OPEN_COPY.tallyBank : save.flags["flag.cinder_send"] ? OPEN_COPY.tallySend : OPEN_COPY.tallyPlain;
+  let next = setFlag(save, "flag.cinder_tally");
+  giveOnce(next, "cinder_tally", "item.cold_vial");
+  say(next, text);
+  refreshQuests(next);
+  return { ok: true, save: next, text };
+}
+
+/** The coat stays shut. The drills are earned spells, and they survive a later job change. */
+export function teachPerchDrill(
+  save: SaveGame,
+): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
+  if (!save.flags["flag.dragoon_trial"]) return { ok: false, reason: OPEN_COPY.perchShut };
+  const held = save.earnedSpells ?? [];
+  if (held.includes("atk.sky_lance") && held.includes("spell.dragoon_leap")) return { ok: true, save, text: OPEN_COPY.perchDone };
+  let next = grantEarned(save, "atk.sky_lance");
+  next = grantEarned(next, "spell.dragoon_leap");
+  say(next, OPEN_COPY.perchTeach);
+  refreshQuests(next);
+  return { ok: true, save: next, text: OPEN_COPY.perchTeach };
+}
+
+export function setDropOrder(
+  save: SaveGame,
+  picks: readonly string[],
+): { ok: true; save: SaveGame; text: string } | { ok: false; reason: string } {
+  if (!save.flags["flag.dragoon_trial"]) return { ok: false, reason: OPEN_COPY.dropEarly };
+  if (save.flags["flag.falling_star"]) return { ok: true, save, text: OPEN_COPY.dropKept };
+  const match = picks.length === DROP_ANSWER.length && picks.every((p, i) => p === DROP_ANSWER[i]);
+  if (!match) return { ok: false, reason: OPEN_COPY.dropWrong };
+  let next = grantEarned(save, "spell.falling_star");
+  next = setFlag(next, "flag.falling_star");
+  giveOnce(next, "falling_star", "item.star_glass");
+  say(next, OPEN_COPY.dropOpen);
+  refreshQuests(next);
+  return { ok: true, save: next, text: OPEN_COPY.dropOpen };
 }
 
 export function chartText(save: SaveGame): string {
@@ -518,6 +612,11 @@ export function headingObjective(save: SaveGame): string | null {
   if (!save.flags["flag.cinder_signal"]) return "Cinderwatch will take the hull. Brant is counting ash. Bank the light, or send it. Neither answer burns the other.";
   if (!save.flags["flag.cinder_stair"]) return "The cold stair under Cinderwatch wants ash, then salt, then ember. Buttons are enough.";
   if (!save.flags["flag.ashkite_cleared"]) return OPEN_COPY.kiteWait;
+  const here = save.mapId === "map.cinder" || save.mapId === "map.ashvault" || save.mapId === "map.deck" || Boolean(save.flags["sky.aboard"]);
+  if (!here) return null;
+  if (!save.flags["flag.dragoon_trial"]) return "The rail home does not wait. East of the post, the cold perch is a drill. It will not hand you a coat.";
+  if (!save.flags["flag.falling_star"]) return "The drop wants rise, then hold, then drop. Dragoon stays shut. The rail home does not wait.";
+  if (!save.flags["flag.cinder_tally"]) return "The upward ash can be counted after a look. It does not rewrite the post. The rail home does not wait.";
   return null;
 }
 
@@ -531,9 +630,14 @@ export function skyClues(save: SaveGame): string[] {
   if (save.flags["flag.sky_later"]) clues.push("A later light will not take the hull.");
   if (save.flags["flag.sky_echo"]) clues.push("A cloud fold is written down. It was not solved by looking.");
   if (save.flags["flag.sight_sky_echo"] && !save.flags["flag.sky_echo"]) clues.push("Sight showed a fold in the cloud. It is not written down until you note it.");
+  if (save.flags["flag.sight_sky_perch"] && !save.flags["flag.sky_perch"]) clues.push("Sight showed a cold perch. It is not written down until you note it, and it is not the drill.");
+  if (save.flags["flag.sky_perch"]) clues.push(OPEN_COPY.perchNote);
   if (save.flags["flag.cinder_bank"]) clues.push("Cinderwatch banked the light.");
   if (save.flags["flag.cinder_send"]) clues.push("Cinderwatch sent the light along the scratch.");
+  if (save.flags["flag.cinder_tally"]) clues.push("The upward ash is counted. The post was not rewritten.");
   if (save.flags["flag.dragoon_spark"]) clues.push(OPEN_COPY.spark);
+  if (save.flags["flag.dragoon_trial"]) clues.push(OPEN_COPY.perchDone);
+  if (save.flags["flag.falling_star"]) clues.push(OPEN_COPY.dropKept);
   if (save.flags["flag.sky_veil_heard"]) clues.push(OPEN_COPY.veilHeard);
   return clues;
 }
