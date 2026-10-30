@@ -279,6 +279,25 @@ function journalLine(id: string): string {
     "flag.dragoon_trial": "The cold perch took the drill. Sky Lance and Leap are in your hands. Dragoon stays shut.",
     "flag.falling_star": "Rise, hold, drop. Falling Star is a drill after the perch. The coat stays shut.",
     "flag.deck_rest": "You slept in the First Stay's bunk. The sight did not wake there.",
+    "flag.sky_beacon": "An old beacon answers the hull. Two lights share one minute. It is not a pad.",
+    "flag.sight_sky_beacon": "Sight: two flight records share the beacon's minute. Looking did not write the mark.",
+    "flag.beacon_found": "The ash road led to the beacon. The chart did not move.",
+    "flag.beacon_record": "Two old hands wrote the same minute at the beacon. Neither was named kinder.",
+    "flag.sight_beacon": "Sight laid both minutes on the beacon log. It did not swear, and it did not quiet the wing.",
+    "flag.beacon_return": "The beacon keeps a light for whoever comes back. The other promise was not lesser.",
+    "flag.beacon_depart": "The beacon keeps a light for whoever leaves. The other promise was not lesser.",
+    "flag.beacon_oath": "The beacon has one oath. It did not rewrite the post, and it did not open a coat.",
+    "flag.oathwing_cleared": "The oathwing's draft was ended. Both old minutes stay written.",
+    "flag.oathwing_spared": "The oathwing sits on both minutes. Neither record was sanded.",
+    "flag.beacon_done": "The beacon is quiet enough to leave. The oath remains. Dragoon stays shut.",
+    "flag.dragoon_oath": "The beacon's oath is a prerequisite a later chapter may ask for. The coat stays shut.",
+    "flag.cinder_after": "Cinderwatch's ash has a new color. The signal was not rewritten.",
+    "flag.sera_beacon": "Sera marked the beacon as a bearing. She did not bolt a second world to the chart.",
+    "flag.mira_beacon": "Mira heard both minutes and did not sand the first page.",
+    "flag.kael_beacon": "Kael heard the oath. It did not become a cleaner law.",
+    "flag.nessa_beacon": "Nessa heard the beacon and kept the older line spoken.",
+    "flag.iri_beacon": "Iri said the beacon did not open the seam. She did not name what is under it.",
+    "flag.beacon_veil_heard": "A thread from the veil was heard over the beacon. Iri was not recruited by it.",
   };
   return lines[id] ?? `Noted: ${id.replace("flag.", "").replaceAll("_", " ")}`;
 }
@@ -313,6 +332,7 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.cinder") return flag(save, "flag.cinder_signal");
     if (q.id === "quest.tally") return flag(save, "flag.cinder_tally");
     if (q.id === "quest.perch") return flag(save, "flag.dragoon_trial") && flag(save, "flag.falling_star");
+    if (q.id === "quest.beacon") return flag(save, "flag.beacon_done");
     return false;
   };
   const visible = (q: QuestNode) => {
@@ -344,6 +364,7 @@ export function refreshQuests(save: SaveGame) {
     if (q.id === "quest.cinder") return flag(save, "flag.found_cinder");
     if (q.id === "quest.tally") return flag(save, "flag.found_cinder");
     if (q.id === "quest.perch") return flag(save, "flag.dragoon_spark");
+    if (q.id === "quest.beacon") return flag(save, "flag.dragoon_trial");
     return false;
   };
   for (const q of save.quests) {

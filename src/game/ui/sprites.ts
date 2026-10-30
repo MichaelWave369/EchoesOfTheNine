@@ -171,6 +171,7 @@ export function foeFrame(jobId: string): { col: number; row: number; big: boolea
   if (jobId === "enemy.inkling") return { col: 1, row: 0, big: false };
   if (jobId === "enemy.gustling" || jobId === "enemy.ashkite") return { col: 1, row: 2, big: false };
   if (jobId === "enemy.perch") return { col: 1, row: 2, big: true };
+  if (jobId === "enemy.oathwing") return { col: 2, row: 1, big: true };
   if (jobId === "enemy.mistling") return { col: 0, row: 2, big: false };
   if (jobId === "enemy.ferryman") return { col: 2, row: 2, big: true };
   if (jobId === "enemy.glowmoth" || jobId === "enemy.driftlantern") return { col: 0, row: 0, big: false };
@@ -225,7 +226,7 @@ export function groundKind(mapId: string, x: number, y: number, path: boolean, t
   if (mapId === "map.shrine" || mapId === "map.glass") return j > 0.78 ? 7 : 6;
   if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth" || mapId === "map.margin") return j > 0.74 ? 1 : 7;
   if (mapId === "map.deck") return j > 0.55 ? 5 : 2;
-  if (mapId === "map.cinder" || mapId === "map.ashvault") return j > 0.62 ? 7 : 2;
+  if (mapId === "map.cinder" || mapId === "map.ashvault" || mapId === "map.beacon") return j > 0.62 ? 7 : 2;
   if (mapId === "map.lowbell" || mapId === "map.ferry" || mapId === "map.hold") return path ? (j > 0.6 ? 1 : 7) : j > 0.5 ? 2 : 7;
   return path ? (j > 0.5 ? 1 : 2) : j > 0.5 ? 4 : 3;
 }
@@ -244,6 +245,7 @@ export function battleArt(encounterId: string, ascension: boolean): string {
   if (encounterId === "enc.galekeeper" || encounterId === "enc.gust") return "battle-ridge.jpg";
   if (encounterId === "enc.hourkeeper" || encounterId === "enc.ink") return "battle-margin.jpg";
   if (encounterId === "enc.ashkite" || encounterId === "enc.perch") return "battle-ridge.jpg";
+  if (encounterId === "enc.oathwing") return "battle-ascent.jpg";
   return "battle-vale.jpg";
 }
 
@@ -254,7 +256,9 @@ export function elementOf(abilityId?: string): { tone: ElementTone; color: strin
   const id = abilityId ?? "";
   if (/ember|solar|fire/.test(id)) return { tone: "fire", color: "#e07a3a" };
   if (/tide|wake|river|mist|dew|spring/.test(id)) return { tone: "water", color: "#4ec8c0" };
-  if (/gust|gale|crosswind|wind|bell_hour|sky_lance|dragoon|falling_star|perch/.test(id)) return { tone: "wind", color: "#d7e4f2" };
+  if (/vow_rake|beacon_flare|oathwing/.test(id)) return { tone: "fire", color: "#e07a3a" };
+  if (/broken_record/.test(id)) return { tone: "steel", color: "#c8bba8" };
+  if (/shear_line|gust|gale|crosswind|wind|bell_hour|sky_lance|dragoon|falling_star|perch/.test(id)) return { tone: "wind", color: "#d7e4f2" };
   if (/ink|seam|folded|shadow|veil/.test(id)) return { tone: "arcane", color: "#8b6bb8" };
   if (/mend|heal|salve|resin|hymn/.test(id)) return { tone: "life", color: "#8fce6a" };
   if (/strike|oath|namedguard|knife|lash|cut/.test(id)) return { tone: "steel", color: "#f3e6c8" };

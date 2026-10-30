@@ -186,6 +186,18 @@ function rewardFor(state: EncounterState, mercy: boolean): RewardGrant {
       unique: true,
     };
   }
+  if (state.encounterId === "enc.oathwing") {
+    return {
+      id: mercy ? "reward.oathwing.mercy" : "reward.oathwing.defeat",
+      gold: mercy ? 40 : 56,
+      xp: mercy ? 60 : 78,
+      items: mercy ? [{ itemId: "item.vow_wick", qty: 1 }] : [{ itemId: "item.vow_glass", qty: 1 }],
+      flags: mercy
+        ? ["flag.oathwing_spared", "flag.beacon_done", "flag.dragoon_oath"]
+        : ["flag.oathwing_cleared", "flag.beacon_done", "flag.dragoon_oath"],
+      unique: true,
+    };
+  }
   return {
     id: `reward.${state.encounterId}`,
     gold: 20,
@@ -416,6 +428,21 @@ function chooseEnemyIntent(state: EncounterState, actor: CombatantState): Intent
       abilityId = "enemy.perch_rake";
       telegraph = "Perch Rake — wind on one of you. Stone bites it. Sidestep or brace.";
     }
+  } else if (actor.jobId === "enemy.oathwing") {
+    const phase = actor.phase ?? 1;
+    if (phase >= 2 && (actor.cooldowns["enemy.broken_record"] ?? 0) === 0 && state.turnIndex % 2 === 0) {
+      abilityId = "enemy.broken_record";
+      telegraph = "Broken Record — both minutes hit everyone. Defend. Stone bites the page. Tide still bites the fire under it.";
+    } else if (phase >= 2) {
+      abilityId = "enemy.shear_line";
+      telegraph = "Shear Line — wind on one of you. Stone bites it. Sidestep or brace.";
+    } else if (state.turnIndex % 3 === 0 && (actor.cooldowns["enemy.beacon_flare"] ?? 0) === 0) {
+      abilityId = "enemy.beacon_flare";
+      telegraph = "Beacon Flare — the whole party. Defend. Tide bites this fire. A sidestep will not cover everyone.";
+    } else {
+      abilityId = "enemy.vow_rake";
+      telegraph = "Vow Rake — flame on one of you. Tide bites it. Sidestep or brace.";
+    }
   } else if (actor.jobId === "enemy.warden") {
     const phase = actor.phase ?? 1;
     if (phase >= 2 && hasStatus(actor, "exposed")) {
@@ -591,6 +618,11 @@ function applyEffects(
         if (target.hp > 0 && target.jobId === "enemy.hourkeeper" && target.hp <= target.maxHp * 0.5 && (target.phase ?? 1) < 2) {
           target.phase = 2;
           push(state, { kind: "status", text: "The hour folds. Both pages are in the room." });
+        }
+        if (target.hp > 0 && target.jobId === "enemy.oathwing" && target.hp <= target.maxHp * 0.5 && (target.phase ?? 1) < 2) {
+          target.phase = 2;
+          target.resistances = { wind: 0.1, flame: 0.05, tide: -0.2, stone: -0.35 };
+          push(state, { kind: "status", text: "The record breaks open. Both minutes are in the air. Stone bites the page. Tide still bites the fire." });
         }
         if (target.hp === 0) {
           target.alive = false;
@@ -785,6 +817,8 @@ export interface MercyRules {
   skyAsked?: boolean;
   /** Hourkeeper mercy opens if the Vale contradiction was kept, or the Warden was spared. */
   hourAsked?: boolean;
+  /** Oathwing mercy opens if Sight already showed both minutes. It does not ask who else was spared. */
+  beaconRead?: boolean;
 }
 
 export function tryMercy(state: EncounterState, rules?: MercyRules): ActionResult {
@@ -907,6 +941,37 @@ export function tryMercy(state: EncounterState, rules?: MercyRules): ActionResul
       ? "You ask it to leave the hour unwritten, the way you once asked a guardian to sleep. It sits."
       : "You kept both hours, even after a guardian fell. You ask this one to sit. It does. The contradiction stays.";
     push(next, { kind: "mercy", targetId: keeper.id, text });
+    grantReward(next, true);
+    return { ok: true, state: next };
+  }
+  if (state.encounterId === "enc.oathwing") {
+    const wing = state.combatants.find((c) => c.jobId === "enemy.oathwing" && c.alive);
+    if (!wing) return { ok: false, reason: "The wing is already quiet.", state };
+    if (wing.hp > wing.maxHp * 0.45) {
+      return { ok: false, reason: "The draft is still too loud. Bring it under half, or finish it.", state };
+    }
+    if (!rules?.beaconRead) {
+      return {
+        ok: false,
+        reason: "It will not hold two minutes for someone who has not seen them. You can still end the draft.",
+        state,
+      };
+    }
+    const next = clone(state);
+    for (const foe of next.combatants) {
+      if (foe.side === "enemy" && foe.alive) {
+        foe.alive = false;
+        foe.hp = 0;
+      }
+    }
+    next.outcome = "mercy";
+    next.phase = "mercy";
+    next.activeActorId = null;
+    push(next, {
+      kind: "mercy",
+      targetId: wing.id,
+      text: "You ask it to hold both minutes. The wing sits. Neither record is sanded. The draft stops.",
+    });
     grantReward(next, true);
     return { ok: true, state: next };
   }

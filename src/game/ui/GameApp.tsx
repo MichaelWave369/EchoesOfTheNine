@@ -115,8 +115,13 @@ import {
   setCinderOrder,
   setDropOrder,
   skyClues,
+  swearBeacon,
   talkCrew,
   teachPerchDrill,
+  watchAgain,
+  enterBeacon,
+  leaveBeacon,
+  readBeaconLog,
 } from "../content/opensky.ts";
 import {
   applyReward,
@@ -160,7 +165,7 @@ function musicFor(mapId: string): "vale" | "woods" | "shrine" | "reach" | "barro
   if (mapId === "map.cave" || mapId === "map.ashvault") return "cave";
   if (mapId === "map.berth" || mapId === "map.deck") return "berth";
   if (mapId === "map.margin") return "glass";
-  if (mapId === "map.cinder") return "sky";
+  if (mapId === "map.cinder" || mapId === "map.beacon") return "sky";
   if (mapId === "map.inn" || mapId === "map.smith") return "inn";
   return "vale";
 }
@@ -712,7 +717,7 @@ function Explore({
         push("A warm pebble comes loose under the clock. It keeps pace with you.");
         return;
       }
-      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch", "npc.hale", "npc.wren", "sign.timetable", "sign.pier", "sign.faded", "sign.wake", "sign.board", "door.berth", "npc.sera", "npc.ada", "npc.orrin", "sign.bridge", "sign.salt", "sign.skiff", "sign.heading", "sign.cross", "door.dome", "door.gale", "sign.ledger", "sign.hourbook", "sign.hourbell", "sign.hourmist", "door.stair", "sign.page", "sign.echo", "sign.glint", "door.hour", "npc.iri", "sign.oathvale", "sign.oathpath", "sign.hearth", "npc.lark", "sign.seam", "sign.wheel", "sign.chart", "sign.log", "sign.bunk", "sign.mira", "sign.kael", "sign.nessa", "sign.iri", "sign.veil", "sign.party", "sign.home", "sign.rail", "npc.brant", "npc.pemma", "sign.signal", "sign.watch", "sign.tally", "sign.drop"].includes(spot.id);
+      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch", "npc.hale", "npc.wren", "sign.timetable", "sign.pier", "sign.faded", "sign.wake", "sign.board", "door.berth", "npc.sera", "npc.ada", "npc.orrin", "sign.bridge", "sign.salt", "sign.skiff", "sign.heading", "sign.cross", "door.dome", "door.gale", "sign.ledger", "sign.hourbook", "sign.hourbell", "sign.hourmist", "door.stair", "sign.page", "sign.echo", "sign.glint", "door.hour", "npc.iri", "sign.oathvale", "sign.oathpath", "sign.hearth", "npc.lark", "sign.seam", "sign.wheel", "sign.chart", "sign.log", "sign.bunk", "sign.mira", "sign.kael", "sign.nessa", "sign.iri", "sign.veil", "sign.party", "sign.home", "sign.rail", "npc.brant", "npc.pemma", "sign.signal", "sign.watch", "sign.tally", "sign.drop", "sign.ashroad", "sign.watchward", "sign.vane", "sign.record", "sign.plinth", "sign.ashhome"].includes(spot.id);
       if (!special) {
         const key =
           spot.id === "npc.voss"
@@ -1070,12 +1075,79 @@ function Explore({
         push(OPEN_COPY.dropKept);
         return;
       }
+      if (save.mapId !== "map.cinder") {
+        push(OPEN_COPY.dropFar);
+        return;
+      }
       if (!flag(save, "flag.dragoon_trial")) {
         push(OPEN_COPY.dropEarly);
         return;
       }
       setDropPick([]);
       setPuzzle("drop");
+      return;
+    }
+    if (spot.id === "sign.ashroad") {
+      const road = enterBeacon(save);
+      if (!road.ok) {
+        push(road.reason);
+        return;
+      }
+      commit(road.save);
+      startMusic(musicFor(road.save.mapId));
+      push(road.text);
+      return;
+    }
+    if (spot.id === "sign.watchward") {
+      const back = leaveBeacon(save);
+      if (!back.ok) {
+        push(back.reason);
+        return;
+      }
+      commit(back.save);
+      startMusic(musicFor(back.save.mapId));
+      push(back.text);
+      return;
+    }
+    if (spot.id === "sign.vane") {
+      push(OPEN_COPY.vaneText);
+      return;
+    }
+    if (spot.id === "sign.record") {
+      const read = readBeaconLog(save);
+      if (read.ok && read.save !== save) commit(read.save);
+      push(read.ok ? read.text : read.reason);
+      return;
+    }
+    if (spot.id === "sign.plinth") {
+      if (flag(save, "flag.beacon_oath")) {
+        push(OPEN_COPY.oathKept);
+        return;
+      }
+      if (save.mapId !== "map.beacon") {
+        push(OPEN_COPY.oathFar);
+        return;
+      }
+      setDialogue({
+        nodes: [
+          {
+            id: "beacon.ask",
+            speaker: "The beacon",
+            text: OPEN_COPY.oathAsk,
+            choices: [
+              { label: "Keep a light for whoever comes back.", next: "beacon.done", flag: "choice.beacon.return" },
+              { label: "Keep a light for whoever leaves.", next: "beacon.done", flag: "choice.beacon.depart" },
+            ],
+          },
+        ],
+        index: "beacon.ask",
+      });
+      return;
+    }
+    if (spot.id === "sign.ashhome") {
+      const again = watchAgain(save);
+      if (again.ok && again.save !== save) commit(again.save);
+      push(again.ok ? again.text : again.reason);
       return;
     }
     if (spot.id === "sign.ledger") {
@@ -1559,6 +1631,18 @@ function Explore({
         onBattle(makeEncounter(save, "enc.perch"));
         return;
       }
+      if (spot.id === "battle.oath") {
+        if (flag(save, "flag.beacon_done")) {
+          push(flag(save, "flag.oathwing_spared") ? OPEN_COPY.wingSit : OPEN_COPY.wingDone);
+          return;
+        }
+        if (!flag(save, "flag.beacon_oath")) {
+          push(OPEN_COPY.oathNeed);
+          return;
+        }
+        onBattle(makeEncounter(save, "enc.oathwing"));
+        return;
+      }
     }
     if (spot.kind === "puzzle") {
       if (spot.id === "puzzle.runes") {
@@ -1733,6 +1817,13 @@ function Explore({
       }
       if (who === "signal" && (value === "bank" || value === "send")) {
         const chosen = chooseSignal(save, value);
+        if (chosen.ok) {
+          commit(chosen.save);
+          push(chosen.text);
+        } else push(chosen.reason);
+      }
+      if (who === "beacon" && (value === "return" || value === "depart")) {
+        const chosen = swearBeacon(save, value);
         if (chosen.ok) {
           commit(chosen.save);
           push(chosen.text);
@@ -2930,6 +3021,9 @@ function Explore({
                     {job.id === "job.dragoon" && flag(save, "flag.falling_star") && (
                       <p className="text-teal">{OPEN_COPY.dropKept}</p>
                     )}
+                    {job.id === "job.dragoon" && flag(save, "flag.dragoon_oath") && (
+                      <p className="text-teal">The beacon kept an oath. The coat stays shut.</p>
+                    )}
                   </div>
                 );
               })}
@@ -2942,7 +3036,7 @@ function Explore({
               <li>Battles: Attack, Magic, Defend, Item. Ascension adds movement and a real-time cast.</li>
               <li>When Ascension is awake, Look from inside the step changes the view on the road. The Margin wants the page from the walk and the echo from the other view. A look is not a reading.</li>
               <li>After a flight, an oath, a spring, or a veil may ask again. Sight shows the trouble. It does not press it.</li>
-              <li>When the first heading is written, the Sky Atlas is a chart with edges. A or Left is west. D or Right is east. Land only where a pad agrees. The walked atlas still does not open the sky. The perch is a drill. Dragoon stays shut.</li>
+              <li>When the first heading is written, the Sky Atlas is a chart with edges. A or Left is west. D or Right is east. Land only where a pad agrees. The walked atlas still does not open the sky. The perch is a drill. The beacon is an oath, not a pad. Dragoon stays shut.</li>
               <li>Everything mandatory can be done with buttons. VR is optional and not required.</li>
             </ul>
           )}
@@ -3031,6 +3125,9 @@ function blocked(mapId: string, x: number, y: number): boolean {
   if (mapId === "map.ashvault") {
     if (y <= 1 || y >= 6 || x <= 0 || x >= 9) return true;
   }
+  if (mapId === "map.beacon") {
+    if (y <= 1 || y >= 6 || x <= 0 || x >= 11) return true;
+  }
   return false;
 }
 
@@ -3079,7 +3176,7 @@ function currentObjective(save: SaveGame): string {
   return "Listen to how the shrine ends.";
 }
 
-function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden" | "enc.thicket" | "enc.cantor" | "enc.crossing" | "enc.vault" | "enc.ferryman" | "enc.gust" | "enc.galekeeper" | "enc.ink" | "enc.hourkeeper" | "enc.ashkite" | "enc.perch"): EncounterState {
+function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden" | "enc.thicket" | "enc.cantor" | "enc.crossing" | "enc.vault" | "enc.ferryman" | "enc.gust" | "enc.galekeeper" | "enc.ink" | "enc.hourkeeper" | "enc.ashkite" | "enc.perch" | "enc.oathwing"): EncounterState {
   const party = save.party.map((pid, i) => {
     const mate = prepareForBattle(save, pid);
     mate.position = formationSlot(save.formation ?? "line", i);
@@ -3131,6 +3228,8 @@ function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.w
                       ? [{ ...structuredClone(ENEMY_TEMPLATES.ashkite), id: "ashkite", position: { x: 0, z: -2 } }]
                     : id === "enc.perch"
                       ? [{ ...structuredClone(ENEMY_TEMPLATES.perch), id: "perch", position: { x: 0, z: -1.8 } }]
+                    : id === "enc.oathwing"
+                      ? [{ ...structuredClone(ENEMY_TEMPLATES.oathwing), id: "oathwing", position: { x: 0, z: -2 } }]
                   : [{ ...structuredClone(ENEMY_TEMPLATES.warden), id: "warden", position: { x: 0, z: -2.2 } }];
   return createEncounter({
     encounterId: id,
@@ -3861,6 +3960,8 @@ function Battle({
                       ? "Ash Kite"
                       : enc.encounterId === "enc.perch"
                         ? "Cold Perch"
+                        : enc.encounterId === "enc.oathwing"
+                          ? "Oathwing"
                         : "Glasspine flicker"}
           </h2>
         </div>
@@ -3901,6 +4002,8 @@ function Battle({
                       ? "The folded hour"
                       : enc.encounterId === "enc.ink"
                         ? "Ink on the stair"
+                    : enc.encounterId === "enc.oathwing"
+                      ? "Two lights, one minute"
                     : "The prism wakes"}
             </p>
             <p className="font-display text-4xl">
@@ -3914,6 +4017,8 @@ function Battle({
                       ? "Hourkeeper"
                       : enc.encounterId === "enc.ink"
                         ? "Inklings"
+                    : enc.encounterId === "enc.oathwing"
+                      ? "Oathwing"
                     : "Crystal Warden"}
             </p>
             <p className="mt-2 max-w-md text-sm text-parchment/80">
@@ -3923,6 +4028,8 @@ function Battle({
                   ? "Ink, then a bell. Tide bites the ink. Stone bites the bell. Under half and a little more you may ask it to sit, if you kept both Vale hours or already asked a guardian to sleep. When the hour folds, the note hits everyone."
                   : enc.encounterId === "enc.ink"
                     ? "Wet ink on the stair. Tide bites it. It is not the hour. It is only in the way."
+                : enc.encounterId === "enc.oathwing"
+                  ? "A beacon that learned two minutes and drafts on both. Tide bites the fire. Under half the record breaks, and stone bites the page. If you have already seen both minutes, you may ask it to hold them. Otherwise end the draft. No companion is required."
                 : enc.encounterId === "enc.ferryman"
                 ? "He is still boarding. Under two fifths you may ask which departure he is keeping, if you recorded both hours or already learned how to ask. Otherwise finish the line. When the second boarding starts, the note hits everyone."
                 : enc.encounterId === "enc.cantor"
@@ -4014,7 +4121,7 @@ function Battle({
                     <MenuButton tone="ghost" onClick={() => chooseAbility("act.dodge", "dodge")}>Sidestep</MenuButton>
                   )}
                   <MenuButton tone="ghost" onClick={() => setPick("item")}>Item</MenuButton>
-                  {(enc.encounterId === "enc.warden" || (enc.encounterId === "enc.cantor" && flag(save, "flag.warden_spared")) || enc.encounterId === "enc.ferryman" || enc.encounterId === "enc.galekeeper" || enc.encounterId === "enc.hourkeeper") && (
+                  {(enc.encounterId === "enc.warden" || (enc.encounterId === "enc.cantor" && flag(save, "flag.warden_spared")) || enc.encounterId === "enc.ferryman" || enc.encounterId === "enc.galekeeper" || enc.encounterId === "enc.hourkeeper" || enc.encounterId === "enc.oathwing") && (
                     <MenuButton
                       tone="ghost"
                       onClick={() => {
@@ -4024,6 +4131,7 @@ function Battle({
                           doubleDeparture: flag(save, "flag.twice_departed"),
                           skyAsked: flag(save, "flag.sky_split") || flag(save, "flag.sight_glass") || flag(save, "flag.sera_stay"),
                           hourAsked: flag(save, "flag.hour_both"),
+                          beaconRead: flag(save, "flag.sight_beacon"),
                         });
                         if (!res.ok) {
                           push(res.reason ?? "Not yet.");
@@ -4040,11 +4148,13 @@ function Battle({
                                 ? "The gale sits."
                                 : enc.encounterId === "enc.hourkeeper"
                                   ? "The hour sits."
+                                : enc.encounterId === "enc.oathwing"
+                                  ? "The wing holds both minutes."
                                 : "The Warden bows.",
                         );
                       }}
                     >
-                      {enc.encounterId === "enc.ferryman" ? "Ask which departure" : enc.encounterId === "enc.galekeeper" ? "Ask which noon" : enc.encounterId === "enc.hourkeeper" ? "Ask it to sit" : "Offer mercy"}
+                      {enc.encounterId === "enc.ferryman" ? "Ask which departure" : enc.encounterId === "enc.galekeeper" ? "Ask which noon" : enc.encounterId === "enc.hourkeeper" ? "Ask it to sit" : enc.encounterId === "enc.oathwing" ? "Ask it to hold both" : "Offer mercy"}
                     </MenuButton>
                   )}
                   {active.id !== "wanderer" && companionInstinct(enc, active.id) && (

@@ -418,6 +418,22 @@ function paint(
       ctx.arc(cx, cy - 16, 3, 0, Math.PI * 2);
       ctx.fill();
     }
+    if (find.id === "beacon") {
+      const pulse = reduced ? 0.65 : 0.35 + 0.5 * Math.abs(Math.sin(time / 280));
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.fillStyle = known ? `rgba(232,177,90,${0.25 + pulse * 0.45})` : "rgba(232,177,90,0.12)";
+      ctx.beginPath();
+      ctx.arc(0, -20, known ? 14 : 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = known ? "#e8b15a" : "rgba(243,230,200,0.35)";
+      ctx.fillRect(-3, -16, 6, 24);
+      ctx.fillStyle = known ? "#7eb6d6" : "rgba(126,182,214,0.28)";
+      ctx.beginPath();
+      ctx.arc(8, -18, known ? 4 : 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
   }
   ctx.save();
   ctx.translate(display.x, display.y);

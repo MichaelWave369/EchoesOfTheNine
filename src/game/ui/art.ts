@@ -244,6 +244,17 @@ const LOOKS: Record<string, RegionLook> = {
     water: null,
     note: "A short stair and a cold nick.",
   },
+  "map.beacon": {
+    skyTop: "#1a2744",
+    skyBottom: "#140e12",
+    ground: ["#4a3834", "#241816"],
+    path: "#6a5048",
+    wall: "#100c10",
+    wallCap: "#5a4038",
+    accent: "#e8b15a",
+    water: null,
+    note: "A beacon with two lights, a broken log, and a road back to the watch.",
+  },
 };
 
 export function regionLook(mapId: string): RegionLook {
@@ -987,11 +998,39 @@ function paintLandmarks(ctx: CanvasRenderingContext2D, mapId: string, tick: numb
       ctx.fillRect(4 * TILE + 10, 4 * TILE + 8, 8, 8);
     }
   }
+  if (mapId === "map.beacon") {
+    const pulse = reduced ? 0.7 : 0.4 + 0.45 * Math.abs(Math.sin(tick / 8));
+    ctx.fillStyle = "#3a3034";
+    ctx.fillRect(8 * TILE + 10, 2 * TILE, 14, 3 * TILE);
+    ctx.fillStyle = `rgba(232,177,90,${pulse})`;
+    ctx.beginPath();
+    ctx.arc(8 * TILE + 12, 2 * TILE - 4, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = `rgba(126,182,214,${pulse})`;
+    ctx.beginPath();
+    ctx.arc(8 * TILE + 22, 2 * TILE - 4, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#d7e4f2";
+    ctx.beginPath();
+    ctx.moveTo(4 * TILE + 8, 3 * TILE + 4);
+    ctx.lineTo(4 * TILE + 8, 3 * TILE + 18);
+    ctx.moveTo(5 * TILE, 3 * TILE + 8);
+    ctx.lineTo(5 * TILE + 16, 3 * TILE + 14);
+    ctx.stroke();
+    ctx.fillStyle = "#c8bba8";
+    ctx.fillRect(4 * TILE + 2, 4 * TILE + 4, 22, 14);
+    if (sight) {
+      ctx.fillStyle = "rgba(232,177,90,0.55)";
+      ctx.fillRect(4 * TILE + 4, 4 * TILE + 6, 8, 8);
+      ctx.fillStyle = "rgba(126,182,214,0.55)";
+      ctx.fillRect(4 * TILE + 14, 4 * TILE + 6, 8, 8);
+    }
+  }
 }
 
 function paintAmbience(ctx: CanvasRenderingContext2D, mapId: string, w: number, h: number, tick: number, reduced: boolean) {
   if (reduced) return;
-  if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth" || mapId === "map.margin" || mapId === "map.cinder" || mapId === "map.deck") {
+  if (mapId === "map.ridge" || mapId === "map.highroad" || mapId === "map.berth" || mapId === "map.margin" || mapId === "map.cinder" || mapId === "map.deck" || mapId === "map.beacon") {
     ctx.strokeStyle = "rgba(232,220,200,0.25)";
     for (let i = 0; i < 5; i++) {
       const y = 20 + i * 28 + ((tick * 2 + i * 10) % 18);
@@ -1401,6 +1440,7 @@ type CombatantLike = {
   alive: boolean;
   position: { x: number; z: number };
   statuses: { id: string }[];
+  phase?: number;
 };
 
 type EncounterLike = {
@@ -1433,9 +1473,12 @@ export function paintArena(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const tick = reduced ? 0 : now / 90;
   const asc = enc.mode === "ascension";
+  const oath = enc.encounterId === "enc.oathwing";
   const art = battleArt(enc.encounterId, asc);
-  const plate = imageReady(art);
-  if (plate) {
+  const plate = oath ? null : imageReady(art);
+  if (oath) {
+    paintBeaconBattle(ctx, w, h, tick, reduced);
+  } else if (plate) {
     ctx.drawImage(plate, 0, 0, w, h);
     const scrim = ctx.createLinearGradient(0, h * 0.35, 0, h);
     scrim.addColorStop(0, "rgba(8,4,10,0)");
@@ -1646,6 +1689,48 @@ function project(w: number, h: number, x: number, z: number) {
   return { px: w / 2 + x * (w * 0.09), py: h * 0.62 + z * (h * 0.08) };
 }
 
+function paintBeaconBattle(ctx: CanvasRenderingContext2D, w: number, h: number, tick: number, reduced: boolean) {
+  const sky = ctx.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, "#1a2744");
+  sky.addColorStop(0.5, "#3a2a38");
+  sky.addColorStop(1, "#140e12");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "#2a2428";
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.62);
+  ctx.lineTo(w * 0.28, h * 0.4);
+  ctx.lineTo(w * 0.5, h * 0.58);
+  ctx.lineTo(w, h * 0.34);
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.fill();
+  const tx = w * 0.74;
+  const ty = h * 0.62;
+  ctx.fillStyle = "#3a3034";
+  ctx.fillRect(tx - 16, ty - 110, 32, 110);
+  const pulse = reduced ? 0.75 : 0.4 + 0.55 * Math.abs(Math.sin(tick / 7));
+  ctx.fillStyle = `rgba(232,177,90,${pulse})`;
+  ctx.beginPath();
+  ctx.arc(tx - 12, ty - 122, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = `rgba(126,182,214,${pulse})`;
+  ctx.beginPath();
+  ctx.arc(tx + 12, ty - 122, 10, 0, Math.PI * 2);
+  ctx.fill();
+  if (!reduced) {
+    ctx.fillStyle = "rgba(196,90,50,0.75)";
+    for (let i = 0; i < 14; i++) {
+      const y = (tick * 2 + i * 37) % (h * 0.7);
+      ctx.fillRect((i * 47) % w, h * 0.15 + y, 2, 7);
+    }
+  }
+  ctx.fillStyle = "rgba(74,48,40,0.9)";
+  ctx.beginPath();
+  ctx.ellipse(w / 2, h * 0.78, w * 0.46, h * 0.16, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function battleBackdrop(id: string, asc: boolean): { top: string; bottom: string; ground: string } {
   if (asc) return { top: "#1a1030", bottom: "#0c0814", ground: "rgba(78,200,192,0.16)" };
   if (id === "enc.warden") return { top: "#241830", bottom: "#120c16", ground: "rgba(139,107,184,0.25)" };
@@ -1676,6 +1761,43 @@ function battlePose(enc: EncounterLike, c: CombatantLike, reduced: boolean, tick
 const foeBorn = new Map<string, number>();
 
 function paintFoe(ctx: CanvasRenderingContext2D, c: CombatantLike, x: number, y: number, tick: number, reduced: boolean, pose: Pose = "idle") {
+  if (c.jobId === "enemy.oathwing") {
+    const bob = reduced ? 0 : Math.sin(tick / 5 + x) * 3;
+    const phase = (c.phase ?? 1) >= 2;
+    ctx.save();
+    ctx.translate(x, y + bob);
+    ctx.fillStyle = "rgba(20,16,18,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(0, 8, 36, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = phase ? "#4a3038" : "#2a242c";
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(-54, 10);
+    ctx.lineTo(-18, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(54, 10);
+    ctx.lineTo(18, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#c8b49a";
+    ctx.beginPath();
+    ctx.ellipse(0, -6, 16, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(232,177,90,0.9)";
+    ctx.beginPath();
+    ctx.arc(phase ? -10 : -6, -16, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(126,182,214,0.9)";
+    ctx.beginPath();
+    ctx.arc(phase ? 10 : 6, -16, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
   if (c.jobId === "enemy.hourkeeper" || c.jobId === "enemy.inkling") {
     const bob = reduced ? 0 : Math.sin(tick / 6 + x) * 2;
     ctx.save();
