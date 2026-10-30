@@ -48,6 +48,13 @@ Honest labels. Updated for the Unwritten Hour. Skyweave's rules are unchanged. T
 - Optional marks: a hanging spire, an abandoned route marker, a cloud fold, a shear, a scratch toward the cold blue, and a cache that waits on Sight or the marker. Looking is not writing the fold down, and it is not pocketing the shine.
 - Schema stays 4. Sky position is flags. Schema 1 through 4 still open.
 
+## Wings of the First Stay
+
+- The Sky Atlas is still one cell per press. A or Left is west. D or Right is east. The picture eases, banks, and draws clouds, a river, a coast, and a hull. Reduced motion snaps. Coordinates do not change because the picture moved.
+- The deck log lists what the chart already knows. The bunk is six gold and does not refill Temporal Sight. Companions still remember the earlier choice. A veil thread still does not recruit Iri.
+- Cinderwatch keeps both signal answers. Sight can show ash falling upward. Counting it is a separate press and pays one cold vial. It does not flip the post. The cold perch, after the kite, is a short fight on the shared core. Sky Lance and Leap are earned there. The drop is rise, hold, drop, and it teaches Falling Star. Both are weaker than noon. Dragoon stays shut. The rail home does not wait.
+- The perch in the air is a note, not a pad and not the fight. Sight on that cell does not write the note and does not start the drill.
+
 ## Partial
 
 - Ascension is still a presentation of the turn clock. Companions do not path on their own, and they do not take a turn without you.
@@ -84,4 +91,6 @@ Hours coverage: both of Pell's first answers can hold the words or serve the per
 
 First Open Sky coverage: the walked `map.sky` row stays locked; the heading names a missing route, shadow, glass, or hour; both Warden outcomes can take either heading once and the second choice does not flip or pay again; the wrong view fails closed; Sight does not pin, write the echo, or pay the cache; Iri joined or veiled does not block it and the veil does not recruit; the chart refuses its edge, a Margin pad without the flag, a later light, and Cinderwatch until it is noted; return from a lost Margin flag still reaches the berth; schema 1 through 4 keep the sky cell and one needle; the Ash Kite's downdraft is the shared core and the ash lance pays once. Dragoon stays shut.
 
-`scripts/hours-smoke.mjs` runs in GitHub Actions against the Pages build: title, New Journey, a step, an interaction, Attack, an oath answer, a journal line, and a Kept Cord that survives reload. `scripts/opensky-smoke.mjs` starts the same way, then uses a labeled pre-heading fixture (not a full campaign playthrough) to pin the heading, fly west, land, reload, and return to the berth. Desktop and 390px screenshots are uploaded. `scripts/game-launch-smoke.mjs` still starts a journey locally and is not required on every commit.
+Wings coverage: the perch can be noted and cannot be landed on; Sight on that cell does not write the note; the upward ash needs a look, pays once, and keeps bank or send; the perch reward is once; Sky Lance and Leap survive a job change; Falling Star needs the trial and the order rise, hold, drop; a wrong order pays nothing; the bunk costs six gold and does not wake the sight; schema 1 through 4 keep the drills. Dragoon stays shut. The smoke fixture is not a full campaign playthrough.
+
+`scripts/hours-smoke.mjs` runs in GitHub Actions against the Pages build: title, New Journey, a step, an interaction, Attack, an oath answer, a journal line, and a Kept Cord that survives reload. `scripts/opensky-smoke.mjs` starts the same way, then uses a labeled pre-heading fixture (not a full campaign playthrough) to pin the heading, fly west, land, reload, and return to the berth. `scripts/wings-smoke.mjs` starts the same way, then uses a labeled pre-cinder fixture (not a full campaign playthrough) for the deck, the flight, the tally, the perch, the drop, a reload, and the flight home. Desktop and 390px screenshots are uploaded. `scripts/game-launch-smoke.mjs` still starts a journey locally and is not required on every commit.

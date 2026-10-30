@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import type { SaveGame } from "../contracts.ts";
-import { artUrl } from "./sprites.ts";
 import {
   SKY_DOCKS,
   SKY_FINDS,
@@ -53,7 +52,8 @@ export function SkyAtlas({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const saveRef = useRef(save);
   saveRef.current = save;
-  const display = useRef({ x: 0, y: 0, ready: false });
+  const display = useRef({ x: 0, y: 0, ang: 0, bank: 0, ready: false });
+  const swipe = useRef<{ x: number; y: number } | null>(null);
   const [status, setStatus] = useState("The chart has edges. The hull does not.");
   const reduced = save.settings.reducedMotion;
   const cell = skyCell(save);
@@ -207,6 +207,9 @@ export function SkyAtlas({
   }
 
   const here = placeLine(save, cell.x, cell.y, cell.facing);
+  const landing = canLand(save, cell.x, cell.y) ? "Landing: this cell will take the hull." : "Landing: not a pad.";
+  const pads = SKY_DOCKS.filter((d) => canLand(save, d.x, d.y));
+  const noted = SKY_FINDS.filter((f) => save.flags[f.flag]);
 
   return (
     <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-3 px-3 py-3 lg:px-6">
@@ -219,12 +222,42 @@ export function SkyAtlas({
       </header>
       <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
         <div className="map-frame overflow-hidden rounded-md border border-line bg-ink-2">
-          <canvas ref={canvasRef} className="block h-[min(68vh,640px)] w-full" aria-label="The First Stay over a bounded sky chart. A and Left are west. D and Right are east." />
-          <p className="sr-only" aria-live="polite">{status}</p>
+          <canvas
+            ref={canvasRef}
+            className="block h-[min(68vh,640px)] w-full touch-none"
+            aria-label="The First Stay over a bounded sky chart. A and Left are west. D and Right are east."
+            onPointerDown={(e) => {
+              swipe.current = { x: e.clientX, y: e.clientY };
+            }}
+            onPointerUp={(e) => {
+              const start = swipe.current;
+              swipe.current = null;
+              if (!start) return;
+              const dx = e.clientX - start.x;
+              const dy = e.clientY - start.y;
+              if (Math.hypot(dx, dy) < 28) return;
+              if (Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? "w" : "e");
+              else go(dy < 0 ? "n" : "s");
+            }}
+          />
+          <p className="sr-only" aria-live="polite">{status} {landing}</p>
         </div>
         <aside className="region-card flex flex-col gap-3 rounded-md border border-line bg-panel p-3">
           <p className="text-sm text-parchment/80">A bounded sky. West is left on the chart. The hull moves one cell at a time. It will not cross the edge, and it will not land on a mark that is not a pad.</p>
-          <p className="text-xs text-parchment/70">A or Left west. D or Right east. W or Up north. S or Down south. A gamepad stick does the same.</p>
+          <div className="grid grid-cols-3 place-items-center text-xs tracking-widest text-amber" aria-label={`Compass. Heading ${facingWord(cell.facing)}.`}>
+            <span />
+            <span className={cell.facing === "n" ? "font-bold text-teal" : ""}>N</span>
+            <span />
+            <span className={cell.facing === "w" ? "font-bold text-teal" : ""}>W</span>
+            <span className="text-[10px] tracking-normal text-parchment/70">{facingWord(cell.facing)}</span>
+            <span className={cell.facing === "e" ? "font-bold text-teal" : ""}>E</span>
+            <span />
+            <span className={cell.facing === "s" ? "font-bold text-teal" : ""}>S</span>
+            <span />
+          </div>
+          <p className="text-sm text-parchment">Sky {cell.x}, {cell.y} · {facingWord(cell.facing)}</p>
+          <p className={canLand(save, cell.x, cell.y) ? "text-sm text-teal" : "text-sm text-parchment/70"}>{landing}</p>
+          <p className="text-xs text-parchment/70">A or Left west. D or Right east. W or Up north. S or Down south. A swipe or a gamepad stick does the same, one cell at a time.</p>
           <div className="grid grid-cols-3 gap-2">
             <span />
             <SkyButton onClick={() => go("n")}>North</SkyButton>
@@ -241,7 +274,12 @@ export function SkyAtlas({
           <SkyButton onClick={() => act("sight")}>Sight</SkyButton>
           <SkyButton onClick={() => act("deck")}>Walk the deck</SkyButton>
           <SkyButton onClick={() => act("home")}>Return to the last dock</SkyButton>
-          <p className="text-xs text-parchment/70">{chartText(save)}</p>
+          <p className="text-xs text-parchment/70">Pads that will take the hull: {pads.length ? pads.map((d) => d.name).join(", ") : "none yet"}.</p>
+          <p className="text-xs text-parchment/70">Noted: {noted.length ? noted.map((f) => f.id).join(", ") : "nothing extra yet"}.</p>
+          <details className="text-xs text-parchment/70">
+            <summary className="cursor-pointer text-amber">Whole chart</summary>
+            <p className="mt-2">{chartText(save)}</p>
+          </details>
         </aside>
       </div>
     </div>
@@ -269,7 +307,7 @@ function facingWord(facing: string): string {
 function paint(
   canvas: HTMLCanvasElement,
   save: SaveGame,
-  display: { x: number; y: number; ready: boolean },
+  display: { x: number; y: number; ang: number; bank: number; ready: boolean },
   time: number,
 ) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -283,17 +321,28 @@ function paint(
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.imageSmoothingEnabled = false;
   const cell = skyCell(save);
   const tx = cell.x * CELL + CELL / 2;
   const ty = cell.y * CELL + CELL / 2;
-  if (!display.ready || save.settings.reducedMotion) {
+  const targetAng = faceAngle(cell.facing);
+  const reduced = save.settings.reducedMotion || time === 0;
+  if (!display.ready || reduced) {
     display.x = tx;
     display.y = ty;
+    display.ang = targetAng;
+    display.bank = 0;
     display.ready = true;
   } else {
-    display.x += (tx - display.x) * 0.18;
-    display.y += (ty - display.y) * 0.18;
+    const dx = tx - display.x;
+    const dy = ty - display.y;
+    display.x += dx * 0.12;
+    display.y += dy * 0.12;
+    const before = display.ang;
+    display.ang = lerpAngle(display.ang, targetAng, 0.14);
+    let turn = display.ang - before;
+    while (turn > Math.PI) turn -= Math.PI * 2;
+    while (turn < -Math.PI) turn += Math.PI * 2;
+    display.bank = display.bank * 0.86 + Math.max(-0.38, Math.min(0.38, turn * 6));
   }
   const worldW = SKY_W * CELL;
   const worldH = SKY_H * CELL;
@@ -302,9 +351,17 @@ function paint(
   camX = Math.max(0, Math.min(worldW - w, camX));
   camY = Math.max(0, Math.min(worldH - h, camY));
   const sky = ctx.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, "#24344a");
-  sky.addColorStop(1, "#141820");
+  sky.addColorStop(0, "#1a2740");
+  sky.addColorStop(0.45, "#24344c");
+  sky.addColorStop(1, "#12161e");
   ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+  const sunX = w * 0.72;
+  const sunY = h * 0.18;
+  const sun = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 180);
+  sun.addColorStop(0, "rgba(232,177,90,0.28)");
+  sun.addColorStop(1, "rgba(232,177,90,0)");
+  ctx.fillStyle = sun;
   ctx.fillRect(0, 0, w, h);
   ctx.save();
   ctx.translate(-camX, -camY);
@@ -312,83 +369,193 @@ function paint(
     for (let x = 0; x < SKY_W; x++) {
       ctx.fillStyle = terrainColor(x, y);
       ctx.fillRect(x * CELL, y * CELL, CELL + 1, CELL + 1);
+      if (skyInside(x, y) && (x + y) % 2 === 0) {
+        ctx.fillStyle = "rgba(243,230,200,0.03)";
+        ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+      }
     }
   }
-  const reduced = save.settings.reducedMotion || time === 0;
-  paintClouds(ctx, worldW, worldH, reduced ? 0 : time / 40);
+  paintCountry(ctx, reduced ? 0 : time);
+  paintClouds(ctx, worldW, worldH, reduced ? 40 : time / 28, 0.22);
   for (const dock of SKY_DOCKS) {
-    const open = canLand(save, dock.x, dock.y) || (dock.id === "dock.cinder" && !save.flags["flag.found_cinder"]);
-    ctx.fillStyle = dock.id === "dock.cinder" ? "#7eb6d6" : "#e8b15a";
-    ctx.globalAlpha = open ? 0.95 : 0.35;
+    const known = canLand(save, dock.x, dock.y);
+    const hinted = dock.id === "dock.cinder" && !save.flags["flag.found_cinder"];
+    const cx = dock.x * CELL + CELL / 2;
+    const cy = dock.y * CELL + CELL / 2;
     ctx.beginPath();
-    ctx.arc(dock.x * CELL + CELL / 2, dock.y * CELL + CELL / 2, 7, 0, Math.PI * 2);
+    ctx.arc(cx, cy, known ? 9 : 5, 0, Math.PI * 2);
+    ctx.fillStyle = dock.id === "dock.cinder" ? "#7eb6d6" : "#e8b15a";
+    ctx.globalAlpha = known ? 0.95 : hinted ? 0.45 : 0.22;
     ctx.fill();
     ctx.globalAlpha = 1;
-    if (dock.id !== "dock.cinder" || save.flags["flag.found_cinder"]) {
+    if (known) {
+      ctx.strokeStyle = "#f3e6c8";
+      ctx.stroke();
       ctx.fillStyle = "#f3e6c8";
       ctx.font = "12px sans-serif";
-      ctx.fillText(dock.name, dock.x * CELL + 8, dock.y * CELL - 4);
+      ctx.fillText(dock.name, dock.x * CELL + 4, dock.y * CELL - 6);
     }
   }
   for (const find of SKY_FINDS) {
-    if (!save.flags[find.flag] && find.id !== "later") continue;
-    ctx.strokeStyle = find.id === "later" ? "#8b6bb8" : "#4ec8c0";
-    ctx.strokeRect(find.x * CELL + 16, find.y * CELL + 16, 24, 24);
+    const known = Boolean(save.flags[find.flag]);
+    const cx = find.x * CELL + CELL / 2;
+    const cy = find.y * CELL + CELL / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI / 4);
+    ctx.strokeStyle = find.id === "later" ? "#8b6bb8" : known ? "#4ec8c0" : "rgba(243,230,200,0.28)";
+    ctx.lineWidth = known ? 2 : 1;
+    ctx.strokeRect(-7, -7, 14, 14);
+    ctx.restore();
+    if (known && find.id !== "later") {
+      ctx.fillStyle = "#d7e4f2";
+      ctx.font = "11px sans-serif";
+      ctx.fillText(find.id, find.x * CELL + 8, find.y * CELL + 12);
+    }
+    if (find.id === "later") {
+      ctx.fillStyle = "rgba(139,107,184,0.85)";
+      ctx.beginPath();
+      ctx.arc(cx, cy - 16, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
-  const img = sheet();
-  const face = skyCell(save).facing;
-  const ang = face === "e" ? 0 : face === "s" ? Math.PI / 2 : face === "w" ? Math.PI : -Math.PI / 2;
   ctx.save();
   ctx.translate(display.x, display.y);
-  ctx.rotate(ang);
-  if (img) ctx.drawImage(img, -46, -28, 92, 56);
-  else {
-    ctx.fillStyle = "#c8bba8";
-    ctx.fillRect(-28, -10, 56, 20);
+  drawHull(ctx, display.ang, display.bank);
+  ctx.restore();
+  ctx.restore();
+  paintCloudsScreen(ctx, w, h, reduced ? 0 : time / 40);
+  if (!reduced) {
+    ctx.strokeStyle = "rgba(215,228,242,0.18)";
+    for (let i = 0; i < 6; i++) {
+      const y = ((time / 8 + i * 70) % (h + 40)) - 20;
+      ctx.beginPath();
+      ctx.moveTo(-10, y);
+      ctx.lineTo(w + 10, y - 18);
+      ctx.stroke();
+    }
   }
-  ctx.restore();
-  ctx.restore();
+  const vignette = ctx.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w * 0.72);
+  vignette.addColorStop(0, "rgba(0,0,0,0)");
+  vignette.addColorStop(1, "rgba(8,10,16,0.45)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, w, h);
   if (!skyInside(cell.x, cell.y)) {
     ctx.strokeStyle = "#e8b15a";
     ctx.strokeRect(8, 8, w - 16, h - 16);
   }
 }
 
+function faceAngle(facing: string): number {
+  if (facing === "s") return Math.PI / 2;
+  if (facing === "w") return Math.PI;
+  if (facing === "n") return -Math.PI / 2;
+  return 0;
+}
+
+function lerpAngle(a: number, b: number, t: number): number {
+  let d = b - a;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return a + d * t;
+}
+
+function drawHull(ctx: CanvasRenderingContext2D, ang: number, bank: number) {
+  ctx.save();
+  ctx.rotate(ang);
+  ctx.transform(1, 0, bank, 1, 0, 0);
+  ctx.fillStyle = "rgba(18,16,14,0.35)";
+  ctx.beginPath();
+  ctx.ellipse(0, 16, 26, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#c8b49a";
+  ctx.beginPath();
+  ctx.ellipse(2, 0, 36, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#6a5040";
+  ctx.stroke();
+  ctx.fillStyle = "#8a6848";
+  ctx.fillRect(-26, -3, 52, 6);
+  ctx.fillStyle = "#2a221c";
+  ctx.fillRect(-6, 5, 16, 8);
+  ctx.fillStyle = "#e8b15a";
+  ctx.beginPath();
+  ctx.moveTo(-30, 0);
+  ctx.lineTo(-46, -10);
+  ctx.lineTo(-46, 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#7eb6d6";
+  ctx.beginPath();
+  ctx.arc(30, 0, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function terrainColor(x: number, y: number): string {
-  if (!skyInside(x, y)) return "#0e1218";
-  if (x === 12 && y >= 8) return "#4a3834";
-  if (x <= 5 && y >= 7) return "#3d5a48";
-  if (x >= 13 && y >= 6) return "#3a4454";
-  if (y <= 4 && x >= 6 && x <= 12) return "#2a3c58";
-  if (y >= 8) return "#1e4a58";
-  if ((x + y) % 5 === 0) return "#2a4038";
-  return "#2c4a3c";
+  if (!skyInside(x, y)) return "#0c1016";
+  if (x >= 11 && x <= 14 && y >= 7) return "#4a3834";
+  if (y >= 9) return "#1a4554";
+  if (x <= 5 && y >= 6) return "#2f4a3c";
+  if (y <= 4 && x >= 5 && x <= 13) return "#3a4658";
+  if (x >= 13) return "#2c3848";
+  if ((x * 3 + y) % 7 === 0) return "#243e34";
+  return "#2a4638";
 }
 
-function paintClouds(ctx: CanvasRenderingContext2D, worldW: number, worldH: number, drift: number) {
-  ctx.fillStyle = "rgba(243,230,200,0.16)";
-  for (let i = 0; i < 7; i++) {
-    const x = ((i * 180 + drift * (i % 2 ? 1.4 : 0.6)) % (worldW + 120)) - 60;
-    const y = 40 + ((i * 97) % (worldH - 80));
+function paintCountry(ctx: CanvasRenderingContext2D, time: number) {
+  ctx.fillStyle = "#5a6a78";
+  for (const [x, y, s] of [[7, 2, 28], [9, 3, 36], [11, 2, 24], [8, 4, 18]] as const) {
     ctx.beginPath();
-    ctx.ellipse(x, y, 70 + (i % 3) * 16, 18, 0, 0, Math.PI * 2);
+    ctx.moveTo(x * CELL, y * CELL + s);
+    ctx.lineTo(x * CELL + s * 0.6, y * CELL - s * 0.2);
+    ctx.lineTo(x * CELL + s * 1.2, y * CELL + s);
     ctx.fill();
   }
-  ctx.fillStyle = "rgba(200,214,230,0.12)";
-  for (let i = 0; i < 5; i++) {
-    const x = ((i * 240 - drift * 0.35) % (worldW + 160)) - 40;
-    const y = 80 + ((i * 130) % (worldH - 100));
+  ctx.strokeStyle = "#3a7a90";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(4 * CELL, 10 * CELL);
+  ctx.quadraticCurveTo(7 * CELL, 7 * CELL, 9 * CELL, 8 * CELL);
+  ctx.quadraticCurveTo(12 * CELL, 9 * CELL, 13 * CELL, 11 * CELL);
+  ctx.stroke();
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#1e3a30";
+  for (let i = 0; i < 8; i++) {
+    const x = 2 * CELL + (i % 4) * 22;
+    const y = 7 * CELL + Math.floor(i / 4) * 18;
     ctx.beginPath();
-    ctx.ellipse(x, y, 110, 26, 0, 0, Math.PI * 2);
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = "#c8bba8";
+  ctx.beginPath();
+  ctx.moveTo(6 * CELL + 20, 5 * CELL + 40);
+  ctx.lineTo(6 * CELL + 28, 5 * CELL + 8);
+  ctx.lineTo(6 * CELL + 36, 5 * CELL + 40);
+  ctx.stroke();
+  ctx.fillStyle = `rgba(126,182,214,${0.35 + Math.sin(time / 40) * 0.08})`;
+  ctx.fillRect(13 * CELL + 18, 7 * CELL + 10, 10, 16);
+}
+
+function paintClouds(ctx: CanvasRenderingContext2D, worldW: number, worldH: number, drift: number, alpha: number) {
+  ctx.fillStyle = `rgba(243,230,200,${alpha})`;
+  for (let i = 0; i < 8; i++) {
+    const x = ((i * 170 + drift * (i % 2 ? 1.6 : 0.7)) % (worldW + 140)) - 70;
+    const y = 30 + ((i * 91) % (worldH - 60));
+    ctx.beginPath();
+    ctx.ellipse(x, y, 64 + (i % 3) * 18, 16, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
-let hull: HTMLImageElement | null = null;
-function sheet(): HTMLImageElement | null {
-  if (hull) return hull.complete ? hull : null;
-  if (typeof Image === "undefined") return null;
-  hull = new Image();
-  hull.src = artUrl("skiff.png");
-  return null;
+function paintCloudsScreen(ctx: CanvasRenderingContext2D, w: number, h: number, drift: number) {
+  ctx.fillStyle = "rgba(210,222,236,0.14)";
+  for (let i = 0; i < 4; i++) {
+    const x = ((i * 220 - drift * 0.45) % (w + 180)) - 60;
+    const y = 24 + i * (h / 5);
+    ctx.beginPath();
+    ctx.ellipse(x, y, 120, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }

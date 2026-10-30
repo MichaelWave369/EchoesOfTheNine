@@ -176,6 +176,16 @@ function rewardFor(state: EncounterState, mercy: boolean): RewardGrant {
       unique: true,
     };
   }
+  if (state.encounterId === "enc.perch") {
+    return {
+      id: "reward.perch",
+      gold: 22,
+      xp: 34,
+      items: [{ itemId: "item.perch_cord", qty: 1 }],
+      flags: ["flag.dragoon_trial"],
+      unique: true,
+    };
+  }
   return {
     id: `reward.${state.encounterId}`,
     gold: 20,
@@ -397,6 +407,14 @@ function chooseEnemyIntent(state: EncounterState, actor: CombatantState): Intent
     } else {
       abilityId = "enemy.cinder_rake";
       telegraph = "Cinder Rake — ash on one of you. Tide bites it. Sidestep or brace.";
+    }
+  } else if (actor.jobId === "enemy.perch") {
+    if (state.turnIndex % 3 === 0 && (actor.cooldowns["enemy.perch_draft"] ?? 0) === 0) {
+      abilityId = "enemy.perch_draft";
+      telegraph = "Perch Draft — a small wind on everyone. Defend. Stone bites it. This is a lesson, not the kite.";
+    } else {
+      abilityId = "enemy.perch_rake";
+      telegraph = "Perch Rake — wind on one of you. Stone bites it. Sidestep or brace.";
     }
   } else if (actor.jobId === "enemy.warden") {
     const phase = actor.phase ?? 1;

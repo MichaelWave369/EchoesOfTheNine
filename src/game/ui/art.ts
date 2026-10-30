@@ -220,7 +220,7 @@ const LOOKS: Record<string, RegionLook> = {
     wallCap: "#5a4030",
     accent: "#e8b15a",
     water: null,
-    note: "A wooden deck, a wheel, and a chart.",
+    note: "A wooden deck, a wheel, a bunk, and a chart.",
   },
   "map.cinder": {
     skyTop: "#1c3048",
@@ -231,7 +231,7 @@ const LOOKS: Record<string, RegionLook> = {
     wallCap: "#3a2a30",
     accent: "#7eb6d6",
     water: null,
-    note: "Ash under a cold blue. Not the Vale, and not the ridge.",
+    note: "Ash under a cold blue. A watch, a perch, and a stair that is not the way home.",
   },
   "map.ashvault": {
     skyTop: "#100e14",
@@ -468,12 +468,14 @@ function stampsFor(mapId: string): Stamp[] {
     return [
       { file: "skiff.png", x: 5.2, y: 1.2, w: 120, h: 70 },
       { file: "lantern.png", x: 4.2, y: 3.2, w: 26, h: 46 },
+      { file: "lantern.png", x: 7.4, y: 3.1, w: 24, h: 42 },
     ];
   }
   if (mapId === "map.cinder") {
     return [
       { file: "lantern.png", x: 7.1, y: 3.4, w: 28, h: 50 },
       { file: "house.png", x: 5.4, y: 2.8, w: 100, h: 84 },
+      { file: "lantern.png", x: 11.2, y: 3.2, w: 24, h: 44 },
     ];
   }
   if (mapId === "map.ashvault") return [{ file: "lantern.png", x: 4.2, y: 3.2, w: 26, h: 48 }];
@@ -929,14 +931,25 @@ function paintLandmarks(ctx: CanvasRenderingContext2D, mapId: string, tick: numb
   if (mapId === "map.deck") {
     ctx.strokeStyle = "#8a6848";
     ctx.strokeRect(3 * TILE, 2 * TILE, 6 * TILE, 3 * TILE);
+    ctx.fillStyle = "#6a5040";
+    ctx.fillRect(4 * TILE + 6, 5 * TILE + 4, 34, 16);
     ctx.fillStyle = "#c8bba8";
-    ctx.fillRect(5 * TILE + 8, 3 * TILE, 28, 18);
+    ctx.fillRect(4 * TILE + 4, 3 * TILE + 6, 28, 20);
     ctx.strokeStyle = "#e8b15a";
     ctx.beginPath();
-    ctx.arc(6 * TILE + 16, 3 * TILE + 8, 10, 0, Math.PI * 2);
+    ctx.arc(6 * TILE + 16, 3 * TILE + 8, 12, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(6 * TILE + 16, 3 * TILE - 2);
+    ctx.lineTo(6 * TILE + 16, 3 * TILE + 18);
+    ctx.moveTo(6 * TILE + 4, 3 * TILE + 8);
+    ctx.lineTo(6 * TILE + 28, 3 * TILE + 8);
+    ctx.stroke();
+    ctx.fillStyle = "#3a2a22";
+    ctx.fillRect(5 * TILE + 6, 3 * TILE + 2, 18, 10);
   }
   if (mapId === "map.cinder") {
+    const drift = reduced ? 0 : Math.sin(tick / 7) * 3;
     ctx.fillStyle = "#2a2428";
     ctx.beginPath();
     ctx.moveTo(4 * TILE, 7 * TILE);
@@ -945,6 +958,16 @@ function paintLandmarks(ctx: CanvasRenderingContext2D, mapId: string, tick: numb
     ctx.fill();
     ctx.fillStyle = "#7eb6d6";
     ctx.fillRect(7 * TILE + 8, 4 * TILE, 6, 22);
+    ctx.fillStyle = `rgba(196,90,50,${0.35 + (reduced ? 0 : 0.15 * Math.sin(tick / 5))})`;
+    for (let i = 0; i < 5; i++) {
+      ctx.fillRect(6 * TILE + i * 10, 2 * TILE + ((i * 7 + drift) % 18), 3, 8);
+    }
+    ctx.strokeStyle = "#d7e4f2";
+    ctx.strokeRect(11 * TILE + 6, 4 * TILE + 4, 22, 18);
+    ctx.beginPath();
+    ctx.moveTo(11 * TILE + 17, 4 * TILE - 6);
+    ctx.lineTo(11 * TILE + 17, 4 * TILE + 8);
+    ctx.stroke();
     ctx.fillStyle = "#c45a32";
     ctx.beginPath();
     ctx.arc(13 * TILE, 4 * TILE, 18, Math.PI, 0);

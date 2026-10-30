@@ -46,6 +46,12 @@ The walked atlas row `map.sky` stays locked. After a route, the hull shadow, bot
 
 Branch: `feature/first-open-sky`. Not merged from this workspace.
 
+## Rung 1i — Wings of the First Stay (playable, this branch)
+
+The chart is still a grid, not a skybox. The hull eases between cells, banks, and shows weather under it. The deck has a log and a bunk that does not wake the sight. Cinderwatch remembers bank or send, and a look can be counted once. After the kite, a cold perch teaches Sky Lance and Leap. Rise, hold, drop teaches Falling Star. Dragoon stays shut. The walked atlas stays locked.
+
+Branch: `feature/wings-first-stay`. Not merged from this workspace.
+
 ## Still after this
 
 The rest of the sky, the remaining regions, a fuller job tree, and any headset battle. Do not start those inside this PR.

@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { applyReward, deserialize, freshSave, serialize, setFlag } from "../chronicle/save.ts";
+import { ABILITIES } from "../content/abilities.ts";
 import { ENEMY_TEMPLATES, makeCombatant } from "../content/characters.ts";
+import { switchJob } from "../content/crossing.ts";
 import { ATLAS, canTravel, JOB_KITS } from "../content/expanses.ts";
-import { useSight } from "../content/gear.ts";
+import { restOnDeck, useSight } from "../content/gear.ts";
 import {
   OPEN_COPY,
   SKY_DOCKS,
@@ -11,6 +13,8 @@ import {
   canLand,
   chooseHeading,
   chooseSignal,
+  countAsh,
+  dragoonStillShut,
   headingBlock,
   landAt,
   launchSky,
@@ -18,10 +22,12 @@ import {
   pinBearing,
   returnDock,
   setCinderOrder,
+  setDropOrder,
   skyCell,
   stepSky,
   takeCache,
   talkCrew,
+  teachPerchDrill,
 } from "../content/opensky.ts";
 import { MAPS, PUBLIC_STRING_BAN } from "../content/world.ts";
 import { createEncounter, proposeAction, resolveEnemyTurn } from "./combat.ts";
@@ -356,5 +362,164 @@ describe("the first open sky", () => {
 
     const blob = JSON.stringify({ OPEN_COPY, deck: MAPS["map.deck"], cinder: MAPS["map.cinder"], stair: MAPS["map.ashvault"] }).toLowerCase();
     for (const banned of PUBLIC_STRING_BAN) assert.equal(blob.includes(banned), false, banned);
+  });
+
+  it("notes the perch and will not land on it", () => {
+    const opened = chooseHeading(bothPins(ready()), "gap");
+    assert.equal(opened.ok, true);
+    if (!opened.ok) return;
+    const up = launchSky(opened.save);
+    assert.equal(up.ok, true);
+    if (!up.ok) return;
+    let sky = setFlag(up.save, "sky.x", 13);
+    sky = setFlag(sky, "sky.y", 7);
+    const seen = beginOpenSkySight(sky);
+    assert.equal(seen?.save.flags["flag.sight_sky_perch"], true);
+    assert.equal(seen?.save.flags["flag.sky_perch"], undefined);
+    const noted = noteSky(sky);
+    assert.equal(noted.ok, true);
+    if (!noted.ok) return;
+    assert.equal(noted.save.flags["flag.sky_perch"], true);
+    assert.equal(landAt(noted.save).ok, false);
+    assert.equal(canLand(noted.save, 13, 7), false);
+    assert.equal(canLand(noted.save, 14, 2), false);
+    assert.equal(dragoonStillShut(), true);
+    assert.equal(JOB_KITS.find((j) => j.id === "job.dragoon")?.playable, false);
+  });
+
+  it("counts the upward ash once and does not flip the signal", () => {
+    let save = setFlag(ready(), "flag.found_cinder");
+    save.mapId = "map.cinder";
+    const blind = countAsh(save);
+    assert.equal(blind.ok, false);
+    save = setFlag(save, "flag.sight_cinder");
+    save = setFlag(save, "flag.cinder_bank");
+    save = setFlag(save, "flag.cinder_signal");
+    const once = countAsh(save);
+    assert.equal(once.ok, true);
+    if (!once.ok) return;
+    assert.equal(once.save.flags["flag.cinder_bank"], true);
+    assert.equal(once.save.flags["flag.cinder_send"], undefined);
+    assert.equal(once.save.inventory.filter((s) => s.itemId === "item.cold_vial").length, 1);
+    const twice = countAsh(once.save);
+    assert.equal(twice.ok, true);
+    if (!twice.ok) return;
+    assert.equal(twice.save.inventory.filter((s) => s.itemId === "item.cold_vial").length, 1);
+    assert.equal(twice.save.flags["flag.cinder_bank"], true);
+  });
+
+  it("teaches perch drills through the shared core and keeps Dragoon shut", () => {
+    let state = createEncounter({
+      encounterId: "enc.perch",
+      seed: 3,
+      party: [makeCombatant("wanderer", { position: { x: 0, z: 2 } })],
+      enemies: [{ ...structuredClone(ENEMY_TEMPLATES.perch), id: "perch", position: { x: 0, z: -1.6 } }],
+    });
+    const seen: string[] = [];
+    for (let i = 0; i < 6 && state.outcome === "ongoing"; i++) {
+      if (state.phase === "enemy") {
+        const intent = state.intents[0];
+        if (intent) seen.push(intent.abilityId);
+        const enemy = resolveEnemyTurn(state);
+        assert.equal(enemy.ok, true);
+        state = enemy.state;
+      } else {
+        const hero = state.activeActorId ?? "wanderer";
+        const hit = proposeAction(state, act({ actorId: hero, abilityId: "atk.strike", kind: "attack", targetIds: ["perch"] }));
+        assert.equal(hit.ok, true);
+        state = hit.state;
+      }
+    }
+    assert.ok(seen.includes("enemy.perch_draft") || seen.includes("enemy.perch_rake"));
+
+    const dying = createEncounter({
+      encounterId: "enc.perch",
+      seed: 8,
+      party: [makeCombatant("wanderer", { position: { x: 0, z: 1.2 } })],
+      enemies: [{ ...structuredClone(ENEMY_TEMPLATES.perch), id: "perch", hp: 1, position: { x: 0, z: -1.2 } }],
+    });
+    dying.phase = "player";
+    dying.activeActorId = "wanderer";
+    const kill = proposeAction(dying, act({ actorId: "wanderer", abilityId: "spell.ember", kind: "cast", targetIds: ["perch"] }));
+    assert.equal(kill.ok, true);
+    assert.equal(kill.state.outcome, "victory");
+    assert.equal(kill.state.pendingReward?.id, "reward.perch");
+    const paid = applyReward(freshSave("Ash"), kill.state.pendingReward!);
+    const twice = applyReward(paid, kill.state.pendingReward!);
+    assert.equal(twice.inventory.filter((s) => s.itemId === "item.perch_cord").length, 1);
+    assert.equal(twice.flags["flag.dragoon_trial"], true);
+    assert.equal(teachPerchDrill(freshSave("Ash")).ok, false);
+    const taught = teachPerchDrill(paid);
+    assert.equal(taught.ok, true);
+    if (!taught.ok) return;
+    assert.ok(taught.save.earnedSpells.includes("atk.sky_lance"));
+    assert.ok(taught.save.earnedSpells.includes("spell.dragoon_leap"));
+    assert.equal(taught.save.earnedSpells.includes("spell.falling_star"), false);
+    const kept = teachPerchDrill(taught.save);
+    assert.equal(kept.ok, true);
+    if (!kept.ok) return;
+    assert.equal(kept.save.earnedSpells.filter((id) => id === "atk.sky_lance").length, 1);
+    assert.equal(switchJob(taught.save, "job.dragoon").ok, false);
+    let swappedSave = taught.save;
+    swappedSave.mapId = "map.cinder";
+    if (!swappedSave.jobsUnlocked.includes("job.elementalist")) swappedSave.jobsUnlocked.push("job.elementalist");
+    const swapped = switchJob(swappedSave, "job.elementalist");
+    assert.equal(swapped.ok, true);
+    if (!swapped.ok) return;
+    assert.ok(swapped.save.knownSpells.wanderer?.includes("atk.sky_lance"));
+    assert.ok(swapped.save.knownSpells.wanderer?.includes("spell.dragoon_leap"));
+    assert.equal(swapped.save.roster.wanderer?.jobId, "job.elementalist");
+    assert.equal(JOB_KITS.find((j) => j.id === "job.dragoon")?.playable, false);
+
+    assert.equal(setDropOrder(freshSave("Ash"), ["rise", "hold", "drop"]).ok, false);
+    assert.equal(setDropOrder(taught.save, ["drop", "hold", "rise"]).ok, false);
+    const dropped = setDropOrder(taught.save, ["rise", "hold", "drop"]);
+    assert.equal(dropped.ok, true);
+    if (!dropped.ok) return;
+    assert.ok(dropped.save.earnedSpells.includes("spell.falling_star"));
+    assert.equal(dropped.save.inventory.filter((s) => s.itemId === "item.star_glass").length, 1);
+    const again = setDropOrder(dropped.save, ["rise", "hold", "drop"]);
+    assert.equal(again.ok, true);
+    if (!again.ok) return;
+    assert.equal(again.save.inventory.filter((s) => s.itemId === "item.star_glass").length, 1);
+
+    const lance = ABILITIES["atk.sky_lance"]?.effects[0];
+    const star = ABILITIES["spell.falling_star"]?.effects[0];
+    const leap = ABILITIES["spell.dragoon_leap"];
+    const side = ABILITIES["act.dodge"];
+    assert.equal(lance && "power" in lance ? lance.power : 0, 18);
+    assert.equal(star && "power" in star ? star.power : 0, 26);
+    assert.ok(ABILITIES["spell.solar"]!.effects.some((e) => "power" in e && (e.power ?? 0) > 26));
+    assert.ok(ABILITIES["spell.crosswind"]!.effects.some((e) => "power" in e && (e.power ?? 0) > 26));
+    assert.ok((leap?.cost.mp ?? 0) > (side?.cost.mp ?? 0));
+    assert.ok((leap?.cost.cooldownTicks ?? 0) > (side?.cost.cooldownTicks ?? 0));
+
+    let bunk = dropped.save;
+    bunk.mapId = "map.deck";
+    bunk.gold = 10;
+    bunk.sightCharges = 1;
+    bunk.roster.wanderer!.hp = 4;
+    const rested = restOnDeck(bunk);
+    assert.equal(rested.ok, true);
+    if (!rested.ok) return;
+    assert.equal(rested.save.gold, 4);
+    assert.equal(rested.save.sightCharges, 1);
+    assert.equal(rested.save.roster.wanderer?.hp, rested.save.roster.wanderer?.maxHp);
+    const poor = structuredClone(rested.save);
+    poor.gold = 2;
+    assert.equal(restOnDeck(poor).ok, false);
+
+    for (const schema of [1, 2, 3, 4]) {
+      const raw = JSON.parse(serialize(dropped.save)) as Record<string, unknown>;
+      raw.schema = schema;
+      const back = deserialize(JSON.stringify(raw));
+      assert.equal(back.schema, 4);
+      assert.equal(back.flags["flag.dragoon_trial"], true);
+      assert.equal(back.flags["flag.falling_star"], true);
+      assert.ok(back.earnedSpells.includes("spell.falling_star"));
+      assert.equal(back.quests.filter((q) => q.id === "quest.perch").length, 1);
+      assert.equal(back.quests.filter((q) => q.id === "quest.tally").length, 1);
+      assert.equal(JOB_KITS.find((j) => j.id === "job.dragoon")?.playable, false);
+    }
   });
 });

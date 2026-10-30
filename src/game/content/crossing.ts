@@ -11,12 +11,12 @@ export const HOLD_OLD = ["flame", "tide", "stone"] as const;
 export const HOLD_SEAL = ["stone", "stone", "flame"] as const;
 
 export const JOB_SPELLS: Record<string, { base: string[]; earned: string[] }> = {
-  "job.wanderer": { base: ["spell.ember"], earned: ["spell.solar"] },
-  "job.elementalist": { base: ["spell.ember", "spell.flare"], earned: ["spell.solar"] },
-  "job.riverward": { base: ["spell.stillwater", "spell.echo_lash"], earned: ["spell.double_wake"] },
+  "job.wanderer": { base: ["spell.ember"], earned: ["spell.solar", "atk.sky_lance", "spell.dragoon_leap", "spell.falling_star"] },
+  "job.elementalist": { base: ["spell.ember", "spell.flare"], earned: ["spell.solar", "atk.sky_lance", "spell.dragoon_leap", "spell.falling_star"] },
+  "job.riverward": { base: ["spell.stillwater", "spell.echo_lash"], earned: ["spell.double_wake", "atk.sky_lance", "spell.dragoon_leap", "spell.falling_star"] },
 };
 
-export const SAFE_JOB_MAPS = ["map.inn", "map.smith", "map.ferry", "map.highroad", "map.ridge", "map.berth"] as const;
+export const SAFE_JOB_MAPS = ["map.inn", "map.smith", "map.ferry", "map.highroad", "map.ridge", "map.berth", "map.deck", "map.cinder"] as const;
 
 export const MIST_SHOP = ["armor.mist_cloak", "item.lantern_salve", "item.dew_vial"] as const;
 

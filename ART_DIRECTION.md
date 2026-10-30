@@ -35,7 +35,7 @@ Type stays Fraunces for titles and Source Sans 3 for the road. Buttons stay larg
 | Cinderwatch | Ash and cold blue. Not the Vale's lanterns and not the ridge's rope. |
 | The cold stair | A short dark stair and one ember nick. |
 
-The walked atlas mark called open sky stays locked. Do not paint it as a place you can walk. The Sky Atlas is a separate screen: the First Stay over a bounded chart, with clouds and terrain under the hull. A and Left are west on that chart. Reduced motion snaps the hull and holds the clouds still.
+The walked atlas mark called open sky stays locked. Do not paint it as a place you can walk. The Sky Atlas is a separate screen: the First Stay over a bounded chart, with layered clouds, a coast, a river, mountains, and an original hull that banks between cells. A and Left are west on that chart. Reduced motion snaps the hull and holds the clouds still. Discovered pads are labeled. Unknown marks stay faint. The picture does not decide a landing.
 
 ## How to extend it
 

@@ -162,10 +162,10 @@ export const JOB_KITS: {
     name: "Dragoon",
     who: "Not yet",
     bearer: null,
-    requires: "A later chapter. No button will pretend otherwise.",
+    requires: "A later chapter. The perch can teach a drill. No button here will put the coat on.",
     arts: [],
     kit: [],
-    synergy: "Unwritten.",
+    synergy: "The coat stays shut. Drills, once earned, stay on the wanderer through a job change. They are weaker than noon.",
     playable: false,
   },
   {

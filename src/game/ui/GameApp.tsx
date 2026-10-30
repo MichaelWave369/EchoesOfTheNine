@@ -3,7 +3,7 @@ import type { CombatAction, EncounterState, SaveGame, WandererAppearance } from 
 import { CHARACTERS, ENEMY_TEMPLATES, JOBS } from "../content/characters.ts";
 import { ability, ABILITIES } from "../content/abilities.ts";
 import { DIALOGUE, ITEMS, MAPS, MOSS_ANSWER, RUNE_ANSWER, type MapHotspot } from "../content/world.ts";
-import { buyItem, equipItem, GEAR, learnElementalist, levelForXp, prepareForBattle, restParty, SHOP_IDS, useSight, withGear } from "../content/gear.ts";
+import { buyItem, equipItem, GEAR, learnElementalist, levelForXp, prepareForBattle, restOnDeck, restParty, SHOP_IDS, useSight, withGear } from "../content/gear.ts";
 import { companionAside, choiceCoda, reachClose, wardenMemory } from "../content/memory.ts";
 import {
   ATLAS,
@@ -106,13 +106,17 @@ import {
   chartText,
   chooseHeading,
   chooseSignal,
+  countAsh,
   headingBlock,
   headingObjective,
+  logText,
   pinBearing,
   returnDock,
   setCinderOrder,
+  setDropOrder,
   skyClues,
   talkCrew,
+  teachPerchDrill,
 } from "../content/opensky.ts";
 import {
   applyReward,
@@ -627,7 +631,8 @@ function Explore({
   const [kilnPick, setKilnPick] = useState<string[]>([]);
   const [holdPick, setHoldPick] = useState<string[]>([]);
   const [cinderPick, setCinderPick] = useState<string[]>([]);
-  const [puzzle, setPuzzle] = useState<null | "runes" | "conduits" | "moss" | "bell" | "kiln" | "hold" | "lens" | "spring" | "seam" | "heading" | "cinder">(null);
+  const [dropPick, setDropPick] = useState<string[]>([]);
+  const [puzzle, setPuzzle] = useState<null | "runes" | "conduits" | "moss" | "bell" | "kiln" | "hold" | "lens" | "spring" | "seam" | "heading" | "cinder" | "drop">(null);
   const [conduit, setConduit] = useState(0);
   const moved = useRef(false);
   const padPrev = useRef<boolean[]>([]);
@@ -707,7 +712,7 @@ function Explore({
         push("A warm pebble comes loose under the clock. It keeps pace with you.");
         return;
       }
-      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch", "npc.hale", "npc.wren", "sign.timetable", "sign.pier", "sign.faded", "sign.wake", "sign.board", "door.berth", "npc.sera", "npc.ada", "npc.orrin", "sign.bridge", "sign.salt", "sign.skiff", "sign.heading", "sign.cross", "door.dome", "door.gale", "sign.ledger", "sign.hourbook", "sign.hourbell", "sign.hourmist", "door.stair", "sign.page", "sign.echo", "sign.glint", "door.hour", "npc.iri", "sign.oathvale", "sign.oathpath", "sign.hearth", "npc.lark", "sign.seam", "sign.wheel", "sign.chart", "sign.mira", "sign.kael", "sign.nessa", "sign.iri", "sign.veil", "sign.party", "sign.home", "sign.rail", "npc.brant", "npc.pemma", "sign.signal", "sign.watch"].includes(spot.id);
+      const special = ["npc.shelf", "npc.pell", "sign.mother", "npc.ivo", "sign.scorch", "npc.hale", "npc.wren", "sign.timetable", "sign.pier", "sign.faded", "sign.wake", "sign.board", "door.berth", "npc.sera", "npc.ada", "npc.orrin", "sign.bridge", "sign.salt", "sign.skiff", "sign.heading", "sign.cross", "door.dome", "door.gale", "sign.ledger", "sign.hourbook", "sign.hourbell", "sign.hourmist", "door.stair", "sign.page", "sign.echo", "sign.glint", "door.hour", "npc.iri", "sign.oathvale", "sign.oathpath", "sign.hearth", "npc.lark", "sign.seam", "sign.wheel", "sign.chart", "sign.log", "sign.bunk", "sign.mira", "sign.kael", "sign.nessa", "sign.iri", "sign.veil", "sign.party", "sign.home", "sign.rail", "npc.brant", "npc.pemma", "sign.signal", "sign.watch", "sign.tally", "sign.drop"].includes(spot.id);
       if (!special) {
         const key =
           spot.id === "npc.voss"
@@ -963,6 +968,16 @@ function Explore({
       push(chartText(save));
       return;
     }
+    if (spot.id === "sign.log") {
+      push(logText(save));
+      return;
+    }
+    if (spot.id === "sign.bunk") {
+      const rested = restOnDeck(save);
+      if (rested.ok) commit(rested.save);
+      push(rested.ok ? rested.text : rested.reason);
+      return;
+    }
     if (spot.id === "sign.mira" || spot.id === "sign.kael" || spot.id === "sign.nessa" || spot.id === "sign.iri") {
       const who = spot.id.replace("sign.", "") as "mira" | "kael" | "nessa" | "iri";
       const scene = talkCrew(save, who);
@@ -1042,6 +1057,25 @@ function Explore({
       const scene = talkCrew(save, "watch");
       if (scene.ok && scene.save !== save) commit(scene.save);
       push(scene.ok ? scene.text : scene.reason);
+      return;
+    }
+    if (spot.id === "sign.tally") {
+      const counted = countAsh(save);
+      if (counted.ok && counted.save !== save) commit(counted.save);
+      push(counted.ok ? counted.text : counted.reason);
+      return;
+    }
+    if (spot.id === "sign.drop") {
+      if (flag(save, "flag.falling_star")) {
+        push(OPEN_COPY.dropKept);
+        return;
+      }
+      if (!flag(save, "flag.dragoon_trial")) {
+        push(OPEN_COPY.dropEarly);
+        return;
+      }
+      setDropPick([]);
+      setPuzzle("drop");
       return;
     }
     if (spot.id === "sign.ledger") {
@@ -1513,6 +1547,18 @@ function Explore({
         onBattle(makeEncounter(save, "enc.ashkite"));
         return;
       }
+      if (spot.id === "battle.perch") {
+        if (flag(save, "flag.dragoon_trial")) {
+          push(OPEN_COPY.perchDone);
+          return;
+        }
+        if (!flag(save, "flag.dragoon_spark")) {
+          push(OPEN_COPY.perchShut);
+          return;
+        }
+        onBattle(makeEncounter(save, "enc.perch"));
+        return;
+      }
     }
     if (spot.kind === "puzzle") {
       if (spot.id === "puzzle.runes") {
@@ -1791,6 +1837,19 @@ function Explore({
     if (!set.ok) {
       push(set.reason);
       setCinderPick([]);
+      return;
+    }
+    commit(set.save);
+    setPuzzle(null);
+    push(set.text);
+    playSfx("spell");
+  }
+
+  function submitDrop() {
+    const set = setDropOrder(save, dropPick);
+    if (!set.ok) {
+      push(set.reason);
+      setDropPick([]);
       return;
     }
     commit(set.save);
@@ -2382,6 +2441,25 @@ function Explore({
           </div>
         </Modal>
       )}
+      {puzzle === "drop" && (
+        <Modal title="The drop" onClose={() => setPuzzle(null)}>
+          <p className="mb-3 text-sm">{OPEN_COPY.dropNeed}</p>
+          <div className="mb-3 flex gap-2">
+            {dropPick.map((r, i) => (
+              <span key={r + i} className="rounded-md bg-ink px-2 py-1 text-teal">{r}</span>
+            ))}
+            {dropPick.length === 0 && <span className="text-parchment/50">The air is listening.</span>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["rise", "hold", "drop", "fall"].map((r) => (
+              <MenuButton key={r} tone="ghost" disabled={dropPick.includes(r)} onClick={() => setDropPick((p) => [...p, r].slice(0, 3))}>
+                {r}
+              </MenuButton>
+            ))}
+            <MenuButton onClick={submitDrop}>Set the order</MenuButton>
+          </div>
+        </Modal>
+      )}
       {puzzle === "conduits" && (
         <Modal title="Conduit ring" onClose={() => setPuzzle(null)}>
           <p className="mb-2 text-sm">
@@ -2846,6 +2924,12 @@ function Explore({
                     {job.id === "job.dragoon" && flag(save, "flag.dragoon_spark") && (
                       <p className="text-teal">{OPEN_COPY.spark}</p>
                     )}
+                    {job.id === "job.dragoon" && flag(save, "flag.dragoon_trial") && (
+                      <p className="text-teal">{OPEN_COPY.perchDone}</p>
+                    )}
+                    {job.id === "job.dragoon" && flag(save, "flag.falling_star") && (
+                      <p className="text-teal">{OPEN_COPY.dropKept}</p>
+                    )}
                   </div>
                 );
               })}
@@ -2858,7 +2942,7 @@ function Explore({
               <li>Battles: Attack, Magic, Defend, Item. Ascension adds movement and a real-time cast.</li>
               <li>When Ascension is awake, Look from inside the step changes the view on the road. The Margin wants the page from the walk and the echo from the other view. A look is not a reading.</li>
               <li>After a flight, an oath, a spring, or a veil may ask again. Sight shows the trouble. It does not press it.</li>
-              <li>When the first heading is written, the Sky Atlas is a chart with edges. A or Left is west. D or Right is east. Land only where a pad agrees. The walked atlas still does not open the sky.</li>
+              <li>When the first heading is written, the Sky Atlas is a chart with edges. A or Left is west. D or Right is east. Land only where a pad agrees. The walked atlas still does not open the sky. The perch is a drill. Dragoon stays shut.</li>
               <li>Everything mandatory can be done with buttons. VR is optional and not required.</li>
             </ul>
           )}
@@ -2995,7 +3079,7 @@ function currentObjective(save: SaveGame): string {
   return "Listen to how the shrine ends.";
 }
 
-function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden" | "enc.thicket" | "enc.cantor" | "enc.crossing" | "enc.vault" | "enc.ferryman" | "enc.gust" | "enc.galekeeper" | "enc.ink" | "enc.hourkeeper" | "enc.ashkite"): EncounterState {
+function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.warden" | "enc.thicket" | "enc.cantor" | "enc.crossing" | "enc.vault" | "enc.ferryman" | "enc.gust" | "enc.galekeeper" | "enc.ink" | "enc.hourkeeper" | "enc.ashkite" | "enc.perch"): EncounterState {
   const party = save.party.map((pid, i) => {
     const mate = prepareForBattle(save, pid);
     mate.position = formationSlot(save.formation ?? "line", i);
@@ -3045,6 +3129,8 @@ function makeEncounter(save: SaveGame, id: "enc.festival" | "enc.woods" | "enc.w
                       ? [{ ...structuredClone(ENEMY_TEMPLATES.hourkeeper), id: "hour", position: { x: 0, z: -2.1 } }]
                     : id === "enc.ashkite"
                       ? [{ ...structuredClone(ENEMY_TEMPLATES.ashkite), id: "ashkite", position: { x: 0, z: -2 } }]
+                    : id === "enc.perch"
+                      ? [{ ...structuredClone(ENEMY_TEMPLATES.perch), id: "perch", position: { x: 0, z: -1.8 } }]
                   : [{ ...structuredClone(ENEMY_TEMPLATES.warden), id: "warden", position: { x: 0, z: -2.2 } }];
   return createEncounter({
     encounterId: id,
@@ -3450,6 +3536,10 @@ function Battle({
     if (nextEnc.pendingReward && !base.flags[`rewarded.${nextEnc.pendingReward.id}`]) {
       nextSave = applyReward(nextSave, nextEnc.pendingReward);
     }
+    if ((nextEnc.outcome === "victory" || nextEnc.outcome === "mercy") && nextEnc.encounterId === "enc.perch") {
+      const taught = teachPerchDrill(nextSave);
+      if (taught.ok) nextSave = taught.save;
+    }
     const settled = { ...nextEnc, pendingReward: null };
     if (nextEnc.outcome === "victory" || nextEnc.outcome === "mercy") {
       if (nextEnc.encounterId === "enc.woods") nextSave = setFlag(nextSave, "flag.woods_cleared");
@@ -3767,7 +3857,11 @@ function Battle({
                       ? "Vault lights"
                   : enc.encounterId === "enc.festival"
                     ? "Lantern crash"
-                    : "Glasspine flicker"}
+                    : enc.encounterId === "enc.ashkite"
+                      ? "Ash Kite"
+                      : enc.encounterId === "enc.perch"
+                        ? "Cold Perch"
+                        : "Glasspine flicker"}
           </h2>
         </div>
         {save.ascensionUnlocked && enc.outcome === "ongoing" && (
@@ -3909,6 +4003,11 @@ function Battle({
               {pick === "root" && (
                 <div className="flex flex-wrap gap-2">
                   <MenuButton onClick={() => chooseAbility(attacks[0] ?? "atk.strike", "attack")}>Attack</MenuButton>
+                  {attacks.slice(1).map((id) => (
+                    <MenuButton key={id} tone="ghost" onClick={() => chooseAbility(id, "attack")}>
+                      {ability(id).name} · {ability(id).cost.mp} MP
+                    </MenuButton>
+                  ))}
                   <MenuButton tone="ghost" onClick={() => setPick("magic")}>Magic</MenuButton>
                   <MenuButton tone="ghost" onClick={() => chooseAbility("act.defend", "defend")}>Defend</MenuButton>
                   {abilitiesFor.includes("act.dodge") && (
